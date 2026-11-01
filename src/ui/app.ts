@@ -53,15 +53,14 @@ export class App {
     const tw = h('div', { class: 'title-towers', 'aria-hidden': 'true' }, ...TOWER_ORDER.map(k => h('img', { src: towerIcon(k, 120), alt: '' })));
     this.mount(h('section', { class: 'screen title' },
       h('div', { class: 'title-inner' },
-        h('p', { class: 'kicker', text: 'A tower defence game' }),
         h('h1', { class: 'logo', text: 'TowerRiot' }),
         h('p', { class: 'tag', text: 'Hold the Lantern Keep. Build towers, raise Wren from level 1 to 16 in every fight, and outthink a Hollow that learns.' }),
-        tw,
         h('div', { class: 'title-btns' },
           h('button', { class: 'btn primary big', onclick: () => this.campaign() }, c > 0 ? `Continue: stage ${Math.min(20, c + 1)}` : 'Play'),
           h('button', { class: 'btn big', onclick: () => this.trees() }, 'Skill trees'),
           h('button', { class: 'btn big', onclick: () => this.settings() }, 'Settings')),
-        h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars. Plays fully offline.` }))));
+        h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars. Plays fully offline.` })),
+      tw));
   }
 
   /* ------------------------------------------------------------------ campaign */
@@ -87,15 +86,21 @@ export class App {
         open ? h('button', { class: 'btn primary big', onclick: () => this.play(id) }, best ? 'Play again' : 'Start') : h('p', { class: 'fine', text: 'Clear the stage before it to open this one.' }));
       this.root.querySelectorAll('.node').forEach(n => n.classList.toggle('sel', n.getAttribute('data-id') === String(id)));
     };
-    const regions = h('div', { class: 'regions' }, ...REGIONS.map((r, ri) => h('div', { class: `region r${ri}`, style: `--rc:${r.color}` },
+    const regions = h('div', { class: 'regions' }, ...REGIONS.map((r, ri) => {
+      const own = STAGES.filter(st => st.region === ri);
+      // A region you cannot enter yet is one quiet line, not five grey rows.
+      if (!isUnlocked(s, own[0].id)) return h('div', { class: `region r${ri} sealed`, style: `--rc:${r.color}` },
+        h('h3', { text: r.name }), h('p', { class: 'fine', text: `Stages ${own[0].id} to ${own[own.length - 1].id}. Opens after stage ${own[0].id - 1}.` }));
+      return h('div', { class: `region r${ri}`, style: `--rc:${r.color}` },
       h('h3', { text: r.name }), h('p', { class: 'fine', text: r.rule }),
       h('div', { class: 'nodes' }, ...STAGES.filter(st => st.region === ri).map(st => {
         const open = isUnlocked(s, st.id), best = s.stars[st.id] ?? 0;
         return h('button', {
           class: `node ${open ? '' : 'locked'} ${best ? 'done' : ''} ${st.id % 5 === 0 ? 'boss' : ''}`, 'data-id': String(st.id),
           'aria-label': `Stage ${st.id}, ${st.name}${open ? '' : ', locked'}`, onclick: () => show(st.id),
-        }, h('span', { class: 'num', text: String(st.id) }), h('span', { class: 'nm', text: st.name }), h('span', { class: 'st', text: best ? '★'.repeat(best) : open ? 'new' : '' }));
-      })))));
+        }, h('span', { class: 'num', text: String(st.id) }), h('span', { class: 'nm', text: st.name }), h('span', { class: `st ${!best && open ? 'next' : ''}`, text: best ? '★'.repeat(best) : open ? 'Next' : '' }));
+      })));
+    }));
     const e = embers(s);
     this.mount(h('section', { class: 'screen campaign' },
       h('header', { class: 'bar-top' },
@@ -141,6 +146,20 @@ export class App {
     const toggle = (label: string, key: keyof typeof st, note: string) => h('label', { class: 'toggle' },
       h('input', { type: 'checkbox', checked: st[key], onchange: (e: Event) => { st[key] = (e.target as HTMLInputElement).checked; this.applySettings(); } }),
       h('span', {}, h('b', { text: label }), h('small', { text: note })));
+    // Two steps on the page itself: browser dialogs look foreign here and do nothing in some app views.
+    const erase = h('div', { class: 'erase' });
+    const askErase = () => {
+      clear(erase);
+      erase.append(h('button', { class: 'btn danger', onclick: () => {
+        clear(erase);
+        erase.append(
+          h('p', { class: 'erase-q', text: 'Erase all stars and tree picks? This cannot be undone.' }),
+          h('div', { class: 'act-row' },
+            h('button', { class: 'btn danger solid', onclick: () => { this.save = freshSave(); this.persist(); this.title(); } }, 'Erase'),
+            h('button', { class: 'btn', onclick: askErase }, 'Cancel')));
+      } }, 'Erase progress'));
+    };
+    askErase();
     this.mount(h('section', { class: 'screen settings' },
       h('header', { class: 'bar-top' }, h('button', { class: 'btn', onclick: () => this.title() }, 'Back'), h('h2', { text: 'Settings' }), h('span')),
       h('div', { class: 'panel' },
@@ -154,7 +173,7 @@ export class App {
           h('li', { text: 'Wren gains levels inside each stage. Spend points on Q, W, E and R. Landing the killing blow pays 50% more gold.' }),
           h('li', { text: 'Walk her to the gate to shop. Grab runes when they glow on the map.' }),
           h('li', { text: 'Keys: Q W E R skills, 1 to 6 build, Space next wave, F speed, P pause, B shop. Right click moves Wren.' })),
-        h('button', { class: 'btn danger', onclick: () => { if (window.confirm('Erase all stars and tree picks?')) { this.save = freshSave(); this.persist(); this.title(); } } }, 'Erase progress'))));
+        erase)));
   }
 
   private applySettings() {

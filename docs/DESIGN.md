@@ -44,3 +44,18 @@ TowerRiot is a classic tower defence game with an early Dota touch. You hold the
 ## Twenty stages
 
 Each region adds a map rule. The fifth stage of each region is a boss. See `src/game/data/stages.ts` for the maps.
+
+## Look and feel
+
+The game is set in the morning. Keep every new screen to these rules.
+
+- **Surfaces:** pale limestone paper with dark iron text. Panels over the map use the same paper, slightly see-through.
+- **One accent:** rust red, only for the thing you act on (Play, Start, buy, the next stage, a skill point to spend).
+- **Gold is for stars and coin only.** Not for titles, borders or selection.
+- **Type:** Cinzel for the logo, screen titles, stage names and battle banners. Barlow for everything else, card titles and the hero name included. No italic headings.
+- **Map light:** a light edge shade by day and a morning grade baked into the ground once. Night and lava stages keep their dark on purpose.
+- **Motion:** short and once. Nothing bobs or pulses forever. Calm motion and the system reduce-motion setting turn effects off.
+- **Phones:** no button or label wraps onto two lines. Shrink an icon before you wrap text.
+- **No browser dialogs.** Ask in a card inside the game.
+
+All colours live as tokens at the top of `src/styles.css`.

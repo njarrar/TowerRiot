@@ -86,7 +86,7 @@ Set each tower to aim at the foe furthest along, the strongest or the closest. L
 
 And four bosses, one at the end of each region: **The Mire King**, **The Tidewyrm**, **The Brass Colossus** and **The Hollow Queen**.
 
-![Lighthouse Rock at night](docs/images/battle-lighthouse.jpg)
+![Lighthouse Rock](docs/images/battle-lighthouse.jpg)
 
 ---
 
