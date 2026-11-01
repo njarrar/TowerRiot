@@ -220,7 +220,7 @@ export class Battle {
     this.stage = stage;
     this.mods = opts.mods ?? baseMods();
     this.rng = makeRng(opts.seed ?? 1234);
-    this.scale = hpScale(stage.id);
+    this.scale = hpScale(stage.id) * (stage.hpMul ?? 1);
     this.roads = stage.roads.map(def => {
       const path = makePath(def.id, smooth(def.ctrl));
       const rt: RoadRt = { def, path, closed: false, closeAt: null, barrier: null, belts: [] };
