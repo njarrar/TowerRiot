@@ -22,6 +22,11 @@ final class BattleController: ObservableObject {
     @Published private(set) var exitAsk = false
     @Published private(set) var result: ResultInfo?
     @Published private(set) var levelFlash = false
+    /// Upright phones: the world x at the middle of the screen. The map is wider than the screen and slides under a drag.
+    @Published private(set) var viewCentre = World.width / 2
+    /// Set by the view on each layout: points per world unit, and half the world width in view.
+    private var panScale: CGFloat = 1
+    private var panHalf = World.width / 2
 
     enum Menu: Equatable { case plot(Int), tower(Int) }
     struct BannerItem: Equatable { let id: Int; let title: String; let sub: String; let secs: Double; let low: Bool }
@@ -51,7 +56,10 @@ final class BattleController: ObservableObject {
         scene.onFrame = { [weak self] dt in self?.frame(dt) ?? [] }
         scene.onTap = { [weak self] x, y in self?.tap(x, y) }
         scene.onAim = { [weak self] x, y in self?.scene.look.aimW = Vec(x, y) }
+        scene.onPan = { [weak self] dx in self?.pan(by: dx) }
         start()
+        // Open on the marked plot, or on Wren, when only part of the map shows.
+        viewCentre = hintPlot.map { battle.plots[$0].x } ?? battle.hero.x
     }
 
     var data: GameData { battle.data }
@@ -73,6 +81,22 @@ final class BattleController: ObservableObject {
             showBanner("Build your first tower", "Tap the marked plot. Towers do most of the work.", 5)
         }
         if autoSkills { battle.autoLearn() }
+    }
+
+    /* ------------------------------------------------------------------ sliding map */
+
+    /// The view tells the controller how the map is shown; a map that fits leaves nothing to slide.
+    func setView(scale: CGFloat, halfWidth: Double) {
+        panScale = scale; panHalf = halfWidth
+        scene.canPan = halfWidth < World.width / 2 - 1
+    }
+
+    /// The world x at the middle of the screen, kept so the map never slides past its edges.
+    func centre() -> Double { min(max(viewCentre, panHalf), World.width - panHalf) }
+
+    private func pan(by dx: CGFloat) {
+        if menu != nil { closeMenu() }
+        viewCentre = min(max(centre() - Double(dx / max(0.01, panScale)), panHalf), World.width - panHalf)
     }
 
     /* ------------------------------------------------------------------ loop */

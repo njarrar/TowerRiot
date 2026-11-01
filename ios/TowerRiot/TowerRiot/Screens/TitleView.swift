@@ -5,6 +5,7 @@ import TowerRiotKit
 /// Title: a still frame of a real fight on the next stage fills the screen; the menu sits on paper over its left side.
 struct TitleView: View {
     @EnvironmentObject var app: AppModel
+    @Environment(\.upright) private var upright
     @State private var scene: BattleScene?
 
     var body: some View {
@@ -41,7 +42,8 @@ struct TitleView: View {
                 .overlay(Rectangle().fill(Ink.ink).frame(height: 3), alignment: .top)
                 .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Ink.ruleStrong, lineWidth: 1))
                 .shadow(color: Ink.shadow, radius: 20, y: 10)
-                .padding(.leading, 40)
+                .padding(.leading, upright ? 16 : 40)
+                .padding(.trailing, upright ? 16 : 0)
                 Spacer(minLength: 0)
             }
             .frame(maxHeight: .infinity)
@@ -82,18 +84,32 @@ struct SoundCorner: View {
 
 /// The bar across the top of the menu screens: back, a title, and what sits on the right.
 struct TopBar<Trailing: View>: View {
+    @Environment(\.upright) private var upright
     let title: String
     let back: () -> Void
     @ViewBuilder var trailing: Trailing
     var body: some View {
-        ZStack {
-            Text(title).font(Face.title(24)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.6)
-            HStack {
-                Button("Back", action: back).buttonStyle(PaperButton())
-                Spacer()
-                trailing
+        if upright {
+            // Too narrow for three parts on one line: the title drops to its own.
+            VStack(spacing: 8) {
+                HStack {
+                    Button("Back", action: back).buttonStyle(PaperButton())
+                    Spacer()
+                    trailing
+                }
+                Text(title).font(Face.title(20)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.6)
             }
+            .padding(.bottom, 10)
+        } else {
+            ZStack {
+                Text(title).font(Face.title(24)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.6)
+                HStack {
+                    Button("Back", action: back).buttonStyle(PaperButton())
+                    Spacer()
+                    trailing
+                }
+            }
+            .padding(.bottom, 12)
         }
-        .padding(.bottom, 12)
     }
 }

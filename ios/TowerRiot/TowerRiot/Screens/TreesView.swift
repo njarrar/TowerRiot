@@ -4,6 +4,7 @@ import TowerRiotKit
 /// Skill trees: Embers from stars buy lasting upgrades. Refunds are free.
 struct TreesView: View {
     @EnvironmentObject var app: AppModel
+    @Environment(\.upright) private var upright
 
     var body: some View {
         let s = app.save, c = s.cleared, trees = app.data.trees
@@ -14,25 +15,28 @@ struct TreesView: View {
             }
             Text("Earn Embers from stars: one per star, two more for each stage cleared. Refunds are free, so try other builds.")
                 .font(Face.body(13)).foregroundStyle(Ink.inkFaint).multilineTextAlignment(.center).frame(maxWidth: 560)
-            HStack(spacing: 2) {
-                ForEach(Array(trees.enumerated()), id: \.offset) { i, tree in
-                    Button { app.treeTab = i } label: {
-                        HStack(spacing: 4) {
-                            if tree.after > c { ArtIcon(name: "lock", size: 12) }
-                            Text(tree.name).font(Face.body(14, i == tab ? .heavy : .semibold)).lineLimit(1)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 2) {
+                    ForEach(Array(trees.enumerated()), id: \.offset) { i, tree in
+                        Button { app.treeTab = i } label: {
+                            HStack(spacing: 4) {
+                                if tree.after > c { ArtIcon(name: "lock", size: 12) }
+                                Text(tree.name).font(Face.body(14, i == tab ? .heavy : .semibold)).lineLimit(1)
+                            }
+                            .foregroundStyle(i == tab ? Ink.ink : Ink.inkDim)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: 4).fill(i == tab ? Ink.paper : .clear))
                         }
-                        .foregroundStyle(i == tab ? Ink.ink : Ink.inkDim)
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(i == tab ? Ink.paper : .clear))
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(3)
+                .background(RoundedRectangle(cornerRadius: 5).fill(Ink.paper3))
             }
-            .padding(3)
-            .background(RoundedRectangle(cornerRadius: 5).fill(Ink.paper3))
+            .fixedSize(horizontal: !upright, vertical: true)
             Text(t.after > c ? "Opens after stage \(t.after)." : t.blurb).font(Face.body(14)).foregroundStyle(Ink.inkDim)
             ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible(maximum: 340)), GridItem(.flexible(maximum: 340))], spacing: 14) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(maximum: upright ? 600 : 340)), count: upright ? 1 : 2), spacing: 14) {
                     ForEach(t.nodes, id: \.id) { n in NodeCard(node: n) }
                 }
                 .frame(maxWidth: 700)

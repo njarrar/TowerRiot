@@ -4,6 +4,8 @@ import TowerRiotKit
 
 /// The battle screen: the map, the HUD, build menus, hero controls, shop and the result card.
 /// Wide screens put the HUD in columns beside the map; narrower ones put a band under it. The map keeps 16:9.
+/// A phone held upright gets a strip on top, the map at full height in the middle and a deep band below;
+/// the map is wider than the screen there, and a drag slides it left and right.
 struct BattleView: View {
     @EnvironmentObject var app: AppModel
     @StateObject private var ctl: BattleController
@@ -18,20 +20,37 @@ struct BattleView: View {
             let safe = geo.safeAreaInsets
             let w = geo.size.width + safe.leading + safe.trailing
             let h = geo.size.height + safe.top + safe.bottom
+            let upright = h > w * 1.15 && w < 760
             let sideRoom = (w - safe.leading - safe.trailing - h * 16 / 9) / 2
-            let side = sideRoom >= 64
+            let side = !upright && sideRoom >= 64
             let band: CGFloat = h < 480 ? 74 : 92
+            let top: CGFloat = upright ? safe.top + 56 : 0
+            // The part of the screen the map shows in.
             let map: CGRect = {
+                if upright {
+                    // At least about two fifths of the map in view, so towers and foes stay big enough to tap.
+                    let mh = max(180, min(h - top - 210 - safe.bottom, w / (World.width * 0.42) * World.height))
+                    return CGRect(x: 0, y: top, width: w, height: mh)
+                }
                 if side { let mw = h * 16 / 9; return CGRect(x: (w - mw) / 2, y: 0, width: mw, height: h) }
                 let mh = min(h - band - safe.bottom, w * 9 / 16), mw = mh * 16 / 9
                 return CGRect(x: (w - mw) / 2, y: 0, width: mw, height: mh)
             }()
+            // The whole map, which runs past the screen's sides when upright.
+            let scale = map.height / World.height
+            let _ = ctl.setView(scale: scale, halfWidth: min(World.width / 2, Double(map.width / scale / 2)))
+            let full: CGRect = upright
+                ? CGRect(x: map.midX - CGFloat(ctl.centre()) * scale, y: map.minY, width: World.width * scale, height: map.height)
+                : map
             ZStack(alignment: .topLeading) {
                 Ink.paper3
                 SpriteView(scene: ctl.scene, preferredFramesPerSecond: 60, options: [.ignoresSiblingOrder])
-                    .frame(width: map.width, height: map.height)
+                    .frame(width: full.width, height: full.height)
+                    .offset(x: full.minX - map.minX)
+                    .frame(width: map.width, height: map.height, alignment: .topLeading)
+                    .clipped()
                     .offset(x: map.minX, y: map.minY)
-                HudLayer(ctl: ctl, map: map, side: side, safe: safe, size: CGSize(width: w, height: h), band: band)
+                HudLayer(ctl: ctl, map: map, full: full, side: side, upright: upright, safe: safe, size: CGSize(width: w, height: h), band: band)
             }
             .frame(width: w, height: h)
             .offset(x: -safe.leading, y: -safe.top)
@@ -46,8 +65,11 @@ enum AppHolder { static weak var shared: AppModel? }
 
 private struct HudLayer: View {
     @ObservedObject var ctl: BattleController
+    /// The part of the screen the map shows in, and the whole map (wider than the screen on an upright phone).
     let map: CGRect
+    let full: CGRect
     let side: Bool
+    let upright: Bool
     let safe: EdgeInsets
     let size: CGSize
     let band: CGFloat
@@ -56,7 +78,32 @@ private struct HudLayer: View {
         let _ = ctl.tick
         let b = ctl.battle
         ZStack(alignment: .topLeading) {
-            if side {
+            if upright {
+                // Top strip: lives, gold, wave and the controls. Band below the map: Wren and the call button, then the skills.
+                HStack(alignment: .center, spacing: 8) {
+                    StatsView(ctl: ctl, vertical: false)
+                    Spacer(minLength: 0)
+                    ControlsView(ctl: ctl)
+                }
+                .padding(.horizontal, 8).padding(.bottom, 6)
+                .frame(width: size.width, height: map.minY, alignment: .bottom)
+                .background(Ink.paper)
+                .overlay(Rectangle().fill(Ink.rule).frame(height: 1), alignment: .bottom)
+                VStack(spacing: 10) {
+                    HStack(alignment: .top, spacing: 8) {
+                        HeroCard(ctl: ctl)
+                        Spacer(minLength: 0)
+                        CallView(ctl: ctl, compact: true)
+                    }
+                    SkillsView(ctl: ctl, columns: false)
+                }
+                .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 10 + safe.bottom)
+                .frame(width: size.width, height: size.height - map.maxY, alignment: .top)
+                .background(Ink.paper)
+                .overlay(Rectangle().fill(Ink.rule).frame(height: 1), alignment: .top)
+                .offset(y: map.maxY)
+                EdgeMarks(battle: b, map: map, full: full)
+            } else if side {
                 // Left column: lives, gold, wave and the hero. Right column: controls, skills, the call button.
                 VStack(alignment: .leading, spacing: 8) {
                     StatsView(ctl: ctl, vertical: true)
@@ -130,7 +177,50 @@ private struct HudLayer: View {
     }
 
     func toView(_ x: Double, _ y: Double) -> CGPoint {
-        CGPoint(x: map.minX + x / World.width * map.width, y: map.minY + y / World.height * map.height)
+        CGPoint(x: full.minX + x / World.width * full.width, y: full.minY + y / World.height * full.height)
+    }
+}
+
+/// When the map runs past the screen's sides: a soft shade at an edge with more map beyond it,
+/// and a dark notch on that edge for each foe out of view, at its height on the map.
+private struct EdgeMarks: View {
+    let battle: Battle
+    let map: CGRect
+    let full: CGRect
+
+    var body: some View {
+        let k = full.width / World.width
+        let x0 = Double((map.minX - full.minX) / k), x1 = Double((map.maxX - full.minX) / k)
+        ZStack(alignment: .topLeading) {
+            ForEach([-1, 1], id: \.self) { side in
+                let more = side < 0 ? full.minX < map.minX - 1 : full.maxX > map.maxX + 1
+                if more {
+                    let ex = side < 0 ? map.minX : map.maxX
+                    LinearGradient(colors: [Ink.ink.opacity(0.28), Ink.ink.opacity(0)], startPoint: side < 0 ? .leading : .trailing, endPoint: side < 0 ? .trailing : .leading)
+                        .frame(width: 18, height: map.height)
+                        .offset(x: side < 0 ? ex : ex - 18, y: map.minY)
+                    ForEach(battle.foes.filter { !$0.dead && (side < 0 ? $0.x < x0 : $0.x > x1) }, id: \.id) { f in
+                        let y = map.minY + max(8, min(map.height - 8, CGFloat(f.y) * k))
+                        Notch(left: side < 0).fill(Ink.life)
+                            .frame(width: 10, height: 14)
+                            .offset(x: side < 0 ? ex + 2 : ex - 12, y: y - 7)
+                    }
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// A small arrow head pointing off the screen.
+private struct Notch: Shape {
+    let left: Bool
+    func path(in r: CGRect) -> SwiftUI.Path {
+        SwiftUI.Path { p in
+            if left { p.move(to: CGPoint(x: r.maxX, y: r.minY)); p.addLine(to: CGPoint(x: r.minX, y: r.midY)); p.addLine(to: CGPoint(x: r.maxX, y: r.maxY)) }
+            else { p.move(to: CGPoint(x: r.minX, y: r.minY)); p.addLine(to: CGPoint(x: r.maxX, y: r.midY)); p.addLine(to: CGPoint(x: r.minX, y: r.maxY)) }
+            p.closeSubpath()
+        }
     }
 }
 
