@@ -174,6 +174,19 @@ npm run native:art    # paint the sprites, maps and menu pictures for the iOS ap
 
 The art step paints with the same painters the web game uses (`src/art/lfx.js`), in a headless browser, so both games always look alike. Every push that touches `ios/` builds the app and runs the Swift tests on a Mac (`.github/workflows/ios.yml`).
 
+#### Play it on your iPhone
+
+You need a Mac with Xcode 16 or newer and a free Apple ID. No npm step is needed: the art is in the repo.
+
+1. Clone the repo and open `ios/TowerRiot/TowerRiot.xcodeproj` in Xcode.
+2. In Xcode, open Settings, then Accounts, and add your Apple ID.
+3. Click the TowerRiot project, then the TowerRiot target, then Signing & Capabilities. Pick your name under Team. If Xcode says the bundle id is taken, change `com.njarrar.towerriot` to anything of your own.
+4. Plug the iPhone in with a cable, unlock it and tap Trust. On the phone, turn on Settings, Privacy & Security, Developer Mode, and let it restart.
+5. Pick the iPhone in the device menu at the top of Xcode and press Run (Cmd R).
+6. The first time, the phone blocks the app. Open Settings, General, VPN & Device Management, tap your Apple ID and tap Trust. Then open TowerRiot.
+
+With a free Apple ID the app stops opening after 7 days. Press Run again to renew it.
+
 ### Android app
 
 ```bash
