@@ -9,7 +9,7 @@ import {
 } from '../game/save';
 import { Audio } from '../audio/sfx';
 import { h, clear, icon } from './dom';
-import { towerIcon, LOCK_ICON } from './icons';
+import { towerIcon, LOCK_ICON, SOUND_ICON, MUTE_ICON } from './icons';
 import { BattleScreen } from './battle';
 import { Battle, starLives } from '../game/sim';
 import { Scene, W as MAP_W, H as MAP_H } from '../render/scene';
@@ -29,6 +29,31 @@ export class App {
   }
 
   private persist() { writeSave(this.store, this.save); }
+
+  /** Sound on or off, from any screen. The choice lives in the save, so it holds next time. */
+  toggleSound(): boolean {
+    this.save.settings.sound = !this.save.settings.sound;
+    this.audio.unlock();
+    this.applySettings();
+    if (this.save.settings.sound) this.audio.play('click');
+    return this.save.settings.sound;
+  }
+
+  /** A speaker button for menus: struck through when muted. */
+  private soundButton(cls = '') {
+    const btn = h('button', { class: `btn icon sound ${cls}` });
+    const show = () => {
+      const on = this.save.settings.sound;
+      clear(btn); btn.append(icon(on ? SOUND_ICON : MUTE_ICON));
+      btn.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
+      btn.setAttribute('title', on ? 'Mute sound' : 'Turn sound on');
+      btn.setAttribute('aria-pressed', String(!on));
+      btn.classList.toggle('off', !on);
+    };
+    btn.addEventListener('click', () => { this.toggleSound(); show(); });
+    show();
+    return btn;
+  }
 
   /** Where the Android back button goes. Returns false on the title screen, so the app can close. */
   private screen: 'title' | 'campaign' | 'trees' | 'settings' | 'battle' = 'title';
@@ -53,7 +78,7 @@ export class App {
     this.screen = 'title';
     const c = cleared(this.save), next = Math.min(20, c + 1);
     const map = h('canvas', { class: 'title-map', 'aria-hidden': 'true' });
-    const el = h('section', { class: 'screen title' }, map,
+    const el = h('section', { class: 'screen title' }, map, this.soundButton('title-sound'),
       h('div', { class: 'title-inner' },
         h('div', { class: 'title-panel' },
           h('h1', { class: 'logo', text: 'TowerRiot' }),
@@ -153,7 +178,7 @@ export class App {
       h('header', { class: 'bar-top' },
         h('button', { class: 'btn', onclick: () => this.title() }, 'Back'),
         h('h2', { text: 'The campaign' }),
-        h('button', { class: 'btn', onclick: () => this.trees() }, `Skill trees: ${e.free} Embers`)),
+        h('div', { class: 'bar-end' }, h('button', { class: 'btn', onclick: () => this.trees() }, `Skill trees: ${e.free} Embers`), this.soundButton())),
       h('div', { class: 'campaign-body' }, regions, card)));
     show(focus ?? next);
     // Open on the stage you came for: on a phone the cleared regions above would push it off screen.
@@ -216,7 +241,7 @@ export class App {
     this.mount(h('section', { class: 'screen settings' },
       h('header', { class: 'bar-top' }, h('button', { class: 'btn', onclick: () => this.title() }, 'Back'), h('h2', { text: 'Settings' }), h('span')),
       h('div', { class: 'panel' },
-        toggle('Sound', 'sound', 'Tower fire, hits and Wren.'),
+        toggle('Sound', 'sound', 'Tower fire, hits and Wren. Mute it any time with the speaker button, or M in battle.'),
         toggle('Calm motion', 'reduceMotion', 'No screen shake, fog drift or light shafts.'),
         toggle('Auto skill points', 'autoSkills', 'Spend Wren\'s points for you as she levels. On by default in Mosslight Vale.'),
         toggle('Damage numbers', 'dmgNumbers', 'Show the damage of big hits over foes.'),
@@ -226,7 +251,7 @@ export class App {
           h('li', { text: 'Tap the ground to move Wren. She holds that spot and blocks up to two foes. Tap a foe to send her after it.' }),
           h('li', { text: 'Wren gains levels inside each stage. Spend points on Q, W, E and R. Landing the killing blow pays 50% more gold.' }),
           h('li', { text: 'Walk her to the gate to shop. Grab runes when they glow on the map.' }),
-          h('li', { text: 'Keys: Q W E R skills, 1 to 6 build, Space next wave, F speed, P pause, B shop. Right click moves Wren.' })),
+          h('li', { text: 'Keys: Q W E R skills, 1 to 6 build, Space next wave, F speed, P pause, M sound, B shop. Right click moves Wren.' })),
         erase)));
   }
 
@@ -246,6 +271,7 @@ export class App {
     requestAnimationFrame(() => setTimeout(() => {
       const screen = new BattleScreen({
         audio: this.audio,
+        toggleSound: () => this.toggleSound(),
         mods: modsFor(this.save),
         reduceMotion: this.save.settings.reduceMotion,
         autoSkills: this.save.settings.autoSkills ?? stageById(id).region === 0,

@@ -6,7 +6,14 @@ export class Audio {
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   private last = new Map<Sfx, number>();
-  enabled = true;
+  private on = true;
+
+  /** Muting also silences any sound already playing, not just the next one. */
+  get enabled() { return this.on; }
+  set enabled(v: boolean) {
+    this.on = v;
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(v ? 0.5 : 0, this.ctx.currentTime, 0.02);
+  }
 
   /** Browsers start audio only after a tap. Call this from the first input. */
   unlock() {
@@ -15,7 +22,7 @@ export class Audio {
     if (!AC) return;
     this.ctx = new AC();
     this.master = this.ctx.createGain();
-    this.master.gain.value = 0.5;
+    this.master.gain.value = this.on ? 0.5 : 0;
     this.master.connect(this.ctx.destination);
     const len = this.ctx.sampleRate;
     this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
