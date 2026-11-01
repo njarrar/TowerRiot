@@ -9,7 +9,7 @@ import { ITEMS, ITEM_ORDER, ITEM_SLOTS, RUNES } from '../game/data/shop';
 import type { Mods } from '../game/mods';
 import type { Audio } from '../audio/sfx';
 import { h, clear, setText, icon } from './dom';
-import { towerIcon, foeIcon, SKILL_ICON, LOCK_ICON, ELEMENT_ICON } from './icons';
+import { towerIcon, foeIcon, heroIcon, SKILL_ICON, LOCK_ICON, ELEMENT_ICON, PAUSE_ICON, PLAY_ICON, LEAVE_ICON, WING_ICON } from './icons';
 
 export interface BattleHost {
   audio: Audio;
@@ -29,6 +29,12 @@ const ELEMENT_TITLE: Record<string, string> = { pierce: 'Bolts', fire: 'Fire', f
 const RESIST_CAP = 0.6;
 const MODE_NAME: Record<TargetMode, string> = { first: 'First', strong: 'Strongest', close: 'Closest' };
 const ROUND_NAME: Record<Rounds, string> = { ember: 'Ember', frost: 'Frost', storm: 'Storm' };
+/** What each tower is for, in a few words: shown on the build buttons, since a finger cannot hover. */
+const TOWER_ROLE: Record<TowerKind, string> = {
+  watch: 'One target, hits fliers', cannon: 'Blasts groups, ground only', bell: 'Slows all around it',
+  pylon: 'Jumps foe to foe, hits fliers', roots: 'Holds a foe, ground only', beacon: 'Boosts towers, shows Shades',
+};
+const coin = (n: number | string) => h('span', { class: 'price' }, h('i', { class: 'ico gold', 'aria-hidden': 'true' }), String(n));
 
 export class BattleScreen {
   readonly el: HTMLElement;
@@ -191,7 +197,7 @@ export class BattleScreen {
     el.append(h('div', { class: 'nw-foes' }, ...nw.foes.map(f => {
       const d = ENEMIES[f.kind];
       return h('span', { class: `nw-foe ${d.flying ? 'fly' : ''}`, title: `${d.name}: ${d.blurb}` },
-        h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), h('span', { class: 'nw-name', text: d.flying ? `${d.name}, flying` : d.name }));
+        h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), d.flying ? icon(WING_ICON, 'svg-ico nw-wing') : null, h('span', { class: 'nw-name', text: d.name }));
     })));
     if (adapts) el.append(h('div', { class: 'nw-note', text: lean ? `The Hollow adapts this wave, against your ${ELEMENT_NAME[lean]}.` : 'The Hollow adapts this wave.' }));
   }
@@ -222,7 +228,6 @@ export class BattleScreen {
   /* ------------------------------------------------------------------ HUD */
 
   private buildHud(): HTMLElement {
-    const b = this.battle, st = b.stage;
     const stat = (cls: string, label: string) => {
       const v = h('b', { class: 'v' });
       this.hud[cls] = v;
@@ -235,7 +240,7 @@ export class BattleScreen {
     this.hud.call = call;
     const speed = h('button', { class: 'btn icon speed', title: 'Game speed (F)', onclick: () => this.cycleSpeed() }, '1x');
     this.hud.speed = speed;
-    const pause = h('button', { class: 'btn icon', title: 'Pause (P)', onclick: () => this.togglePause() }, 'II');
+    const pause = h('button', { class: 'btn icon pause', title: 'Pause (P)', 'aria-label': 'Pause', onclick: () => this.togglePause() }, icon(PAUSE_ICON));
     this.hud.pause = pause;
 
     // Hero card.
@@ -262,12 +267,13 @@ export class BattleScreen {
     const shopBtn = h('button', { class: 'btn shopbtn', onclick: () => this.toggleShop() }, 'Shop');
     this.hud.shopBtn = shopBtn;
     const heroCard = h('div', { class: 'hero-card' },
-      h('div', { class: 'hero-top' }, lvl, h('div', { class: 'hero-name', text: 'Wren' }), pts),
+      h('div', { class: 'hero-top' }, h('div', { class: 'face' }, h('img', { src: heroIcon(40), alt: '' }), lvl), h('div', { class: 'hero-name', text: 'Wren' }), pts),
       hpBar, xpBar, h('div', { class: 'hero-bottom' }, items, shopBtn));
 
     // The same parts sit in side columns on wide screens and in a bottom band on narrower ones (see fit()).
     this.hud.stats = h('div', { class: 'hud-stats' }, stat('lives', 'Lives'), stat('gold', 'Gold'), stat('wave', 'Wave'), resist);
-    this.hud.ctrl = h('div', { class: 'hud-ctrl' }, speed, pause, h('button', { class: 'btn icon', title: 'Leave the battle', 'aria-label': 'Leave the battle', onclick: () => this.confirmExit() }, '✕'));
+    // Leaving lives in the pause card, so a slip of the thumb next to pause cannot end a run.
+    this.hud.ctrl = h('div', { class: 'hud-ctrl' }, speed, pause);
     this.hud.hero = heroCard;
     this.hud.skills = skills;
     const next = h('div', { class: 'next-wave', 'aria-live': 'off' });
@@ -277,8 +283,7 @@ export class BattleScreen {
     this.hud.colR = h('div', { class: 'col col-r' });
     this.hud.band = h('div', { class: 'band' });
     this.hud.over = h('div', { class: 'over' });
-    return h('div', { class: 'hud' }, this.hud.colL, this.hud.colR, this.hud.band, this.hud.over,
-      h('div', { class: 'stage-name', text: `${st.id}. ${st.name}` }));
+    return h('div', { class: 'hud' }, this.hud.colL, this.hud.colR, this.hud.band, this.hud.over);
   }
 
   private updateHud(dt: number) {
@@ -320,7 +325,7 @@ export class BattleScreen {
       const locked = (k === 'w' && !b.mods.skillW) || (k === 'r' && !b.mods.skillR);
       btn.classList.toggle('locked', locked);
       // Say when a skill opens instead of showing a dead button.
-      const req = locked ? `After stage ${k === 'w' ? 1 : 7}` : r === 0 && hero.level < s.needLevel(1) ? `Level ${s.needLevel(1)}` : '';
+      const req = locked ? `Clear stage ${k === 'w' ? 1 : 7}` : r === 0 && hero.level < s.needLevel(1) ? `Level ${s.needLevel(1)}` : '';
       setText(btn.querySelector('.req')!, req);
       btn.classList.toggle('has-req', !!req);
       btn.classList.toggle('none', r === 0);
@@ -329,7 +334,8 @@ export class BattleScreen {
       btn.classList.toggle('aiming', k === 'w' && this.aimingW);
       const cd = r > 0 && k !== 'e' ? hero.cd[k] / s.cd[r - 1] : 0;
       (btn.querySelector('.cd') as HTMLElement).style.height = `${Math.max(0, Math.min(1, cd)) * 100}%`;
-      setText(btn.querySelector('.ranks')!, '◆'.repeat(r) + '◇'.repeat(s.maxRank - r));
+      const ranks = btn.querySelector<HTMLElement>('.ranks')!;
+      if (ranks.dataset.r !== `${r}`) { ranks.dataset.r = `${r}`; clear(ranks); for (let i = 0; i < s.maxRank; i++) ranks.append(h('i', { class: i < r ? 'on' : '' })); }
     }
     // Items.
     const ik = hero.items.join();
@@ -431,10 +437,24 @@ export class BattleScreen {
     setText(this.hud.speed, `${b.speed}x`);
   }
 
+  private pauseCard: HTMLElement | null = null;
+
+  /** Pause shows a small card over the map: resume, or leave the battle. The map stays in view. */
   private togglePause() {
-    this.battle.paused = !this.battle.paused;
-    setText(this.hud.pause, this.battle.paused ? '▶' : 'II');
-    this.el.classList.toggle('paused', this.battle.paused);
+    const b = this.battle;
+    b.paused = !b.paused;
+    clear(this.hud.pause); this.hud.pause.append(icon(b.paused ? PLAY_ICON : PAUSE_ICON));
+    this.hud.pause.setAttribute('aria-label', b.paused ? 'Resume' : 'Pause');
+    this.el.classList.toggle('paused', b.paused);
+    this.pauseCard?.remove(); this.pauseCard = null;
+    if (b.paused && !this.exitVeil && !this.ended) {
+      this.pauseCard = h('div', { class: 'pause-card', role: 'dialog', 'aria-label': 'Paused' },
+        h('div', { class: 'banner-title', text: 'Paused' }),
+        h('div', { class: 'act-row' },
+          h('button', { class: 'btn primary', onclick: () => this.togglePause() }, 'Resume'),
+          h('button', { class: 'btn leave', onclick: () => this.confirmExit() }, icon(LEAVE_ICON), 'Leave battle')));
+      this.el.append(this.pauseCard);
+    }
   }
 
   /* ------------------------------------------------------------------ build and tower menus */
@@ -468,7 +488,9 @@ export class BattleScreen {
   private previewTower(k: TowerKind) {
     this.view.preview = k;
     const d = TOWERS[k];
-    setText(this.menu.querySelector('.note-preview'), `${d.name}: ${d.blurb}${d.hitsFlying ? '' : ' Cannot hit fliers.'}`);
+    const note = this.menu.querySelector('.note-preview');
+    note?.classList.remove('hidden');
+    setText(note, `${d.name}: ${d.blurb}${d.hitsFlying ? '' : ' Cannot hit fliers.'}`);
   }
 
   private closeMenu() {
@@ -499,11 +521,11 @@ export class BattleScreen {
           class: `build ${ok ? '' : 'poor'}`, title: `${def.name}: ${def.blurb}`, 'data-cost': cost,
           onpointerenter: () => this.previewTower(k),
           onclick: () => { if (b.build(pi, k)) this.closeMenu(); else this.previewTower(k); },
-        }, h('img', { src: towerIcon(k), alt: '' }), h('span', { class: 'bn', text: def.name }), h('span', { class: 'bc', text: `${cost}` }), h('span', { class: 'hot', text: String(idx + 1) }));
+        }, h('img', { src: towerIcon(k), alt: '' }), h('span', { class: 'bn', text: def.name }), h('span', { class: 'br', text: TOWER_ROLE[k] }), h('span', { class: 'bc', text: `${cost}` }), h('span', { class: 'hot', text: String(idx + 1) }));
         row.append(btn);
       });
       m.append(row);
-      m.append(h('div', { class: 'popup-note note-preview', text: 'Tap a tower to build it.' }));
+      m.append(h('div', { class: 'popup-note note-preview hidden' }));
       if (place) this.placeMenu(p.x, p.y);
       return;
     }
@@ -520,14 +542,19 @@ export class BattleScreen {
     if (rs > 0) m.append(h('div', { class: 'popup-warn' }, icon(ELEMENT_ICON[el] ?? ''), h('span', { text: `The Hollow takes ${Math.round(rs * 100)}% less ${ELEMENT_NAME[el]} damage right now. Mix in other towers.` })));
     const acts = h('div', { class: 'act-row' });
     const up = b.upgradeCost(t);
-    if (up !== null) acts.append(h('button', { class: `btn act ${b.gold >= up ? '' : 'poor'}`, 'data-cost': up, onclick: () => b.upgrade(t.id) }, `Upgrade ${up}`));
+    if (up !== null) {
+      // Say what the gold buys: the next level's numbers beside today's.
+      const n = b.stats({ ...t, lv: t.lv + 1 });
+      const gain = t.kind === 'beacon' || t.kind === 'bell' ? `Range ${Math.round(s.range)} to ${Math.round(n.range)}` : `Damage ${Math.round(s.dmg)} to ${Math.round(n.dmg)}, range ${Math.round(s.range)} to ${Math.round(n.range)}`;
+      acts.append(h('button', { class: `btn act primary upgrade ${b.gold >= up ? '' : 'poor'}`, 'data-cost': up, onclick: () => b.upgrade(t.id) },
+        h('span', { class: 'up-t' }, `Level ${t.lv + 1}`, coin(up)), h('small', { text: gain })));
+    }
     if (t.lv === 3 && b.mods.splits && t.kind !== 'beacon' || (t.lv === 3 && t.kind === 'beacon' && b.mods.splits)) {
       for (const sp of def.splits) {
         const c = b.splitCost(t.kind, sp.id);
         acts.append(h('button', { class: `btn act split ${b.gold >= c ? '' : 'poor'}`, 'data-cost': c, title: sp.desc, onclick: () => b.splitTower(t.id, sp.id) }, h('b', { text: sp.name }), h('small', { text: `${sp.desc} ${c}` })));
       }
     } else if (t.lv === 3 && !b.mods.splits) acts.append(h('div', { class: 'popup-note', text: 'Level 4 splits open after Storm Shelf.' }));
-    acts.append(h('button', { class: 'btn act sell', onclick: () => { b.sell(t.id); this.closeMenu(); } }, `Sell ${b.sellValue(t)}`));
     m.append(acts);
     if (t.kind !== 'beacon' && t.kind !== 'bell') {
       const modes = h('div', { class: 'seg', role: 'group', 'aria-label': 'Target' });
@@ -540,6 +567,8 @@ export class BattleScreen {
         m.append(h('div', { class: 'popup-sub', text: 'Rounds' }), rounds);
       }
     }
+    // Selling is rare and costs gold: a quiet line at the foot of the card, away from Upgrade.
+    m.append(h('button', { class: 'sell-link', onclick: () => { b.sell(t.id); this.closeMenu(); } }, 'Sell for ', coin(b.sellValue(t))));
     if (place) this.placeMenu(t.x, t.y - 90);
   }
 
@@ -555,7 +584,10 @@ export class BattleScreen {
     el.dataset.sig = sig;
     clear(el);
     el.append(h('div', { class: 'shop-head' }, h('b', { text: 'The gate shop' }), h('button', { class: 'btn icon', onclick: () => this.closeShop(), 'aria-label': 'Close' }, '✕')));
-    el.append(h('p', { class: 'popup-note', text: near ? `Wren is at the gate. ${b.hero.items.length}/${ITEM_SLOTS} slots used.` : 'Walk Wren to the gate to buy or sell. Gold spent here is gold not spent on towers.' }));
+    if (near) el.append(h('p', { class: 'popup-note', text: `Wren is at the gate. ${b.hero.items.length} of ${ITEM_SLOTS} slots used. Gold spent here is gold not spent on towers.` }));
+    else el.append(h('div', { class: 'shop-far' },
+      h('p', { class: 'popup-note', text: 'Wren buys at the gate.' }),
+      h('button', { class: 'btn primary act', onclick: () => { const g = b.gate[0]; b.moveHero(g[0] - 60, g[1]); this.scene.markMove(g[0] - 60, g[1]); } }, b.hero.dead ? 'Wren is down' : 'Send Wren to the gate')));
     const list = h('div', { class: 'shop-list' });
     for (const id of ITEM_ORDER) {
       const it = ITEMS[id];
@@ -564,8 +596,8 @@ export class BattleScreen {
       list.append(h('div', { class: `item ${owned ? 'owned' : ''}` },
         h('div', {}, h('b', { text: it.name }), h('small', { text: it.desc })),
         owned
-          ? h('button', { class: `btn act ${near ? '' : 'poor'}`, onclick: () => b.sellItem(id) }, `Sell ${Math.floor(it.cost / 2)}`)
-          : h('button', { class: `btn act ${b.canBuy(id) ? '' : 'poor'}`, onclick: () => b.buy(id) }, `${it.cost}`)));
+          ? h('button', { class: `btn act ${near ? '' : 'poor'}`, onclick: () => b.sellItem(id) }, 'Sell ', coin(Math.floor(it.cost / 2)))
+          : h('button', { class: `btn act buy ${b.canBuy(id) ? '' : 'poor'} ${b.gold < it.cost ? 'short' : ''}`, disabled: !near, onclick: () => b.buy(id) }, coin(it.cost))));
     }
     el.append(list);
   }
@@ -583,6 +615,7 @@ export class BattleScreen {
     if (this.exitVeil) { this.closeExit(); return; }
     const wasPaused = this.battle.paused;
     if (!wasPaused) this.togglePause();
+    this.pauseCard?.remove(); this.pauseCard = null;
     const stay = h('button', { class: 'btn primary', onclick: () => this.closeExit() }, 'Keep fighting');
     const card = h('div', { class: 'result', role: 'dialog', 'aria-label': 'Leave this battle?' },
       h('h2', { text: 'Leave this battle?' }),
@@ -600,6 +633,7 @@ export class BattleScreen {
     this.exitVeil.remove();
     this.exitVeil = null;
     if (resume && this.battle.paused) this.togglePause();
+    else if (this.battle.paused) { this.togglePause(); this.togglePause(); }
   }
 
   private end(won: boolean, stars: number) {
@@ -609,11 +643,11 @@ export class BattleScreen {
     const gained = won ? this.host.onResult(st.id, stars) : 0;
     const card = h('div', { class: `result ${won ? 'won' : 'lost'}`, role: 'dialog', 'aria-label': won ? 'Victory' : 'Defeat' },
       h('h2', { text: won ? 'The Keep holds' : 'The gate falls' }),
-      h('div', { class: 'stars', 'aria-label': `${stars} of 3 stars` }, ...[1, 2, 3].map(i => h('span', { class: i <= stars ? 'on' : '', text: '★' }))),
+      won ? h('div', { class: 'stars reveal', 'aria-label': `${stars} of 3 stars` }, ...[1, 2, 3].map(i => h('span', { class: i <= stars ? 'on' : '', style: `--i:${i}`, text: '★' }))) : null,
       h('p', { text: won ? `${st.name} cleared with ${this.battle.lives} lives left. Wren reached level ${this.battle.hero.level}.` : `Wave ${this.battle.wave} of ${this.battle.totalWaves}. Try other towers, or send Wren to the weak side.` }),
       won && gained > 0 ? h('p', { class: 'embers', text: `+${gained} Embers for the skill trees` }) : null,
       h('div', { class: 'act-row' },
-        h('button', { class: 'btn', onclick: () => this.host.onRetry(st.id) }, 'Play again'),
+        h('button', { class: `btn ${won ? '' : 'primary'}`, onclick: () => this.host.onRetry(st.id) }, won ? 'Play again' : 'Try again'),
         won && st.id < 20 ? h('button', { class: 'btn primary', onclick: () => this.host.onNext(st.id + 1) }, 'Next stage') : null,
         h('button', { class: 'btn', onclick: () => this.host.onExit() }, 'Map')));
     this.el.append(h('div', { class: 'veil' }, card));
