@@ -87,8 +87,8 @@ private struct RegionStrip: View {
         .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Ink.rule, lineWidth: 1))
     }
 
-    private func road(_ stops: [CGPoint], W: CGFloat, H: CGFloat) -> Path {
-        Path { p in
+    private func road(_ stops: [CGPoint], W: CGFloat, H: CGFloat) -> SwiftUI.Path {
+        SwiftUI.Path { p in
             guard let first = stops.first, let last = stops.last else { return }
             p.move(to: CGPoint(x: -0.2 * W, y: first.y + 0.06 * H))
             p.addCurve(to: first, control1: CGPoint(x: 0, y: first.y + 0.06 * H), control2: CGPoint(x: first.x - 0.04 * W, y: first.y))
