@@ -1,0 +1,222 @@
+[
+ {
+  "stage": 1,
+  "won": true,
+  "lives": 20,
+  "waves": 6,
+  "level": 6,
+  "gold": 39,
+  "towers": 7,
+  "kills": 90,
+  "clock": 162.1
+ },
+ {
+  "stage": 2,
+  "won": true,
+  "lives": 20,
+  "waves": 8,
+  "level": 8,
+  "gold": 58,
+  "towers": 11,
+  "kills": 152,
+  "clock": 238.233
+ },
+ {
+  "stage": 3,
+  "won": true,
+  "lives": 20,
+  "waves": 8,
+  "level": 7,
+  "gold": 86,
+  "towers": 11,
+  "kills": 142,
+  "clock": 285.133
+ },
+ {
+  "stage": 4,
+  "won": true,
+  "lives": 20,
+  "waves": 8,
+  "level": 14,
+  "gold": 107,
+  "towers": 13,
+  "kills": 169,
+  "clock": 260.6
+ },
+ {
+  "stage": 5,
+  "won": true,
+  "lives": 20,
+  "waves": 7,
+  "level": 13,
+  "gold": 41,
+  "towers": 10,
+  "kills": 143,
+  "clock": 258.333
+ },
+ {
+  "stage": 6,
+  "won": true,
+  "lives": 20,
+  "waves": 10,
+  "level": 16,
+  "gold": 112,
+  "towers": 11,
+  "kills": 231,
+  "clock": 313.967
+ },
+ {
+  "stage": 7,
+  "won": true,
+  "lives": 19,
+  "waves": 9,
+  "level": 10,
+  "gold": 77,
+  "towers": 12,
+  "kills": 167,
+  "clock": 271.5
+ },
+ {
+  "stage": 8,
+  "won": true,
+  "lives": 16,
+  "waves": 10,
+  "level": 16,
+  "gold": 841,
+  "towers": 12,
+  "kills": 318,
+  "clock": 318.467
+ },
+ {
+  "stage": 9,
+  "won": true,
+  "lives": 20,
+  "waves": 10,
+  "level": 16,
+  "gold": 109,
+  "towers": 12,
+  "kills": 198,
+  "clock": 307.667
+ },
+ {
+  "stage": 10,
+  "won": true,
+  "lives": 18,
+  "waves": 8,
+  "level": 12,
+  "gold": 125,
+  "towers": 12,
+  "kills": 155,
+  "clock": 269.933
+ },
+ {
+  "stage": 11,
+  "won": true,
+  "lives": 20,
+  "waves": 9,
+  "level": 16,
+  "gold": 71,
+  "towers": 12,
+  "kills": 237,
+  "clock": 311.533
+ },
+ {
+  "stage": 12,
+  "won": true,
+  "lives": 13,
+  "waves": 10,
+  "level": 16,
+  "gold": 121,
+  "towers": 13,
+  "kills": 217,
+  "clock": 317.7
+ },
+ {
+  "stage": 13,
+  "won": true,
+  "lives": 22,
+  "waves": 9,
+  "level": 16,
+  "gold": 230,
+  "towers": 13,
+  "kills": 232,
+  "clock": 276.933
+ },
+ {
+  "stage": 14,
+  "won": true,
+  "lives": 23,
+  "waves": 9,
+  "level": 16,
+  "gold": 76,
+  "towers": 13,
+  "kills": 255,
+  "clock": 273.833
+ },
+ {
+  "stage": 15,
+  "won": true,
+  "lives": 11,
+  "waves": 7,
+  "level": 15,
+  "gold": 116,
+  "towers": 13,
+  "kills": 152,
+  "clock": 375.8
+ },
+ {
+  "stage": 16,
+  "won": true,
+  "lives": 16,
+  "waves": 9,
+  "level": 16,
+  "gold": 187,
+  "towers": 13,
+  "kills": 202,
+  "clock": 326.4
+ },
+ {
+  "stage": 17,
+  "won": true,
+  "lives": 18,
+  "waves": 10,
+  "level": 16,
+  "gold": 2616,
+  "towers": 9,
+  "kills": 313,
+  "clock": 370.733
+ },
+ {
+  "stage": 18,
+  "won": true,
+  "lives": 15,
+  "waves": 9,
+  "level": 16,
+  "gold": 197,
+  "towers": 13,
+  "kills": 241,
+  "clock": 295.133
+ },
+ {
+  "stage": 19,
+  "won": true,
+  "lives": 21,
+  "waves": 10,
+  "level": 16,
+  "gold": 2316,
+  "towers": 13,
+  "kills": 327,
+  "clock": 316.9
+ },
+ {
+  "stage": 20,
+  "won": true,
+  "lives": 18,
+  "waves": 7,
+  "level": 16,
+  "gold": 2098,
+  "towers": 13,
+  "kills": 236,
+  "clock": 248.433
+ }
+]
