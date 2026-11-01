@@ -60,6 +60,10 @@ export interface View {
   reduceMotion: boolean;
   /** Show damage numbers over foes. Gold and lives always show. */
   dmgNumbers: boolean;
+  /** A plot to mark for a new player (stage 1, before the first tower). */
+  hintPlot?: number | null;
+  /** A still frame (title screen): no health bars or shells in flight. */
+  still?: boolean;
 }
 
 export class Scene {
@@ -342,11 +346,11 @@ export class Scene {
     for (const t of b.towers) this.drawTowerEmit(b, t, T);
     for (const [x, y] of this.posts) { const f = 0.8 + 0.2 * Math.sin(T * 15 + x); g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - 34, 10 * f, '#ff9a3a', 0.25); g.restore(); g.fillStyle = '#ffd08a'; g.fillRect(x - 2, y - 37, 4, 6 * f); }
     for (const f of b.foes) this.drawFoe(f, 'emit', T);
-    if (!b.hero.dead) this.drawHero(b, 'emit', T);
+    if (!b.hero.dead) this.drawHero(b, 'emit', T, !!view.still);
     for (const [gx, gy] of b.gate) L.gate(g, gx, gy, 'emit');
     if (st.lighthouse) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, st.lighthouse[0], st.lighthouse[1] - 110, 60, '#ffe6b0', 0.5); g.restore(); }
 
-    this.drawShots(b);
+    if (!view.still) this.drawShots(b);
     this.drawFx(T);
     this.drawRanges(b, view);
     this.drawCrows(T, dt, view.reduceMotion);
@@ -461,6 +465,13 @@ export class Scene {
         if (!up) { g.fillStyle = 'rgba(10,12,10,.45)'; g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.fill(); }
       }
       if (used) return;
+      if (view.hintPlot === i && view.selPlot !== i) {
+        // A steady double ring, no pulse: easy to find, quiet once seen.
+        g.lineWidth = 3; g.strokeStyle = 'rgba(255,248,232,.95)';
+        g.beginPath(); g.ellipse(p.x, p.y - 1.5, 46, 19, 0, 0, TAU); g.stroke();
+        g.lineWidth = 2; g.strokeStyle = 'rgba(40,30,22,.75)';
+        g.beginPath(); g.ellipse(p.x, p.y - 1.5, 50, 21, 0, 0, TAU); g.stroke();
+      }
       if (view.selPlot === i) {
         g.strokeStyle = `rgba(255,214,140,${0.6 + 0.3 * Math.sin(T * 6)})`; g.lineWidth = 2.5;
         g.beginPath(); g.ellipse(p.x, p.y - 1.5, 39, 16, 0, 0, TAU); g.stroke();
@@ -609,7 +620,7 @@ export class Scene {
     }
   }
 
-  private drawHero(b: Battle, pass: 'base' | 'emit', T: number) {
+  private drawHero(b: Battle, pass: 'base' | 'emit', T: number, still = false) {
     const g = this.g, h = b.hero;
     if (pass === 'base') {
       // A pale ring of lantern light at her feet: the one unit you command never reads as a foe.
@@ -622,6 +633,7 @@ export class Scene {
       return;
     }
     L.wren(g, h.x, h.y, 1.4, 'emit');
+    if (still) return;
     // Health and level above her head.
     bar0(g, h.x, h.y - 98, h.hp / b.heroMaxHp(), '#7fd06a', 46);
     g.font = '800 12px Barlow, sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)';

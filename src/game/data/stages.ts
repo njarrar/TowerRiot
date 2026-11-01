@@ -52,6 +52,8 @@ export interface StageDef {
   night?: boolean;
   /** A fixed lighthouse that lights a wide circle. */
   lighthouse?: Vec;
+  /** Extra foe health for this stage, on top of the usual climb. Default 1. */
+  hpMul?: number;
   /** The Hollow adapts every n waves. Default 3. */
   adaptEvery?: number;
   waves: WaveDef[];
@@ -351,12 +353,12 @@ const s12: StageDef = {
     ['Burrowers dig in', '4 burrower @w /2, 10 grub @n /0.8'],
     ['Two fronts', '20 skitter @w /0.35, 10 skitter @n /0.5'],
     ['Shells and menders', '6 shell @w /2, 2 mender @n /5'],
-    ['Under the roots', '10 burrower @w /1.2, 6 burrower @n /1.6'],
+    ['Under the roots', '8 burrower @w /1.4, 5 burrower @n /1.8'],
     ['Splitters', '10 splitter @w /1.1, 4 splitter @n /2'],
     ['Moths', '16 moth @w /0.5, 10 moth @n /0.6'],
     ['Wardens', '2 warden @w /6, 1 warden @n, 16 grub @w +2 /0.5'],
-    ['Iron and earth', '10 shell @w /1.4, 10 burrower @n /1, 4 mender @w +6 /3'],
-    ['The garden turns', '3 warden @w /5, 14 burrower @n /0.9, 14 splitter @w +6 /0.9, 20 moth @n +10 /0.5'],
+    ['Iron and earth', '10 shell @w /1.4, 7 burrower @n /1.2, 4 mender @w +6 /3'],
+    ['The garden turns', '3 warden @w /5, 6 burrower @n /1.4, 11 splitter @w +6 /1, 14 moth @n +10 /0.6'],
   ]),
 };
 
@@ -435,7 +437,7 @@ const s15: StageDef = {
 const s16: StageDef = {
   id: 16, name: 'Ember Pass', region: 3, lava: true,
   twist: 'Three roads through the pass. Lava closes one of them at a time, so the fight moves.', newFoe: 'Burrower swarm', unlocks: 'Wren gear: Ember spear',
-  startGold: 680, lives: 20, towers: ALL,
+  startGold: 680, lives: 20, towers: ALL, hpMul: 1.8,
   roads: [
     { id: 'top', spawn: 'w', w: 46, ctrl: [[-40, 360], [160, 360], [300, 180], [640, 130], [980, 180], [1100, 330], [1222, 360]] },
     { id: 'mid', spawn: 'w', w: 46, ctrl: [[-40, 360], [160, 360], [400, 380], [640, 345], [880, 380], [1100, 355], [1222, 360]] },
@@ -465,7 +467,7 @@ const s16: StageDef = {
 const s17: StageDef = {
   id: 17, name: 'Avalanche Ridge', region: 3, lava: true,
   twist: 'The ridge gives range to towers on it, but avalanches bury ridge plots as the waves go on.', newFoe: 'Iron swarm', unlocks: 'Wren gear: Dawn mantle',
-  startGold: 720, lives: 20, towers: ALL,
+  startGold: 720, lives: 20, towers: ALL, hpMul: 1.7,
   roads: [{ id: 'main', spawn: 'w', w: 50, ctrl: [[-40, 640], [200, 620], [400, 520], [520, 400], [700, 420], [860, 560], [1060, 600], [1160, 450], [1110, 300], [1222, 250]] }],
   waters: [{ w: 34, ctrl: [[300, 770], [340, 690], [430, 660]] }],
   high: [[0, 0], [1000, 0], [1010, 160], [900, 280], [700, 300], [400, 310], [0, 330], [0, 0]],
@@ -491,7 +493,7 @@ const s17: StageDef = {
 const s18: StageDef = {
   id: 18, name: 'Mirror Lake', region: 3, lava: true,
   twist: 'Two gates across a lake of fire. Foes copy your weak side, so defend both and keep Wren moving.', newFoe: 'Everything doubled', unlocks: 'Shop item: Second dawn',
-  startGold: 760, lives: 20, towers: ALL,
+  startGold: 760, lives: 20, towers: ALL, hpMul: 1.2,
   roads: [
     { id: 'north', spawn: 'w', w: 48, ctrl: [[-40, 380], [160, 380], [300, 240], [600, 180], [900, 200], [1222, 200]] },
     { id: 'south', spawn: 'w', w: 48, ctrl: [[-40, 380], [160, 380], [300, 520], [600, 580], [900, 560], [1222, 560]] },
@@ -515,7 +517,7 @@ const s18: StageDef = {
 const s19: StageDef = {
   id: 19, name: 'The Hollow Gate', region: 3, lava: true,
   twist: 'Four rifts, every foe. The Hollow adapts after every wave, not every third one.', newFoe: 'All of them', unlocks: 'Capstones in every tree',
-  startGold: 820, lives: 20, towers: ALL, adaptEvery: 1,
+  startGold: 820, lives: 20, towers: ALL, adaptEvery: 1, hpMul: 1.5,
   roads: [
     { id: 'nw', spawn: 'nw', w: 44, ctrl: [[-40, 160], [240, 200], [480, 330], [640, 360], [800, 360], [960, 250], [1100, 300], [1222, 360]] },
     { id: 'sw', spawn: 'sw', w: 44, ctrl: [[-40, 560], [240, 520], [480, 390], [640, 360], [800, 360], [960, 250], [1100, 300], [1222, 360]] },

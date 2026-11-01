@@ -220,7 +220,7 @@ export class Battle {
     this.stage = stage;
     this.mods = opts.mods ?? baseMods();
     this.rng = makeRng(opts.seed ?? 1234);
-    this.scale = hpScale(stage.id);
+    this.scale = hpScale(stage.id) * (stage.hpMul ?? 1);
     this.roads = stage.roads.map(def => {
       const path = makePath(def.id, smooth(def.ctrl));
       const rt: RoadRt = { def, path, closed: false, closeAt: null, barrier: null, belts: [] };
@@ -1232,3 +1232,11 @@ export function inPoly(pt: Vec, poly: Vec[]): boolean {
 }
 
 export { distToPath };
+
+/** The fewest lives that still earn 3 and 2 stars, by the same rule as finish(): 90% and 50% of the lives you start with. */
+export function starLives(start: number) {
+  let three = start, two = start;
+  while (three > 0 && (three - 1) / start >= 0.9) three--;
+  while (two > 0 && (two - 1) / start >= 0.5) two--;
+  return { three, two };
+}

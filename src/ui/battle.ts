@@ -1,6 +1,6 @@
 /** The battle screen: canvas, HUD, build menus, hero controls and the result card. */
-import { Battle, ell, type BattleEvent, type TargetMode, type Tower } from '../game/sim';
-import { Scene, type View } from '../render/scene';
+import { Battle, ell, starLives, type BattleEvent, type TargetMode, type Tower } from '../game/sim';
+import { Scene, W as MAP_W, type View } from '../render/scene';
 import { stageById } from '../game/data/stages';
 import { TOWERS, TOWER_ORDER, type Rounds, type TowerKind } from '../game/data/towers';
 import { ENEMIES } from '../game/data/enemies';
@@ -57,6 +57,11 @@ export class BattleScreen {
   private shopEl: HTMLElement;
   private ended = false;
   private menuKey = '';
+  /** Stage 1 marks one plot until the first tower goes up, so a new player builds before anything else. */
+  private hintPlot: number | null = null;
+  private hintEl: HTMLElement;
+  /** Lives lost to each kind of foe, for the defeat card. */
+  private leakBy = new Map<string, number>();
   private readonly onResize = () => this.fit();
   private readonly onKey = (e: KeyboardEvent) => this.key(e);
 
@@ -69,7 +74,8 @@ export class BattleScreen {
     this.menu = h('div', { class: 'popup hidden', role: 'dialog' });
     this.banner = h('div', { class: 'banner off', 'aria-live': 'polite' }, h('div', { class: 'banner-title' }), h('div', { class: 'banner-sub' }));
     this.shopEl = h('div', { class: 'shop hidden', role: 'dialog', 'aria-label': 'Shop' });
-    this.el = h('section', { class: 'screen battle' }, this.canvas, this.buildHud(), this.banner, this.menu, this.shopEl);
+    this.hintEl = h('div', { class: 'plot-hint hidden', 'aria-hidden': 'true', text: 'Build here' });
+    this.el = h('section', { class: 'screen battle' }, this.canvas, this.buildHud(), this.hintEl, this.banner, this.menu, this.shopEl);
   }
 
   /** Paint the map (slow), then start the loop. */
@@ -82,9 +88,14 @@ export class BattleScreen {
     const st = this.battle.stage;
     this.showBanner(st.name, st.twist, 4);
     if (st.id === 1) {
-      // First stage: show one skill working right away, and say how to move Wren.
+      // First stage: one skill works right away. Building comes first; how to move Wren follows the first tower.
       if (this.battle.canLearn('q')) this.battle.learn('q');
-      this.showBanner('Tap the road to send Wren', 'She fights there and grows stronger with every kill.', 4);
+      const b = this.battle, hx = b.hero.x, hy = b.hero.y;
+      let best = 0;
+      b.plots.forEach((p, i) => { if (Math.hypot(p.x - hx, p.y - hy) < Math.hypot(b.plots[best].x - hx, b.plots[best].y - hy)) best = i; });
+      this.hintPlot = best;
+      this.view.hintPlot = best;
+      this.showBanner('Build your first tower', 'Tap the marked plot. Towers do most of the work.', 5);
     }
     if (this.host.autoSkills) this.battle.autoLearn();
     this.last = performance.now();
@@ -156,7 +167,7 @@ export class BattleScreen {
         case 'root': a.play('root'); break;
         case 'kill': a.play('coin'); break;
         case 'heroHit': a.play('hero'); break;
-        case 'leak': a.play('leak'); break;
+        case 'leak': a.play('leak'); this.leakBy.set(e.kind, (this.leakBy.get(e.kind) ?? 0) + e.lives); break;
         case 'build': case 'upgrade': a.play('build'); break;
         case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
         case 'wave': a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2); break;
@@ -233,6 +244,10 @@ export class BattleScreen {
       this.hud[cls] = v;
       return h('div', { class: `stat ${cls}`, title: label }, h('i', { class: `ico ${cls}`, 'aria-hidden': 'true' }), v);
     };
+    // The stars you would win if the fight ended now: lives are the star count, so they sit together.
+    const need = starLives(this.battle.startLives);
+    const starsNow = h('span', { class: 'stars-now', 'aria-hidden': 'true' }, h('i', { text: '★' }), h('i', { text: '★' }), h('i', { text: '★' }));
+    this.hud.starsNow = starsNow;
     const resist = h('div', { class: 'resist', 'aria-label': 'What the Hollow resists' });
     this.hud.resist = resist;
     const call = h('button', { class: 'btn call', onclick: () => { this.host.audio.unlock(); if (this.battle.callWave()) this.host.audio.play('click'); } },
@@ -271,7 +286,9 @@ export class BattleScreen {
       hpBar, xpBar, h('div', { class: 'hero-bottom' }, items, shopBtn));
 
     // The same parts sit in side columns on wide screens and in a bottom band on narrower ones (see fit()).
-    this.hud.stats = h('div', { class: 'hud-stats' }, stat('lives', 'Lives'), stat('gold', 'Gold'), stat('wave', 'Wave'), resist);
+    const lives = stat('lives', `Lives. Keep ${need.three} for 3 stars, ${need.two} for 2.`);
+    lives.append(starsNow);
+    this.hud.stats = h('div', { class: 'hud-stats' }, lives, stat('gold', 'Gold'), stat('wave', 'Wave'), resist);
     // Leaving lives in the pause card, so a slip of the thumb next to pause cannot end a run.
     this.hud.ctrl = h('div', { class: 'hud-ctrl' }, speed, pause);
     this.hud.hero = heroCard;
@@ -289,6 +306,22 @@ export class BattleScreen {
   private updateHud(dt: number) {
     const b = this.battle, hero = b.hero;
     setText(this.hud.lives, String(b.lives));
+    const share = b.lives / b.startLives, held = share >= 0.9 ? 3 : share >= 0.5 ? 2 : 1;
+    if (this.hud.starsNow.dataset.n !== String(held)) {
+      this.hud.starsNow.dataset.n = String(held);
+      [...this.hud.starsNow.children].forEach((s, i) => s.classList.toggle('on', i < held));
+    }
+    if (this.hintPlot !== null) {
+      if (b.towers.length > 0) {
+        this.hintPlot = null; this.view.hintPlot = null; this.hintEl.classList.add('hidden');
+        this.showBanner('Tap the road to send Wren', 'She fights there and grows stronger with every kill.', 4);
+      } else {
+        const p = b.plots[this.hintPlot], [sx, sy] = this.scene.toScreen(p.x, p.y);
+        const open = this.menuKey !== '';
+        this.hintEl.classList.toggle('hidden', open);
+        this.hintEl.style.transform = `translate(${Math.round(sx)}px, ${Math.round(sy - 24 * this.scene.worldRect().w / MAP_W)}px) translate(-50%, -100%)`;
+      }
+    }
     setText(this.hud.gold, String(b.gold));
     setText(this.hud.wave, `${Math.max(1, b.wave)}/${b.totalWaves}`);
     // Resistances: one meter per element the Hollow has hardened against, out of its cap.
@@ -641,10 +674,20 @@ export class BattleScreen {
     this.ended = true;
     const st = this.battle.stage;
     const gained = won ? this.host.onResult(st.id, stars) : 0;
+    const b = this.battle, need = starLives(b.startLives);
+    // Say what the next star takes, and on a loss, which foe got through most.
+    const lost = b.startLives - b.lives;
+    const toThree = won && stars < 3 ? `Lose ${b.startLives - need.three} lives or fewer for 3 stars. You lost ${lost}.` : '';
+    const worst = [...this.leakBy.entries()].sort((x, y) => y[1] - x[1])[0];
+    const why = !won && worst ? ENEMIES[worst[0] as keyof typeof ENEMIES] : null;
     const card = h('div', { class: `result ${won ? 'won' : 'lost'}`, role: 'dialog', 'aria-label': won ? 'Victory' : 'Defeat' },
       h('h2', { text: won ? 'The Keep holds' : 'The gate falls' }),
       won ? h('div', { class: 'stars reveal', 'aria-label': `${stars} of 3 stars` }, ...[1, 2, 3].map(i => h('span', { class: i <= stars ? 'on' : '', style: `--i:${i}`, text: '★' }))) : null,
-      h('p', { text: won ? `${st.name} cleared with ${this.battle.lives} lives left. Wren reached level ${this.battle.hero.level}.` : `Wave ${this.battle.wave} of ${this.battle.totalWaves}. Try other towers, or send Wren to the weak side.` }),
+      h('p', { text: won ? `${st.name} cleared with ${b.lives} lives left. Wren reached level ${b.hero.level}.` : `You held until wave ${b.wave} of ${b.totalWaves}.` }),
+      toThree ? h('p', { class: 'next-star', text: toThree }) : null,
+      why && worst ? h('div', { class: 'cause' },
+        h('img', { src: foeIcon(worst[0] as keyof typeof ENEMIES, 56), alt: '' }),
+        h('div', {}, h('b', { text: `${why.name}${worst[1] > 1 && !why.traits?.boss ? 's' : ''} took ${worst[1]} of your ${b.startLives} lives` }), h('span', { text: why.blurb }))) : null,
       won && gained > 0 ? h('p', { class: 'embers', text: `+${gained} Embers for the skill trees` }) : null,
       h('div', { class: 'act-row' },
         h('button', { class: `btn ${won ? '' : 'primary'}`, onclick: () => this.host.onRetry(st.id) }, won ? 'Play again' : 'Try again'),

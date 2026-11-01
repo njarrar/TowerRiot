@@ -9,6 +9,10 @@ TowerRiot is a classic tower defence game with an early Dota touch. You hold the
 - A card by the call button shows what the next wave sends (counts, fliers) and warns when the Hollow will adapt.
 - Smart routing: on a fork, foes take the side with fewer towers.
 - You **win** when the last wave is beaten. You **lose** when the Keep's lives run out.
+- **Stars** come from lives kept: 3 for 90% or more, 2 for half or more, 1 for a win. The lives pill shows the stars you hold, the stage card states the rule, and the win card says what 3 stars needed.
+- Stage 1 marks one plot and asks for a tower before it explains Wren.
+- A defeat card names the foe that took the most lives, with its counter.
+- Difficulty: foe health climbs 6% a stage, and 10% more a stage in the Ashen Rift (16 to 20). Some stages add an `hpMul` on top. A plain greedy test player should take about 2 stars on stages 16 to 20.
 
 ## Wren, the hero (the Dota part)
 
