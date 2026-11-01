@@ -8,14 +8,15 @@ import { SKILLS, SNARE, type SkillKey } from '../game/data/hero';
 import { ITEMS, ITEM_ORDER, ITEM_SLOTS, RUNES } from '../game/data/shop';
 import type { Mods } from '../game/mods';
 import type { Audio } from '../audio/sfx';
-import { h, clear, setText } from './dom';
-import { towerIcon } from './icons';
+import { h, clear, setText, icon } from './dom';
+import { towerIcon, foeIcon, SKILL_ICON, LOCK_ICON, ELEMENT_ICON } from './icons';
 
 export interface BattleHost {
   audio: Audio;
   mods: Mods;
   reduceMotion: boolean;
   autoSkills: boolean;
+  dmgNumbers: boolean;
   onExit(): void;
   onResult(stageId: number, stars: number): number;
   onNext(stageId: number): void;
@@ -23,6 +24,9 @@ export interface BattleHost {
 }
 
 const ELEMENT_NAME: Record<string, string> = { pierce: 'bolts', fire: 'fire', frost: 'frost', storm: 'lightning', nature: 'roots' };
+const ELEMENT_TITLE: Record<string, string> = { pierce: 'Bolts', fire: 'Fire', frost: 'Frost', storm: 'Lightning', nature: 'Roots' };
+/** The most the Hollow can harden against one element. */
+const RESIST_CAP = 0.6;
 const MODE_NAME: Record<TargetMode, string> = { first: 'First', strong: 'Strongest', close: 'Closest' };
 const ROUND_NAME: Record<Rounds, string> = { ember: 'Ember', frost: 'Frost', storm: 'Storm' };
 
@@ -39,6 +43,8 @@ export class BattleScreen {
   private menu: HTMLElement;
   private banner: HTMLElement;
   private bannerT = 0;
+  private bannerQ: { title: string; sub: string; secs: number }[] = [];
+  private lvlT = 0;
   private hud: Record<string, HTMLElement> = {};
   private skillBtns = new Map<SkillKey, HTMLButtonElement>();
   private shopOpen = false;
@@ -51,7 +57,7 @@ export class BattleScreen {
   constructor(private readonly host: BattleHost, stageId: number) {
     const st = stageById(stageId);
     this.battle = new Battle(st, { mods: host.mods, seed: Date.now() & 0xffff });
-    this.view = { selPlot: null, selTower: null, preview: null, aimW: null, reduceMotion: host.reduceMotion };
+    this.view = { selPlot: null, selTower: null, preview: null, aimW: null, reduceMotion: host.reduceMotion, dmgNumbers: host.dmgNumbers };
     this.canvas = h('canvas', { class: 'stage-canvas', 'aria-label': `Battle map: ${st.name}` });
     this.scene = new Scene(this.canvas);
     this.menu = h('div', { class: 'popup hidden', role: 'dialog' });
@@ -68,7 +74,12 @@ export class BattleScreen {
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKey);
     const st = this.battle.stage;
-    this.showBanner(st.name, st.twist, 5);
+    this.showBanner(st.name, st.twist, 4);
+    if (st.id === 1) {
+      // First stage: show one skill working right away, and say how to move Wren.
+      if (this.battle.canLearn('q')) this.battle.learn('q');
+      this.showBanner('Tap the road to send Wren', 'She fights there and grows stronger with every kill.', 4);
+    }
     if (this.host.autoSkills) this.battle.autoLearn();
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
@@ -123,7 +134,7 @@ export class BattleScreen {
     b.step(dt);
     const events = b.drain();
     this.react(events);
-    this.scene.consume(b, events);
+    this.scene.consume(b, events, this.host.dmgNumbers);
     this.scene.draw(b, this.view, this.T, b.paused ? 0 : dt);
     this.updateHud(dt);
     this.raf = requestAnimationFrame(t => this.frame(t));
@@ -141,12 +152,12 @@ export class BattleScreen {
         case 'heroHit': a.play('hero'); break;
         case 'leak': a.play('leak'); break;
         case 'build': case 'upgrade': a.play('build'); break;
-        case 'level': a.play('level'); if (this.host.autoSkills) b.autoLearn(); break;
-        case 'wave': a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2.6); break;
+        case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
+        case 'wave': a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2); break;
         case 'adapt': this.showBanner('The Hollow adapts', `It hardens against ${ELEMENT_NAME[e.el] ?? e.el}: ${Math.round(e.resist * 100)}% less damage. Mix your towers.`, 3.4); break;
         case 'shift': this.showBanner(e.on ? e.label : 'The way is open again', e.on ? 'Foes on that road wait at the edge. Others go round.' : '', 2.6); break;
         case 'barrier': this.showBanner('The wreck gives way', 'The beach road is open. Foes will use it now.', 3); break;
-        case 'boss': a.play('boss'); this.showBanner(ENEMIES[e.kind].name, ENEMIES[e.kind].blurb, 4); break;
+        case 'boss': a.play('boss'); this.showBanner(ENEMIES[e.kind].name, ENEMIES[e.kind].blurb, 4, true); break;
         case 'phase': a.play('boss'); this.showBanner(`The Queen breaks: phase ${e.n + 1}`, 'The lava moves. Shades pour out.', 3); break;
         case 'night': this.showBanner(e.on ? 'Night falls' : 'Morning', e.on ? 'Towers outside a Beacon\'s light see less. Shades walk.' : 'Full sight again.', 2.4); break;
         case 'gear': if (b.wave > 1) this.showBanner(e.up === 'a' ? 'Gold gears rise' : 'Iron gears rise', 'Towers on the lowered plots sleep this wave.', 2.4); break;
@@ -164,11 +175,48 @@ export class BattleScreen {
     }
   }
 
-  private showBanner(title: string, sub: string, secs: number) {
-    setText(this.banner.firstElementChild, title);
-    setText(this.banner.lastElementChild, sub);
+  /** The card above the call button: what the next wave sends, and whether the Hollow adapts. */
+  private updateNextWave() {
+    const b = this.battle, el = this.hud.next;
+    const nw = b.over ? null : b.nextWave();
+    const show = !!nw && (b.status === 'prep' || b.nextIn !== null);
+    el.classList.toggle('hidden', !show);
+    if (!show || !nw) return;
+    const lean = b.adaptLean(), adapts = b.adaptsAt(nw.n);
+    const sig = `${nw.n}|${adapts}|${lean}`;
+    if (el.dataset.sig === sig) return;
+    el.dataset.sig = sig;
+    clear(el);
+    el.append(h('div', { class: 'nw-head', text: `Next: wave ${nw.n} of ${b.totalWaves}` }));
+    el.append(h('div', { class: 'nw-foes' }, ...nw.foes.map(f => {
+      const d = ENEMIES[f.kind];
+      return h('span', { class: `nw-foe ${d.flying ? 'fly' : ''}`, title: `${d.name}: ${d.blurb}` },
+        h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), h('span', { class: 'nw-name', text: d.flying ? `${d.name}, flying` : d.name }));
+    })));
+    if (adapts) el.append(h('div', { class: 'nw-note', text: lean ? `The Hollow adapts this wave, against your ${ELEMENT_NAME[lean]}.` : 'The Hollow adapts this wave.' }));
+  }
+
+  /**
+   * Banners wait their turn instead of replacing each other. `now` cuts in line, for things the
+   * player just did (aiming a skill) or must see at once (a boss).
+   */
+  private showBanner(title: string, sub: string, secs: number, now = false) {
+    const item = { title, sub, secs };
+    if (now) { this.bannerQ = []; this.putBanner(item); return; }
+    if (this.bannerT > 0) {
+      this.bannerQ.push(item);
+      if (this.bannerQ.length > 3) this.bannerQ.shift();
+      return;
+    }
+    this.putBanner(item);
+  }
+
+  private putBanner(b: { title: string; sub: string; secs: number }) {
+    setText(this.banner.firstElementChild, b.title);
+    setText(this.banner.lastElementChild, b.sub);
+    this.banner.classList.toggle('no-sub', !b.sub);
     this.banner.classList.remove('off');
-    this.bannerT = secs;
+    this.bannerT = b.secs;
   }
 
   /* ------------------------------------------------------------------ HUD */
@@ -204,7 +252,8 @@ export class BattleScreen {
       const btn = h('button', {
         class: `skill s-${k}`, title: `${s.name}: ${s.desc}`, 'aria-label': `${s.name} (${k.toUpperCase()})`,
         onclick: (e: Event) => { e.stopPropagation(); this.skillPress(k); },
-      }, h('span', { class: 'key', text: k.toUpperCase() }), h('span', { class: 'name', text: s.name }), h('span', { class: 'cd' }), h('span', { class: 'ranks' }), h('span', { class: 'learn', text: '+' }));
+      }, h('span', { class: 'cd' }), h('span', { class: 'key', text: k.toUpperCase() }), icon(SKILL_ICON[k], 'svg-ico sk-ico'), icon(LOCK_ICON, 'svg-ico sk-lock'),
+        h('span', { class: 'name', text: s.name.split(' ').pop()! }), h('span', { class: 'ranks' }), h('span', { class: 'req' }), h('span', { class: 'learn', text: '+' }));
       this.skillBtns.set(k, btn);
       skills.append(btn);
     }
@@ -221,7 +270,9 @@ export class BattleScreen {
     this.hud.ctrl = h('div', { class: 'hud-ctrl' }, speed, pause, h('button', { class: 'btn icon', title: 'Leave the battle', 'aria-label': 'Leave the battle', onclick: () => this.confirmExit() }, '✕'));
     this.hud.hero = heroCard;
     this.hud.skills = skills;
-    this.hud.callWrap = h('div', { class: 'hud-call' }, call);
+    const next = h('div', { class: 'next-wave', 'aria-live': 'off' });
+    this.hud.next = next;
+    this.hud.callWrap = h('div', { class: 'hud-call' }, next, call);
     this.hud.colL = h('div', { class: 'col col-l' });
     this.hud.colR = h('div', { class: 'col col-r' });
     this.hud.band = h('div', { class: 'band' });
@@ -235,14 +286,22 @@ export class BattleScreen {
     setText(this.hud.lives, String(b.lives));
     setText(this.hud.gold, String(b.gold));
     setText(this.hud.wave, `${Math.max(1, b.wave)}/${b.totalWaves}`);
-    // Resistances.
-    const res = Object.entries(b.resist).filter(([, v]) => v > 0);
+    // Resistances: one meter per element the Hollow has hardened against, out of its cap.
+    const res = Object.entries(b.resist).filter(([k, v]) => v > 0 && k !== 'hero');
     const key = res.map(([k, v]) => k + v.toFixed(1)).join();
     if (this.hud.resist.dataset.k !== key) {
+      const was = this.hud.resist.dataset.k;
       this.hud.resist.dataset.k = key;
       clear(this.hud.resist);
-      for (const [k, v] of res) this.hud.resist.append(h('span', { class: `chip el-${k}`, title: `The Hollow takes ${Math.round(v * 100)}% less ${ELEMENT_NAME[k]} damage`, text: `${ELEMENT_NAME[k]} -${Math.round(v * 100)}%` }));
+      for (const [k, v] of res) {
+        this.hud.resist.append(h('span', { class: `rchip el-${k}`, title: `The Hollow takes ${Math.round(v * 100)}% less ${ELEMENT_NAME[k]} damage (most it can reach: ${RESIST_CAP * 100}%)` },
+          icon(ELEMENT_ICON[k] ?? ''), h('span', { class: 'rn', text: ELEMENT_TITLE[k] ?? k }),
+          h('span', { class: 'meter' }, h('i', { style: `width:${Math.round(v / RESIST_CAP * 100)}%` })),
+          h('b', { text: `${Math.round(v * 100)}%` })));
+      }
+      if (was !== undefined && !this.host.reduceMotion) { this.hud.resist.classList.remove('changed'); void this.hud.resist.offsetWidth; this.hud.resist.classList.add('changed'); }
     }
+    this.updateNextWave();
     // Call wave.
     const call = this.hud.call;
     const canCall = b.status === 'prep' || (b.nextIn !== null && b.wave < b.totalWaves);
@@ -260,6 +319,10 @@ export class BattleScreen {
       const r = hero.ranks[k], s = SKILLS[k];
       const locked = (k === 'w' && !b.mods.skillW) || (k === 'r' && !b.mods.skillR);
       btn.classList.toggle('locked', locked);
+      // Say when a skill opens instead of showing a dead button.
+      const req = locked ? `After stage ${k === 'w' ? 1 : 7}` : r === 0 && hero.level < s.needLevel(1) ? `Level ${s.needLevel(1)}` : '';
+      setText(btn.querySelector('.req')!, req);
+      btn.classList.toggle('has-req', !!req);
       btn.classList.toggle('none', r === 0);
       btn.classList.toggle('can-learn', b.canLearn(k));
       btn.classList.toggle('ready', b.skillReady(k));
@@ -282,8 +345,12 @@ export class BattleScreen {
     this.hud.shopBtn.classList.toggle('near', near);
     this.hud.shopBtn.title = near ? 'Open the shop (B)' : 'Walk Wren to the gate to buy';
     if (this.shopOpen) this.renderShop();
-    // Banner.
-    if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) this.banner.classList.add('off'); }
+    // Banner, then the next in line.
+    if (this.bannerT > 0) {
+      this.bannerT -= dt;
+      if (this.bannerT <= 0) { const next = this.bannerQ.shift(); if (next) this.putBanner(next); else this.banner.classList.add('off'); }
+    }
+    if (this.lvlT > 0) { this.lvlT -= dt; if (this.lvlT <= 0) this.hud.hero.classList.remove('lvlup'); }
     // Keep an open menu current (gold changes what you can afford).
     if (!this.menu.classList.contains('hidden')) this.refreshMenu();
   }
@@ -354,7 +421,7 @@ export class BattleScreen {
     else if (k === 'w' && b.skillReady('w')) {
       this.aimingW = !this.aimingW;
       this.view.aimW = this.aimingW ? [b.hero.x + SNARE.range * 0.5 * b.hero.face, b.hero.y] : null;
-      if (this.aimingW) this.showBanner('Lantern Snare', 'Tap where to throw it.', 1.6);
+      if (this.aimingW) this.showBanner('Lantern Snare', 'Tap where to throw it.', 1.6, true);
     } else if (b.canLearn(k)) b.learn(k);
   }
 
@@ -449,6 +516,8 @@ export class BattleScreen {
       : t.kind === 'bell' ? `Slows all foes in range. Range ${Math.round(s.range)}.`
       : `Damage ${Math.round(s.dmg)}, ${(1 / s.rate).toFixed(1)} hits a second, range ${Math.round(s.range)}.`;
     m.append(h('div', { class: 'popup-note', text: t.down ? 'This gear plot is lowered: the tower sleeps this wave.' : facts }));
+    const el = def.element, rs = b.resist[el] ?? 0;
+    if (rs > 0) m.append(h('div', { class: 'popup-warn' }, icon(ELEMENT_ICON[el] ?? ''), h('span', { text: `The Hollow takes ${Math.round(rs * 100)}% less ${ELEMENT_NAME[el]} damage right now. Mix in other towers.` })));
     const acts = h('div', { class: 'act-row' });
     const up = b.upgradeCost(t);
     if (up !== null) acts.append(h('button', { class: `btn act ${b.gold >= up ? '' : 'poor'}`, 'data-cost': up, onclick: () => b.upgrade(t.id) }, `Upgrade ${up}`));
