@@ -206,7 +206,7 @@ export class Scene {
           this.fx.push({ k: 'boom', x: e.x, y: e.y, r: e.r, max: 0.45, life: 0.45 });
           this.shake = Math.max(this.shake, 4);
           for (let i = 0; i < 14; i++) { const a = R() * TAU, v = 60 + R() * 160; this.parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5 - 90, life: 0.8, max: 0.8, c: '#2a241c', s: 2.6, kind: 'chip', grav: 1 }); }
-          for (let i = 0; i < 5; i++) this.parts.push({ x: e.x + (R() - 0.5) * 30, y: e.y - 4, vx: (R() - 0.5) * 20, vy: -14, life: 1.5, max: 1.5, c: 'rgba(70,66,62,', s: 9, kind: 'smoke' });
+          for (let i = 0; i < 3; i++) this.parts.push({ x: e.x + (R() - 0.5) * 26, y: e.y - 4, vx: (R() - 0.5) * 20, vy: -14, life: 0.9, max: 0.9, c: 'rgba(150,142,130,', s: 6, kind: 'smoke' });
           break;
         case 'root': for (let i = 0; i < 8; i++) this.parts.push({ x: e.x + (R() - 0.5) * 30, y: e.y, vx: (R() - 0.5) * 40, vy: -50 - R() * 50, life: 0.6, max: 0.6, c: '#3a3326', s: 2.6, kind: 'chip', grav: 1 }); break;
         case 'hit':
@@ -218,7 +218,7 @@ export class Scene {
           this.coins.push({ sx: e.x, sy: e.y - 20, u: 0, x: e.x, y: e.y });
           this.goldPop(e.x + 12, e.y - 46, e.gold, e.hero);
           for (let i = 0; i < 10; i++) { const a = R() * TAU; this.parts.push({ x: e.x, y: e.y - 10, vx: Math.cos(a) * 60, vy: -30 - R() * 60, life: 0.9, max: 0.9, c: '#5ac8a8', s: 1.8, kind: 'spark' }); }
-          for (let i = 0; i < 3; i++) this.parts.push({ x: e.x + (R() - 0.5) * 20, y: e.y - 6, vx: 0, vy: -16, life: 1.3, max: 1.3, c: 'rgba(30,40,38,', s: 8, kind: 'smoke' });
+          for (let i = 0; i < 2; i++) this.parts.push({ x: e.x + (R() - 0.5) * 16, y: e.y - 6, vx: 0, vy: -16, life: 0.8, max: 0.8, c: 'rgba(60,80,72,', s: 5, kind: 'smoke' });
           if (e.kind === 'mireking' || e.kind === 'tidewyrm' || e.kind === 'colossus' || e.kind === 'queen') { this.shake = 12; this.flash = 0.6; }
           break;
         }
@@ -530,8 +530,11 @@ export class Scene {
 
   private drawTowerBase(t: Tower) {
     const g = this.g, S = Scene.towerScale(t);
+    // A tower on a lowered gear plot sinks back and fades, so it reads as off, not as a smudge.
+    if (t.down) { g.save(); g.globalAlpha = 0.42; }
     this.put(this.towerSprite(t), t.x, t.y);
     if (t.kind === 'cannon') X.cannonBarrel(g, t.x + 4 * S, t.y, S, t.aim, Math.max(0, 1 - t.fired * 4), 0);
+    if (t.down) g.restore();
     // Level plaque at the foot of the tower: one mark per level, all gold once it has split.
     const n = Math.min(t.lv, 3), px = t.x, py = t.y + 20;
     g.fillStyle = 'rgba(40,30,20,.3)'; g.fillRect(px - 18, py - 4, 38, 13);
@@ -544,7 +547,15 @@ export class Scene {
       if (i >= n) { g.strokeStyle = 'rgba(70,56,40,.45)'; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
     }
     if (t.round) { const c = t.round === 'ember' ? '#ff8a3a' : t.round === 'frost' ? '#8fd0ff' : '#b9a8ff'; g.fillStyle = c; g.beginPath(); g.arc(t.x + 30, t.y + 8, 4, 0, TAU); g.fill(); }
-    if (t.down) { g.fillStyle = 'rgba(10,12,14,.45)'; g.beginPath(); g.ellipse(t.x, t.y - 40, 34, 60, 0, 0, TAU); g.fill(); }
+    if (t.down) {
+      // A small paper tag over the plaque: what is wrong and when it ends.
+      const ty = py - 22;
+      g.font = '800 12px Barlow, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const w = g.measureText('Rests this wave').width + 14;
+      g.fillStyle = 'rgba(246,240,228,.96)'; g.strokeStyle = 'rgba(70,56,40,.6)';
+      g.beginPath(); g.roundRect(px - w / 2, ty - 9, w, 18, 3); g.fill(); g.stroke();
+      g.fillStyle = '#3a3128'; g.fillText('Rests this wave', px, ty + 0.5);
+    }
   }
 
   private drawTowerEmit(b: Battle, t: Tower, T: number) {

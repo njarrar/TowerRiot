@@ -156,6 +156,9 @@ export class App {
         h('button', { class: 'btn', onclick: () => this.trees() }, `Skill trees: ${e.free} Embers`)),
       h('div', { class: 'campaign-body' }, regions, card)));
     show(focus ?? next);
+    // Open on the stage you came for: on a phone the cleared regions above would push it off screen.
+    const sel = this.root.querySelector<HTMLElement>('.node.sel');
+    if (sel) requestAnimationFrame(() => sel.closest('.region')?.scrollIntoView({ block: 'center' }));
   }
 
   /* ------------------------------------------------------------------ trees */

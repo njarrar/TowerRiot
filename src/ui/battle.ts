@@ -59,6 +59,8 @@ export class BattleScreen {
   private menuKey = '';
   /** Stage 1 marks one plot until the first tower goes up, so a new player builds before anything else. */
   private hintPlot: number | null = null;
+  /** The last tap on a build button came from a finger, not a mouse. */
+  private touchPick = false;
   private hintEl: HTMLElement;
   /** Lives lost to each kind of foe, for the defeat card. */
   private leakBy = new Map<string, number>();
@@ -86,7 +88,8 @@ export class BattleScreen {
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKey);
     const st = this.battle.stage;
-    this.showBanner(st.name, st.twist, 4);
+    // Stage 1 opens on the build prompt alone: the name card would sit over the marked plot.
+    if (st.id !== 1) this.showBanner(st.name, st.twist, 4);
     if (st.id === 1) {
       // First stage: one skill works right away. Building comes first; how to move Wren follows the first tower.
       if (this.battle.canLearn('q')) this.battle.learn('q');
@@ -210,7 +213,10 @@ export class BattleScreen {
       return h('span', { class: `nw-foe ${d.flying ? 'fly' : ''}`, title: `${d.name}: ${d.blurb}` },
         h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), d.flying ? icon(WING_ICON, 'svg-ico nw-wing') : null, h('span', { class: 'nw-name', text: d.name }));
     })));
-    if (adapts) el.append(h('div', { class: 'nw-note', text: lean ? `The Hollow adapts this wave, against your ${ELEMENT_NAME[lean]}.` : 'The Hollow adapts this wave.' }));
+    // Side columns are narrow: they get the short form, so the call button below never leaves the screen.
+    if (adapts) el.append(h('div', { class: 'nw-note' },
+      h('span', { class: 'nw-full', text: lean ? `The Hollow adapts this wave, against your ${ELEMENT_NAME[lean]}.` : 'The Hollow adapts this wave.' }),
+      h('span', { class: 'nw-short', text: lean ? `Adapts: ${ELEMENT_NAME[lean]}` : 'Adapts' })));
   }
 
   /**
@@ -232,6 +238,8 @@ export class BattleScreen {
     setText(this.banner.firstElementChild, b.title);
     setText(this.banner.lastElementChild, b.sub);
     this.banner.classList.toggle('no-sub', !b.sub);
+    // While stage 1 marks a plot near the top, prompts sit at the foot of the map so they never hide it.
+    this.banner.classList.toggle('low', this.hintPlot !== null);
     this.banner.classList.remove('off');
     this.bannerT = b.secs;
   }
@@ -498,10 +506,16 @@ export class BattleScreen {
     const m = this.menu;
     m.classList.remove('hidden');
     const w = m.offsetWidth, hgt = m.offsetHeight;
-    let left = sx - w / 2, top = sy - hgt - 70;
-    if (top < 8) top = sy + 30;
-    left = Math.max(8, Math.min(r.width - w - 8, left));
-    top = Math.max(8, Math.min(r.height - hgt - 8, top));
+    // Keep to the map when it fits, and below the lives and gold pills, so the purse stays in view while you choose.
+    const wr = this.scene.worldRect();
+    const stats = this.el.dataset.layout === 'band' ? this.hud.stats.getBoundingClientRect() : null;
+    const minTop = Math.max(wr.y, stats ? stats.bottom - r.top : 0) + 8;
+    const minL = w <= wr.w - 16 ? wr.x + 8 : 8, maxL = w <= wr.w - 16 ? wr.x + wr.w - w - 8 : r.width - w - 8;
+    const maxTop = Math.min(r.height, wr.y + wr.h) - hgt - 8;
+    let left = sx - w / 2, top = sy - hgt - 40;
+    if (top < minTop) top = sy + 34;
+    if (top > maxTop) top = Math.max(minTop, maxTop);
+    left = Math.max(minL, Math.min(maxL, left));
     m.style.left = `${left}px`; m.style.top = `${top}px`;
   }
 
@@ -520,6 +534,7 @@ export class BattleScreen {
   /** Show a tower's range ring and what it does, before you pay for it. */
   private previewTower(k: TowerKind) {
     this.view.preview = k;
+    this.menu.querySelectorAll('.build').forEach((el, i) => el.classList.toggle('armed', this.touchPick && this.battle.stage.towers[i] === k));
     const d = TOWERS[k];
     const note = this.menu.querySelector('.note-preview');
     note?.classList.remove('hidden');
@@ -552,9 +567,14 @@ export class BattleScreen {
         const def = TOWERS[k], cost = b.costOf(k), ok = b.canBuild(pi, k);
         const btn = h('button', {
           class: `build ${ok ? '' : 'poor'}`, title: `${def.name}: ${def.blurb}`, 'data-cost': cost,
-          onpointerenter: () => this.previewTower(k),
-          onclick: () => { if (b.build(pi, k)) this.closeMenu(); else this.previewTower(k); },
-        }, h('img', { src: towerIcon(k), alt: '' }), h('span', { class: 'bn', text: def.name }), h('span', { class: 'br', text: TOWER_ROLE[k] }), h('span', { class: 'bc', text: `${cost}` }), h('span', { class: 'hot', text: String(idx + 1) }));
+          onpointerenter: (e: Event) => { if ((e as PointerEvent).pointerType === 'mouse') this.previewTower(k); },
+          onpointerdown: (e: Event) => { this.touchPick = (e as PointerEvent).pointerType !== 'mouse'; },
+          onclick: () => {
+            // A finger cannot hover: the first tap shows the range and what the tower does, the second pays.
+            if (this.touchPick && this.view.preview !== k) { this.previewTower(k); return; }
+            if (b.build(pi, k)) this.closeMenu(); else this.previewTower(k);
+          },
+        }, h('img', { src: towerIcon(k), alt: '' }), h('span', { class: 'bn', text: def.name }), h('span', { class: 'br', text: TOWER_ROLE[k] }), h('span', { class: 'bc', text: `${cost}` }), h('span', { class: 'again', text: 'Tap again to build' }), h('span', { class: 'hot', text: String(idx + 1) }));
         row.append(btn);
       });
       m.append(row);
