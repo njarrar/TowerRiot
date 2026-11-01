@@ -82,6 +82,9 @@ export class Scene {
   private rifts: { x: number; y: number }[] = [];
   private waterPts: { pts: Vec[]; w: number }[] = [];
   private seeds = new Map<number, number>();
+  /** How each foe looks in motion: drawn only, so the fight itself (timing, ranges, gate) never changes. */
+  private gaits = new Map<number, Gait>();
+  private gaitTick = 0;
   private moveMark: { x: number; y: number; t: number } | null = null;
   private crows: { x: number; y: number; v: number; n: number }[] = [];
   private r = makeRng(99);
@@ -98,7 +101,7 @@ export class Scene {
   load(b: Battle) {
     const st = b.stage;
     this.stage = st;
-    this.parts = []; this.fx = []; this.floats = []; this.coins = []; this.seeds.clear();
+    this.parts = []; this.fx = []; this.floats = []; this.coins = []; this.seeds.clear(); this.gaits.clear();
     this.waterPts = st.waters.map(w => ({ pts: smooth(w.ctrl), w: w.w }));
     const decor = makeDecor(b);
     this.posts = decor.posts;
@@ -265,9 +268,39 @@ export class Scene {
 
   private seedOf(f: Foe) { let s = this.seeds.get(f.id); if (s === undefined) { s = 40 + (f.id * 7) % 9; this.seeds.set(f.id, s); } return s; }
 
+  /** Follow each foe from frame to frame: how far it moved, which way it heads, how it turns. */
+  private stepGaits(b: Battle, dt: number) {
+    const tick = ++this.gaitTick;
+    for (const f of b.foes) {
+      let m = this.gaits.get(f.id);
+      const seed = this.seedOf(f);
+      if (!m) {
+        // Start mid stride and already walking, so a still frame shows foes on the move and a crowd is never in step.
+        m = { x: f.x, y: f.y, ph: seed * 1.7 + f.id * 2.3, v: 1, face: f.dir || 1, hx: f.dir || 1, hy: 0, tick };
+        this.gaits.set(f.id, m);
+      }
+      m.tick = tick;
+      if (dt <= 0) continue;
+      const dx = f.x - m.x, dy = f.y - m.y, dist = Math.hypot(dx, dy);
+      m.x = f.x; m.y = f.y;
+      // A burrower that pops up across the map, or a boss phase jump, is not a stride.
+      if (dist > 40) continue;
+      // Legs turn over with ground covered, not with time: slowed foes trudge, held foes stand.
+      m.ph += dist / GAIT[gaitOf(f)].stride * TAU;
+      const k = 1 - Math.exp(-dt * 8);
+      m.v += (Math.min(1.5, dist / dt / f.def.speed) - m.v) * k;
+      if (dist > 0.05) { m.hx += (dx / dist - m.hx) * (1 - Math.exp(-dt * 6)); m.hy += (dy / dist - m.hy) * (1 - Math.exp(-dt * 6)); }
+      // Turning around takes a beat: the body swings through instead of flipping in one frame.
+      const want = f.dir || 1;
+      m.face += Math.sign(want - m.face) * Math.min(Math.abs(want - m.face), dt * 7);
+    }
+    if (tick % 120 === 0) for (const [id, m] of this.gaits) if (m.tick !== tick) this.gaits.delete(id);
+  }
+
   draw(b: Battle, view: View, T: number, dt: number) {
     const g = this.g, st = this.stage, R = this.r;
     this.step(dt);
+    this.stepGaits(b, dt);
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     g.fillStyle = '#e4dccb'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
     g.translate(this.ox, this.oy); g.scale(this.scale, this.scale);
@@ -579,9 +612,27 @@ export class Scene {
   }
 
   private drawFoe(f: Foe, pass: 'base' | 'emit', T: number) {
-    const g = this.g, seed = this.seedOf(f), face = f.dir || 1;
-    const bob = Math.sin(T * 8 + seed) * 0.4;
-    const x = f.x, y = f.y + bob;
+    const g = this.g, seed = this.seedOf(f);
+    const m = this.gaits.get(f.id), kind = gaitOf(f), gt = GAIT[kind];
+    const ph = m?.ph ?? seed, v = Math.min(1, m?.v ?? 1);
+    // A turn shows as the body swinging through side on; never thinner than a quarter, so it never vanishes.
+    const fs = m?.face ?? (f.dir || 1), face = Math.sign(fs || 1) * Math.max(0.25, Math.abs(fs));
+    // Crowds spread across the road instead of walking in single file, and weave a little as they go.
+    const hx = m?.hx ?? 1, hy = m?.hy ?? 0, hl = Math.hypot(hx, hy) || 1;
+    const lane = f.def.traits?.boss || f.def.flying ? 0 : Math.max(-8, Math.min(8, f.off * 0.45)) + Math.sin(T * 0.9 + seed * 3) * 2 * v;
+    const x = f.x - hy / hl * lane, y = f.y + hx / hl * lane * Y_SQUASH;
+    // Held by Wren: rear back and strike instead of walking in place.
+    const strike = f.blocked ? Math.max(0, Math.sin(T * 6 + seed)) ** 3 : 0;
+    // Each footfall lifts and drops the body; at rest only a slow breath remains.
+    const step = Math.abs(Math.sin(ph)) * gt.lift * v;
+    const breath = Math.sin(T * 2.2 + seed) * 0.5;
+    const by = y - step + breath * (1 - v);
+    const bx = x + strike * 5 * Math.sign(face);
+    // Nose up going up the screen, down going down; heavy walkers also rock side to side.
+    const tilt = (hy / hl) * 0.16 * Math.sign(face) + Math.sin(ph) * gt.rock * v - strike * 0.12 * Math.sign(face);
+    // Crawlers surge: stretch as they reach, bunch up as they pull.
+    const surge = Math.sin(ph * 2) * gt.surge * v;
+    const legs = f.blocked || v < 0.05 ? undefined : ph;
     if (f.under) {
       if (pass === 'base') {
         g.fillStyle = 'rgba(40,32,24,.9)'; g.beginPath(); g.ellipse(x, y, 14 * f.def.size, 6 * f.def.size, 0, 0, TAU); g.fill();
@@ -594,28 +645,32 @@ export class Scene {
     const S = f.def.size;
     // Small foes are drawn a fifth bigger than their art scale so they read at 3x and on phones.
     const K = f.def.traits?.boss ? 1 : 1.2;
-    if (K !== 1) { g.save(); g.translate(x, y); g.scale(K, K); g.translate(-x, -y); }
+    g.save();
+    g.translate(bx, by); g.rotate(tilt); g.scale(K * (1 + surge), K * (1 - surge * 0.8)); g.translate(-bx, -by);
+    // Wings beat: seen from the front, a flap reads as the wings folding in and opening out.
+    const flap = (k: number) => { g.save(); g.translate(bx, by); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -by); };
+    const mothY = by + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
     switch (f.kind) {
-      case 'grub': L.grub(g, x, y, 0.42, pass, seed, face); break;
-      case 'skitter': L.grub(g, x, y, 0.28, pass, seed + 3, face); break;
-      case 'mender': L.grub(g, x, y, 0.46, pass, seed + 5, face); if (pass === 'emit') ringGlow(g, x, y - 12, 26, '120,230,140', 0.2 + 0.1 * Math.sin(T * 4)); break;
-      case 'shade': L.grub(g, x, y, 0.4, pass, seed + 7, face); break;
-      case 'splitter': L.grub(g, x, y, 0.5, pass, seed + 1, face); if (pass === 'emit') ringGlow(g, x, y - 14, 20, '180,240,200', 0.15); break;
-      case 'burrower': L.grub(g, x, y, 0.4, pass, seed + 2, face); break;
-      case 'shell': L.shellback(g, x, y, 0.5, pass, seed, face, 1); break;
-      case 'sapper': L.shellback(g, x, y, 0.42, pass, seed + 4, face, 0); break;
-      case 'elite': L.shellback(g, x, y, 0.58, pass, seed + 6, face, 0); if (pass === 'base') { g.fillStyle = 'rgba(150,160,175,.35)'; g.beginPath(); g.ellipse(x, y - 22, 26, 12, 0, Math.PI, TAU); g.fill(); } break;
-      case 'warden': L.shellback(g, x, y, 0.66, pass, 66, face, 0); if (pass === 'emit') ringGlow(g, x, y - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3)); break;
-      case 'moth': L.moth(g, x, y + Math.sin(T * 3 + seed) * 3, 0.34, pass, seed, 60); break;
-      case 'ashmoth': L.moth(g, x, y + Math.sin(T * 3 + seed) * 3, 0.4, pass, seed + 9, 60); if (pass === 'emit') { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - 60, 22, '#ff7a3a', 0.35); g.restore(); } break;
-      case 'mireking': L.grub(g, x, y, 1.25, pass, 41, face); break;
-      case 'tidewyrm': L.grub(g, x, y, 1.05, pass, 47, face); if (pass === 'emit') ringGlow(g, x, y, 60, '120,190,230', 0.2); break;
-      case 'colossus': L.shellback(g, x, y, 1.2, pass, 61, face, (f.slowT > 0 || f.freezeT > 0) ? 1 : 0); break;
-      case 'queen': L.moth(g, x, y, 0.95, pass, 51, 40); L.shellback(g, x, y, 0.7, pass, 63, face, 0); if (pass === 'emit') ringGlow(g, x, y - 40, 80, '90,230,190', 0.25 + 0.1 * Math.sin(T * 2)); break;
+      case 'grub': L.grub(g, bx, by, 0.42, pass, seed, face, legs); break;
+      case 'skitter': L.grub(g, bx, by, 0.28, pass, seed + 3, face, legs); break;
+      case 'mender': L.grub(g, bx, by, 0.46, pass, seed + 5, face, legs); if (pass === 'emit') ringGlow(g, bx, by - 12, 26, '120,230,140', 0.2 + 0.1 * Math.sin(T * 4)); break;
+      case 'shade': L.grub(g, bx, by, 0.4, pass, seed + 7, face, legs); break;
+      case 'splitter': L.grub(g, bx, by, 0.5, pass, seed + 1, face, legs); if (pass === 'emit') ringGlow(g, bx, by - 14, 20, '180,240,200', 0.15); break;
+      case 'burrower': L.grub(g, bx, by, 0.4, pass, seed + 2, face, legs); break;
+      case 'shell': L.shellback(g, bx, by, 0.5, pass, seed, face, 1, legs); break;
+      case 'sapper': L.shellback(g, bx, by, 0.42, pass, seed + 4, face, 0, legs); break;
+      case 'elite': L.shellback(g, bx, by, 0.58, pass, seed + 6, face, 0, legs); if (pass === 'base') { g.fillStyle = 'rgba(150,160,175,.35)'; g.beginPath(); g.ellipse(bx, by - 22, 26, 12, 0, Math.PI, TAU); g.fill(); } break;
+      case 'warden': L.shellback(g, bx, by, 0.66, pass, 66, face, 0, legs); if (pass === 'emit') ringGlow(g, bx, by - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3)); break;
+      case 'moth': flap(0.35); L.moth(g, bx, mothY, 0.34, pass, seed, 60); g.restore(); break;
+      case 'ashmoth': flap(0.35); L.moth(g, bx, mothY, 0.4, pass, seed + 9, 60); g.restore(); if (pass === 'emit') { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 60, 22, '#ff7a3a', 0.35); g.restore(); } break;
+      case 'mireking': L.grub(g, bx, by, 1.25, pass, 41, face, legs); break;
+      case 'tidewyrm': L.grub(g, bx, by, 1.05, pass, 47, face, legs); if (pass === 'emit') ringGlow(g, bx, by, 60, '120,190,230', 0.2); break;
+      case 'colossus': L.shellback(g, bx, by, 1.2, pass, 61, face, (f.slowT > 0 || f.freezeT > 0) ? 1 : 0, legs); break;
+      case 'queen': flap(0.15); L.moth(g, bx, by, 0.95, pass, 51, 40); g.restore(); L.shellback(g, bx, by, 0.7, pass, 63, face, 0, legs); if (pass === 'emit') ringGlow(g, bx, by - 40, 80, '90,230,190', 0.25 + 0.1 * Math.sin(T * 2)); break;
     }
     // The green glow in their seams: the one strong colour the Hollow owns.
-    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
-    if (K !== 1) g.restore();
+    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
+    g.restore();
     g.globalAlpha = 1;
     if (pass === 'base') {
       if (f.rootT > 0) { g.fillStyle = '#0d0f0a'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rx = x + Math.cos(a) * 14 * S, ry = y + Math.sin(a) * 4; g.beginPath(); g.moveTo(rx - 3, ry); g.lineTo(rx + Math.cos(a) * 3, ry - 12 - f.rootT * 4); g.lineTo(rx + 3, ry); g.fill(); } }
@@ -809,4 +864,24 @@ function makeDecor(b: Battle) {
     }
   }
   return { trees, stones, ruins, posts };
+}
+
+interface Gait { x: number; y: number; ph: number; v: number; face: number; hx: number; hy: number; tick: number }
+type GaitKind = 'crawl' | 'scuttle' | 'plod' | 'stomp' | 'fly';
+/** Per kind of walker: stride is ground covered per full leg cycle (world px); lift, rock and surge shape the body. */
+const GAIT: Record<GaitKind, { stride: number; lift: number; rock: number; surge: number }> = {
+  crawl: { stride: 30, lift: 0.8, rock: 0, surge: 0.035 },
+  scuttle: { stride: 16, lift: 2.2, rock: 0, surge: 0.02 },
+  plod: { stride: 34, lift: 1.4, rock: 0.035, surge: 0 },
+  stomp: { stride: 70, lift: 3, rock: 0.025, surge: 0.015 },
+  fly: { stride: 60, lift: 0, rock: 0.04, surge: 0 },
+};
+function gaitOf(f: Foe): GaitKind {
+  if (f.def.flying) return 'fly';
+  if (f.def.traits?.boss) return 'stomp';
+  switch (f.kind) {
+    case 'skitter': return 'scuttle';
+    case 'shell': case 'sapper': case 'elite': case 'warden': return 'plod';
+    default: return 'crawl';
+  }
 }

@@ -9,7 +9,7 @@ import { ITEMS, ITEM_ORDER, ITEM_SLOTS, RUNES } from '../game/data/shop';
 import type { Mods } from '../game/mods';
 import type { Audio } from '../audio/sfx';
 import { h, clear, setText, icon } from './dom';
-import { towerIcon, foeIcon, heroIcon, SKILL_ICON, LOCK_ICON, ELEMENT_ICON, PAUSE_ICON, PLAY_ICON, LEAVE_ICON, WING_ICON } from './icons';
+import { towerIcon, foeIcon, heroIcon, SKILL_ICON, LOCK_ICON, ELEMENT_ICON, PAUSE_ICON, PLAY_ICON, LEAVE_ICON, WING_ICON, SOUND_ICON, MUTE_ICON } from './icons';
 
 export interface BattleHost {
   audio: Audio;
@@ -17,6 +17,8 @@ export interface BattleHost {
   reduceMotion: boolean;
   autoSkills: boolean;
   dmgNumbers: boolean;
+  /** Turn sound on or off and save the choice. Returns whether sound is now on. */
+  toggleSound(): boolean;
   onExit(): void;
   onResult(stageId: number, stars: number): number;
   onNext(stageId: number): void;
@@ -265,6 +267,9 @@ export class BattleScreen {
     this.hud.speed = speed;
     const pause = h('button', { class: 'btn icon pause', title: 'Pause (P)', 'aria-label': 'Pause', onclick: () => this.togglePause() }, icon(PAUSE_ICON));
     this.hud.pause = pause;
+    const sound = h('button', { class: 'btn icon sound', title: 'Sound (M)', onclick: () => this.toggleSound() });
+    this.hud.sound = sound;
+    this.showSound();
 
     // Hero card.
     const hpBar = h('div', { class: 'bar hp' }, h('i'));
@@ -298,7 +303,7 @@ export class BattleScreen {
     lives.append(starsNow);
     this.hud.stats = h('div', { class: 'hud-stats' }, lives, stat('gold', 'Gold'), stat('wave', 'Wave'), resist);
     // Leaving lives in the pause card, so a slip of the thumb next to pause cannot end a run.
-    this.hud.ctrl = h('div', { class: 'hud-ctrl' }, speed, pause);
+    this.hud.ctrl = h('div', { class: 'hud-ctrl' }, sound, speed, pause);
     this.hud.hero = heroCard;
     this.hud.skills = skills;
     const next = h('div', { class: 'next-wave', 'aria-live': 'off' });
@@ -450,6 +455,7 @@ export class BattleScreen {
     else if (k === ' ') { this.battle.callWave(); e.preventDefault(); }
     else if (k === 'f') this.cycleSpeed();
     else if (k === 'p') this.togglePause();
+    else if (k === 'm') this.toggleSound();
     else if (k === 'b') this.toggleShop();
     else if (k === 'escape') { this.aimingW = false; this.view.aimW = null; this.closeMenu(); this.closeShop(); }
     else if (/^[1-6]$/.test(k) && this.view.selPlot !== null) {
@@ -479,6 +485,21 @@ export class BattleScreen {
   }
 
   private pauseCard: HTMLElement | null = null;
+
+  private toggleSound() {
+    this.host.audio.unlock();
+    this.host.toggleSound();
+    this.showSound();
+  }
+
+  /** The speaker shows what you hear now: struck through when muted. */
+  private showSound() {
+    const on = this.host.audio.enabled, btn = this.hud.sound;
+    clear(btn); btn.append(icon(on ? SOUND_ICON : MUTE_ICON));
+    btn.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
+    btn.setAttribute('aria-pressed', String(!on));
+    btn.classList.toggle('off', !on);
+  }
 
   /** Pause shows a small card over the map: resume, or leave the battle. The map stays in view. */
   private togglePause() {

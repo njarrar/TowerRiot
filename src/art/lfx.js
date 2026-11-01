@@ -218,8 +218,9 @@ function stormPylon(ctx,x,y,s,pass,seed,target){seed=seed||31;ctx.save();ctx.tra
 
 /* ---------- THE HOLLOW (origin = ground under the body) ---------- */
 // Grub: eyeless segmented larva. Glow lives in its seams, not in a face.
-function grub(ctx,x,y,s,pass,seed,face){seed=seed||41;face=face||1;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
- const segs=[];const n=9;for(let i=0;i<n;i++){const t=i/(n-1);const px=-48+t*92;const py=-10-Math.sin(t*Math.PI)*6+Math.sin(t*9+seed)*1.2;const r=6+Math.sin(t*Math.PI)*9-(t>.85?3:0);segs.push([px,py,r]);}
+// ph is the walk phase in radians; left out, the grub stands still (menu icons).
+function grub(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ const segs=[];const n=9;for(let i=0;i<n;i++){const t=i/(n-1);const px=-48+t*92;const py=-10-Math.sin(t*Math.PI)*6+Math.sin(t*9+seed)*1.2+(walk?Math.sin(ph-t*5)*1.8:0);const r=6+Math.sin(t*Math.PI)*9-(t>.85?3:0);segs.push([px,py,r]);}
  if(pass==='base'){
   // slime trail behind
   ctx.save();ctx.translate(-70,0);ctx.scale(1,.25);const tg=ctx.createLinearGradient(-50,0,40,0);tg.addColorStop(0,'rgba(20,30,28,0)');tg.addColorStop(1,'rgba(20,34,30,.75)');ctx.fillStyle=tg;ctx.beginPath();ctx.ellipse(0,0,50,14,0,0,TAU);ctx.fill();ctx.restore();
@@ -227,7 +228,8 @@ function grub(ctx,x,y,s,pass,seed,face){seed=seed||41;face=face||1;ctx.save();ct
   shadow(ctx,6,1,62,10,.8);
   // legs: hooked, many, under the body
   const r=rng(seed);ctx.strokeStyle='#0b0c0d';ctx.lineWidth=1.6;ctx.lineCap='round';
-  segs.forEach(([px,py,rr],i)=>{if(i==0||i==n-1)return;for(const side of[-1,1]){const lx=px+side*2;ctx.beginPath();ctx.moveTo(lx,py+rr*.5);ctx.quadraticCurveTo(lx+side*3+(r()-.5)*3,py+rr+3,lx+side*5,-.5);ctx.stroke();}});
+  // Walking, a ripple runs down the legs from tail to head, each one reaching forward then planting.
+  segs.forEach(([px,py,rr],i)=>{if(i==0||i==n-1)return;for(const side of[-1,1]){const lx=px+side*2,q=ph*2-i*1.1+(side>0?Math.PI:0),fx=walk?Math.sin(q)*3.5:0,fy=walk?Math.max(0,Math.cos(q))*2.2:0;ctx.beginPath();ctx.moveTo(lx,py+rr*.5);ctx.quadraticCurveTo(lx+side*3+(r()-.5)*3+fx*.5,py+rr+3-fy,lx+side*5+fx,-.5-fy);ctx.stroke();}});
   // segments from tail to head
   segs.forEach(([px,py,rr],i)=>{
    const g=ctx.createRadialGradient(px-rr*.4,py-rr*.6,1,px,py,rr*1.3);g.addColorStop(0,'#3a3d3f');g.addColorStop(.5,'#191b1c');g.addColorStop(1,'#08090a');
@@ -301,7 +303,8 @@ function moth(ctx,x,y,s,pass,seed,alt){seed=seed||51;alt=alt==null?60:alt;ctx.sa
 
 // Shellback, frost adapted: a long, hunched plated beast seen from the side.
 // Adaptation shows as rime on the plates and broken ice pushed out of the seams, mostly at the back.
-function shellback(ctx,x,y,s,pass,seed,face,frost){seed=seed||61;face=face||1;frost=frost==null?1:frost;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+// ph is the walk phase in radians; left out, it stands still.
+function shellback(ctx,x,y,s,pass,seed,face,frost,ph){seed=seed||61;face=face||1;frost=frost==null?1:frost;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
  const RX=54,RY=36,cy=-12,NB=8;
  const topY=px=>cy-RY*Math.sqrt(Math.max(0,1-(px/RX)*(px/RX)));
  const seamX=j=>-RX*.92+j*(RX*1.84/NB);
@@ -310,7 +313,8 @@ function shellback(ctx,x,y,s,pass,seed,face,frost){seed=seed||61;face=face||1;fr
   shadow(ctx,10,2,74,12,.85);
   const r=rng(seed);
   // legs: thick, jointed, mostly in shadow
-  [-36,-16,6,26].forEach((lx,i)=>{ctx.fillStyle='#0a0b0c';poly(ctx,[[lx-6,cy+2],[lx+6,cy+2],[lx+8,-6],[lx+10,0],[lx-2,0],[lx-4,-6]]);ctx.fill();ctx.fillStyle='rgba(180,170,150,.14)';ctx.fillRect(lx-2,-7,9,1);});
+  // Walking, legs swing in diagonal pairs: one pair plants and pushes back while the other lifts and reaches.
+  [-36,-16,6,26].forEach((lx,i)=>{const q=ph+(i%2)*Math.PI,fx=walk?Math.sin(q)*7:0,up=walk?Math.max(0,Math.cos(q))*4.5:0;ctx.fillStyle='#0a0b0c';poly(ctx,[[lx-6,cy+2],[lx+6,cy+2],[lx+8+fx*.5,-6-up*.6],[lx+10+fx,-up],[lx-2+fx,-up],[lx-4+fx*.5,-6-up*.6]]);ctx.fill();ctx.fillStyle='rgba(180,170,150,.14)';ctx.fillRect(lx-2+fx*.5,-7-up*.6,9,1);});
   // belly
   ctx.fillStyle='#0c0d0e';ctx.beginPath();ctx.ellipse(0,cy+2,RX*.98,9,0,0,TAU);ctx.fill();
   // head: low, armoured, tusks; tucked under the front plate

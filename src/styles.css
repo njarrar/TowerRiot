@@ -97,6 +97,10 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 
 .bar-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 16px; }
 .bar-top > :first-child { justify-self: start; }
+.bar-end { display: flex; gap: 8px; align-items: center; }
+/* Sound: a speaker in a corner of every menu and in the battle controls. Muted, it is struck through and dimmed. */
+.btn.icon.sound.off { color: var(--ink-dim); }
+.title-sound { position: absolute; z-index: 2; top: calc(12px + var(--safe-t)); right: calc(12px + var(--safe-r)); background: var(--paper-glass); }
 .bar-top > :last-child { justify-self: end; }
 .bar-top h2 { text-align: center; font-size: 1.5rem; color: var(--ink); }
 
@@ -394,7 +398,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 
 /* Side columns on wide phones: compact, icon-first. */
 .narrow .hud .col { padding-left: 4px; padding-right: 4px; gap: 6px; }
-.narrow .hud-ctrl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.narrow .hud-ctrl { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
 .narrow .hud-ctrl .btn.icon { width: 100%; height: 44px; font-size: 0.9rem; }
 .narrow .stat { padding: 3px 6px; font-size: 0.82rem; gap: 4px; }
 .narrow .ico { width: 12px; height: 12px; }
