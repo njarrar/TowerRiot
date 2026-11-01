@@ -21,18 +21,31 @@ type Light = [number, number, number, number, string?];
 interface Sprite { c: HTMLCanvasElement; w: number; h: number; ox: number; oy: number }
 interface Part { x: number; y: number; vx: number; vy: number; life: number; max: number; c: string; s: number; kind: 'smoke' | 'spark' | 'chip'; grav?: number }
 interface Fx { k: 'ring' | 'arc' | 'boom' | 'slash' | 'flash' | 'steam' | 'lantern' | 'sun' | 'splash'; x: number; y: number; r: number; max: number; life: number; c?: string; pts?: Vec[]; seed?: number }
-interface Float { x: number; y: number; text: string; c: string; big: boolean; life: number; max: number }
+interface Float { x: number; y: number; text: string; c: string; big: boolean; life: number; max: number; gold?: number }
 
 const LIGHT: Record<TowerKind, [string, number]> = {
   watch: ['#ff9a3a', 120], cannon: ['#ff8a2a', 72], bell: ['#8fd0ff', 70], pylon: ['#a99cff', 150], roots: ['#7fd06a', 50], beacon: ['#ffb050', 150],
 };
 const EL_COLOR: Record<string, string> = { pierce: '#f0d6a8', fire: '#ffb27a', frost: '#bfe6ff', storm: '#cfc6ff', nature: '#b8e6a0', hero: '#e8f2ff', env: '#ffd9a0' };
 
-/** Region looks laid over the same painted ground: [screen lift, water tint, sun warmth]. */
+type RGB = [number, number, number];
+/** Day ground colours per region, painted straight into the field. The Ashen Rift has none and keeps its dark, lava-lit ground. */
+interface DayPal { grassLo: RGB; grassHi: RGB; moss: RGB; high: RGB; roadLo: RGB; roadHi: RGB; water: RGB; leafy: boolean; leaf: string; bark: string }
+const DAY_PAL: (DayPal | null)[] = [
+  // Mosslight Vale: fresh grass, a pale dirt road, clear water.
+  { grassLo: [92, 124, 66], grassHi: [122, 152, 80], moss: [84, 128, 70], high: [150, 148, 132], roadLo: [196, 178, 142], roadHi: [216, 200, 164], water: [64, 118, 140], leafy: true, leaf: '#4f7d3a', bark: '#3a2e24' },
+  // Saltglass Coast: pale sand and dune grass, a darker packed road, blue sea.
+  { grassLo: [184, 174, 134], grassHi: [204, 194, 152], moss: [150, 162, 112], high: [170, 166, 150], roadLo: [160, 142, 110], roadHi: [178, 160, 126], water: [60, 130, 160], leafy: true, leaf: '#6a8a48', bark: '#5a4a3a' },
+  // Cogwheel Foundry: slate and soot, a swept stone road, grey water.
+  { grassLo: [122, 124, 116], grassHi: [144, 144, 134], moss: [112, 122, 96], high: [160, 156, 148], roadLo: [186, 174, 152], roadHi: [200, 190, 168], water: [92, 110, 122], leafy: false, leaf: '#56704a', bark: '#2e2a26' },
+  null,
+];
+
+/** Region looks laid over the same painted ground: [screen lift, water tint, sun warmth]. Only the Ashen Rift still uses the lift. */
 const REGION_LOOK = [
-  { lift: 'rgb(40,50,30)', water: 'rgb(120,165,200)', sunA: 'rgba(255,214,150,.6)', sunB: 'rgba(150,180,120,.35)', sunC: 'rgba(90,130,120,.45)' },
-  { lift: 'rgb(62,58,44)', water: 'rgb(100,170,205)', sunA: 'rgba(255,224,170,.6)', sunB: 'rgba(190,190,150,.35)', sunC: 'rgba(90,140,160,.45)' },
-  { lift: 'rgb(52,46,38)', water: 'rgb(110,115,120)', sunA: 'rgba(255,190,120,.6)', sunB: 'rgba(170,140,110,.35)', sunC: 'rgba(90,90,100,.45)' },
+  { lift: 'rgb(40,50,30)', water: 'rgb(120,165,200)', sunA: 'rgba(255,214,150,.6)', sunB: 'rgba(210,225,170,.4)', sunC: 'rgba(190,215,230,.5)' },
+  { lift: 'rgb(62,58,44)', water: 'rgb(100,170,205)', sunA: 'rgba(255,224,170,.6)', sunB: 'rgba(225,220,180,.4)', sunC: 'rgba(190,215,235,.5)' },
+  { lift: 'rgb(52,46,38)', water: 'rgb(110,115,120)', sunA: 'rgba(255,190,120,.6)', sunB: 'rgba(215,190,160,.4)', sunC: 'rgba(185,195,215,.45)' },
   { lift: 'rgb(48,36,32)', water: 'rgb(255,120,50)', sunA: 'rgba(255,170,110,.6)', sunB: 'rgba(170,110,90,.35)', sunC: 'rgba(80,60,70,.45)' },
 ];
 
@@ -45,6 +58,12 @@ export interface View {
   /** Show the W skill's landing circle at this point. */
   aimW: Vec | null;
   reduceMotion: boolean;
+  /** Show damage numbers over foes. Gold and lives always show. */
+  dmgNumbers: boolean;
+  /** A plot to mark for a new player (stage 1, before the first tower). */
+  hintPlot?: number | null;
+  /** A still frame (title screen): no health bars or shells in flight. */
+  still?: boolean;
 }
 
 export class Scene {
@@ -63,6 +82,9 @@ export class Scene {
   private rifts: { x: number; y: number }[] = [];
   private waterPts: { pts: Vec[]; w: number }[] = [];
   private seeds = new Map<number, number>();
+  /** How each foe looks in motion: drawn only, so the fight itself (timing, ranges, gate) never changes. */
+  private gaits = new Map<number, Gait>();
+  private gaitTick = 0;
   private moveMark: { x: number; y: number; t: number } | null = null;
   private crows: { x: number; y: number; v: number; n: number }[] = [];
   private r = makeRng(99);
@@ -79,13 +101,13 @@ export class Scene {
   load(b: Battle) {
     const st = b.stage;
     this.stage = st;
-    this.parts = []; this.fx = []; this.floats = []; this.coins = []; this.seeds.clear();
+    this.parts = []; this.fx = []; this.floats = []; this.coins = []; this.seeds.clear(); this.gaits.clear();
     this.waterPts = st.waters.map(w => ({ pts: smooth(w.ctrl), w: w.w }));
     const decor = makeDecor(b);
     this.posts = decor.posts;
     this.rifts = [...b.spawns.values()].map(rs => {
       const p = pointAt(rs[0].path, 30);
-      return { x: Math.max(24, Math.min(W - 24, p.x)), y: Math.max(40, Math.min(H - 30, p.y)) };
+      return { x: Math.max(64, Math.min(W - 64, p.x)), y: Math.max(80, Math.min(H - 50, p.y)) };
     });
     const bg = document.createElement('canvas');
     bg.width = W; bg.height = H;
@@ -94,6 +116,7 @@ export class Scene {
       roads: b.roads.map(r => ({ pts: r.path.pts, w: r.def.w })).sort((a, z) => a.w - z.w),
       waters: this.waterPts, high: st.high ?? [], bridges: st.bridges,
       ruins: decor.ruins, stones: decor.stones, trees: decor.trees, plots: [],
+      pal: st.lava ? null : DAY_PAL[st.region],
     });
     this.washRegion(c, st);
     b.plots.forEach((p, i) => L.plot(c, p.x, p.y, 600 + i * 3, 1));
@@ -103,6 +126,14 @@ export class Scene {
 
   private washRegion(c: CanvasRenderingContext2D, st: StageDef) {
     const look = REGION_LOOK[st.region];
+    if (!st.lava && DAY_PAL[st.region]) {
+      // Day ground is already in colour. Add only low sun from the upper right and a cool touch in the far shade.
+      c.save(); c.globalCompositeOperation = 'soft-light';
+      const sg = c.createLinearGradient(W, 0, 0, H);
+      sg.addColorStop(0, 'rgba(255,226,170,.45)'); sg.addColorStop(0.55, 'rgba(255,255,255,0)'); sg.addColorStop(1, 'rgba(120,150,190,.35)');
+      c.fillStyle = sg; c.fillRect(0, 0, W, H); c.restore();
+      return;
+    }
     c.save();
     c.globalCompositeOperation = 'screen'; c.fillStyle = look.lift; c.fillRect(0, 0, W, H);
     c.globalCompositeOperation = st.lava ? 'source-over' : 'multiply';
@@ -116,6 +147,11 @@ export class Scene {
     const sg = c.createLinearGradient(W, 0, 0, H);
     sg.addColorStop(0, look.sunA); sg.addColorStop(0.55, look.sunB); sg.addColorStop(1, look.sunC);
     c.fillStyle = sg; c.fillRect(0, 0, W, H);
+    if (!st.lava) {
+      // Morning grade, baked once: open the mid tones and pull the brown haze toward cool daylight.
+      c.globalCompositeOperation = 'soft-light'; c.fillStyle = 'rgba(255,255,255,.45)'; c.fillRect(0, 0, W, H);
+      c.globalCompositeOperation = 'saturation'; c.fillStyle = 'rgba(90,150,60,.25)'; c.fillRect(0, 0, W, H);
+    }
     c.restore();
   }
 
@@ -163,7 +199,7 @@ export class Scene {
 
   /* ------------------------------------------------------------------ events to effects */
 
-  consume(b: Battle, events: BattleEvent[]) {
+  consume(b: Battle, events: BattleEvent[], dmgNumbers = false) {
     const R = this.r;
     for (const e of events) {
       switch (e.t) {
@@ -173,19 +209,19 @@ export class Scene {
           this.fx.push({ k: 'boom', x: e.x, y: e.y, r: e.r, max: 0.45, life: 0.45 });
           this.shake = Math.max(this.shake, 4);
           for (let i = 0; i < 14; i++) { const a = R() * TAU, v = 60 + R() * 160; this.parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5 - 90, life: 0.8, max: 0.8, c: '#2a241c', s: 2.6, kind: 'chip', grav: 1 }); }
-          for (let i = 0; i < 5; i++) this.parts.push({ x: e.x + (R() - 0.5) * 30, y: e.y - 4, vx: (R() - 0.5) * 20, vy: -14, life: 1.5, max: 1.5, c: 'rgba(70,66,62,', s: 9, kind: 'smoke' });
+          for (let i = 0; i < 3; i++) this.parts.push({ x: e.x + (R() - 0.5) * 26, y: e.y - 4, vx: (R() - 0.5) * 20, vy: -14, life: 0.9, max: 0.9, c: 'rgba(150,142,130,', s: 6, kind: 'smoke' });
           break;
         case 'root': for (let i = 0; i < 8; i++) this.parts.push({ x: e.x + (R() - 0.5) * 30, y: e.y, vx: (R() - 0.5) * 40, vy: -50 - R() * 50, life: 0.6, max: 0.6, c: '#3a3326', s: 2.6, kind: 'chip', grav: 1 }); break;
         case 'hit':
           for (let i = 0; i < 3; i++) { const a = R() * TAU; this.parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 80, vy: Math.sin(a) * 80, life: 0.3, max: 0.3, c: EL_COLOR[e.el] ?? '#fff', s: 1.6, kind: 'spark' }); }
-          if (e.crit) this.float(e.x, e.y - 10, `${Math.round(e.dmg)}!`, '#ffe6b0', true);
-          else if (e.el === 'hero') this.float(e.x, e.y - 6, `${Math.round(e.dmg)}`, '#e8f2ff', false);
+          if (dmgNumbers && e.crit) this.float(e.x, e.y - 10, `${Math.round(e.dmg)}!`, '#ffe6b0', true);
+          else if (dmgNumbers && e.el === 'hero') this.float(e.x, e.y - 6, `${Math.round(e.dmg)}`, '#e8f2ff', false);
           break;
         case 'kill': {
           this.coins.push({ sx: e.x, sy: e.y - 20, u: 0, x: e.x, y: e.y });
-          this.float(e.x + 12, e.y - 46, `+${e.gold}`, e.hero ? '#ffd76a' : '#e8b34a', e.hero);
+          this.goldPop(e.x + 12, e.y - 46, e.gold, e.hero);
           for (let i = 0; i < 10; i++) { const a = R() * TAU; this.parts.push({ x: e.x, y: e.y - 10, vx: Math.cos(a) * 60, vy: -30 - R() * 60, life: 0.9, max: 0.9, c: '#5ac8a8', s: 1.8, kind: 'spark' }); }
-          for (let i = 0; i < 3; i++) this.parts.push({ x: e.x + (R() - 0.5) * 20, y: e.y - 6, vx: 0, vy: -16, life: 1.3, max: 1.3, c: 'rgba(30,40,38,', s: 8, kind: 'smoke' });
+          for (let i = 0; i < 2; i++) this.parts.push({ x: e.x + (R() - 0.5) * 16, y: e.y - 6, vx: 0, vy: -16, life: 0.8, max: 0.8, c: 'rgba(60,80,72,', s: 5, kind: 'smoke' });
           if (e.kind === 'mireking' || e.kind === 'tidewyrm' || e.kind === 'colossus' || e.kind === 'queen') { this.shake = 12; this.flash = 0.6; }
           break;
         }
@@ -196,7 +232,8 @@ export class Scene {
           if (e.key === 'w') this.fx.push({ k: 'lantern', x: e.x, y: e.y, r: SNARE.radius, max: 0.7, life: 0.7 });
           if (e.key === 'r') { this.fx.push({ k: 'sun', x: e.x, y: e.y, r: 0, max: 1.4, life: 1.4 }); this.shake = 7; }
           break;
-        case 'level': this.fx.push({ k: 'ring', x: b.hero.x, y: b.hero.y, r: 0, max: 70, life: 1, c: '255,215,140' }); this.float(b.hero.x, b.hero.y - 90, `Level ${e.level}`, '#ffe2a0', true); break;
+        // The level number itself shows on the hero card; on the map a ring is enough.
+        case 'level': this.fx.push({ k: 'ring', x: b.hero.x, y: b.hero.y, r: 0, max: 70, life: 1, c: '255,215,140' }); break;
         case 'phase': this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 360, life: 1, c: '120,230,200' }); this.shake = 10; break;
         case 'dive': this.fx.push({ k: 'splash', x: e.x, y: e.y, r: 0, max: 0.8, life: 0.8 }); break;
         case 'build': case 'upgrade':
@@ -210,6 +247,18 @@ export class Scene {
     }
   }
 
+  /** Gold from kills close together in time and place adds up in one number instead of a stack. */
+  private goldPop(x: number, y: number, gold: number, hero: boolean) {
+    const f = this.floats.find(o => o.gold !== undefined && o.max - o.life < 0.5 && Math.hypot(o.x - x, o.y - y) < 140);
+    if (f) {
+      f.gold! += gold; f.text = `+${f.gold}`; f.life = f.max;
+      if (hero) { f.c = '#ffd76a'; f.big = true; }
+      return;
+    }
+    this.float(x, y, `+${gold}`, hero ? '#ffd76a' : '#e8b34a', hero);
+    this.floats[this.floats.length - 1].gold = gold;
+  }
+
   private float(x: number, y: number, text: string, c: string, big: boolean) {
     if (this.floats.length > 60) this.floats.shift();
     this.floats.push({ x: x + (this.r() - 0.5) * 12, y, text, c, big, life: big ? 1.4 : 0.8, max: big ? 1.4 : 0.8 });
@@ -219,11 +268,41 @@ export class Scene {
 
   private seedOf(f: Foe) { let s = this.seeds.get(f.id); if (s === undefined) { s = 40 + (f.id * 7) % 9; this.seeds.set(f.id, s); } return s; }
 
+  /** Follow each foe from frame to frame: how far it moved, which way it heads, how it turns. */
+  private stepGaits(b: Battle, dt: number) {
+    const tick = ++this.gaitTick;
+    for (const f of b.foes) {
+      let m = this.gaits.get(f.id);
+      const seed = this.seedOf(f);
+      if (!m) {
+        // Start mid stride and already walking, so a still frame shows foes on the move and a crowd is never in step.
+        m = { x: f.x, y: f.y, ph: seed * 1.7 + f.id * 2.3, v: 1, face: f.dir || 1, hx: f.dir || 1, hy: 0, tick };
+        this.gaits.set(f.id, m);
+      }
+      m.tick = tick;
+      if (dt <= 0) continue;
+      const dx = f.x - m.x, dy = f.y - m.y, dist = Math.hypot(dx, dy);
+      m.x = f.x; m.y = f.y;
+      // A burrower that pops up across the map, or a boss phase jump, is not a stride.
+      if (dist > 40) continue;
+      // Legs turn over with ground covered, not with time: slowed foes trudge, held foes stand.
+      m.ph += dist / GAIT[gaitOf(f)].stride * TAU;
+      const k = 1 - Math.exp(-dt * 8);
+      m.v += (Math.min(1.5, dist / dt / f.def.speed) - m.v) * k;
+      if (dist > 0.05) { m.hx += (dx / dist - m.hx) * (1 - Math.exp(-dt * 6)); m.hy += (dy / dist - m.hy) * (1 - Math.exp(-dt * 6)); }
+      // Turning around takes a beat: the body swings through instead of flipping in one frame.
+      const want = f.dir || 1;
+      m.face += Math.sign(want - m.face) * Math.min(Math.abs(want - m.face), dt * 7);
+    }
+    if (tick % 120 === 0) for (const [id, m] of this.gaits) if (m.tick !== tick) this.gaits.delete(id);
+  }
+
   draw(b: Battle, view: View, T: number, dt: number) {
     const g = this.g, st = this.stage, R = this.r;
     this.step(dt);
+    this.stepGaits(b, dt);
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    g.fillStyle = '#1d2417'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    g.fillStyle = '#e4dccb'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
     g.translate(this.ox, this.oy); g.scale(this.scale, this.scale);
     g.save();
     g.beginPath(); g.rect(0, 0, W, H); g.clip();
@@ -274,14 +353,14 @@ export class Scene {
     for (const [gx, gy] of b.gate) lights.push([gx, gy - 120, 230 * fk, 1, '#ffb050']);
     if (st.lighthouse) lights.push([st.lighthouse[0], st.lighthouse[1] - 120, 380, 1, '#ffe2a0']);
     for (const f of this.fx) if (f.k === 'boom') lights.push([f.x, f.y, 140 * f.life / 0.45 + 40, 0.9, '#ff8a3a']);
-    const dark = b.hero.sunriseT > 0 ? 0 : b.night ? 0.62 : st.lava ? 0.18 : 0.1;
+    const dark = b.hero.sunriseT > 0 ? 0 : b.night ? 0.62 : st.lava ? 0.14 : 0.03;
     L.darkness(g, W, H, lights, dark);
 
     // Sun wash and slow light shafts (not at night).
     if (!b.night) {
       g.save(); g.globalCompositeOperation = 'soft-light';
       const sun = g.createRadialGradient(W * 0.92, -60, 40, W * 0.92, -60, W * 1.1);
-      sun.addColorStop(0, st.lava ? 'rgba(255,170,110,.55)' : 'rgba(255,225,160,.6)'); sun.addColorStop(1, 'rgba(255,225,160,0)');
+      sun.addColorStop(0, st.lava ? 'rgba(255,170,110,.55)' : 'rgba(255,232,180,.32)'); sun.addColorStop(1, 'rgba(255,225,160,0)');
       g.fillStyle = sun; g.fillRect(0, 0, W, H);
       if (!view.reduceMotion) {
         g.globalCompositeOperation = 'screen';
@@ -300,11 +379,11 @@ export class Scene {
     for (const t of b.towers) this.drawTowerEmit(b, t, T);
     for (const [x, y] of this.posts) { const f = 0.8 + 0.2 * Math.sin(T * 15 + x); g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - 34, 10 * f, '#ff9a3a', 0.25); g.restore(); g.fillStyle = '#ffd08a'; g.fillRect(x - 2, y - 37, 4, 6 * f); }
     for (const f of b.foes) this.drawFoe(f, 'emit', T);
-    if (!b.hero.dead) this.drawHero(b, 'emit', T);
+    if (!b.hero.dead) this.drawHero(b, 'emit', T, !!view.still);
     for (const [gx, gy] of b.gate) L.gate(g, gx, gy, 'emit');
     if (st.lighthouse) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, st.lighthouse[0], st.lighthouse[1] - 110, 60, '#ffe6b0', 0.5); g.restore(); }
 
-    this.drawShots(b);
+    if (!view.still) this.drawShots(b);
     this.drawFx(T);
     this.drawRanges(b, view);
     this.drawCrows(T, dt, view.reduceMotion);
@@ -313,7 +392,7 @@ export class Scene {
 
     // Overlays that ignore shake.
     g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
-    L.vignette(g, W, H, b.night ? 0.7 : 0.45);
+    L.vignette(g, W, H, b.night ? 0.7 : 0.16);
     if (this.flash > 0) { g.fillStyle = `rgba(255,${b.status === 'lost' ? 80 : 230},${b.status === 'lost' ? 60 : 180},${this.flash * 0.35})`; g.fillRect(0, 0, W, H); }
     for (const c of this.coins) { g.fillStyle = '#d9962a'; g.beginPath(); g.ellipse(c.x, c.y, 4.5 * Math.abs(Math.cos(c.u * 12)) + 1, 4.5, 0, 0, TAU); g.fill(); g.strokeStyle = '#5a2e08'; g.lineWidth = 1; g.stroke(); }
     g.textAlign = 'center';
@@ -406,6 +485,7 @@ export class Scene {
 
   private drawPlots(b: Battle, view: View, T: number) {
     const g = this.g;
+    const canAfford = b.stage.towers.some(k => b.gold >= b.costOf(k));
     b.plots.forEach((p, i) => {
       const used = b.towers.some(t => t.plot === i);
       if (p.sunk) { g.fillStyle = 'rgba(40,52,40,.9)'; g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.fill(); g.strokeStyle = 'rgba(150,180,150,.25)'; g.stroke(); return; }
@@ -417,27 +497,56 @@ export class Scene {
         g.beginPath(); g.arc(0, 0, 34, 0, TAU); g.stroke(); g.restore();
         if (!up) { g.fillStyle = 'rgba(10,12,10,.45)'; g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.fill(); }
       }
-      if (!used && view.selPlot === i) {
+      if (used) return;
+      if (view.hintPlot === i && view.selPlot !== i) {
+        // A steady double ring, no pulse: easy to find, quiet once seen.
+        g.lineWidth = 3; g.strokeStyle = 'rgba(255,248,232,.95)';
+        g.beginPath(); g.ellipse(p.x, p.y - 1.5, 46, 19, 0, 0, TAU); g.stroke();
+        g.lineWidth = 2; g.strokeStyle = 'rgba(40,30,22,.75)';
+        g.beginPath(); g.ellipse(p.x, p.y - 1.5, 50, 21, 0, 0, TAU); g.stroke();
+      }
+      if (view.selPlot === i) {
         g.strokeStyle = `rgba(255,214,140,${0.6 + 0.3 * Math.sin(T * 6)})`; g.lineWidth = 2.5;
-        g.beginPath(); g.ellipse(p.x, p.y, 36, 15, 0, 0, TAU); g.stroke();
-      } else if (!used && b.status === 'prep') {
-        g.strokeStyle = `rgba(255,214,140,${0.25 + 0.2 * Math.sin(T * 3 + i)})`; g.lineWidth = 1.5;
-        g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.stroke();
+        g.beginPath(); g.ellipse(p.x, p.y - 1.5, 39, 16, 0, 0, TAU); g.stroke();
+      }
+      // A small rust mark on every plot you can afford to build on right now.
+      if (canAfford && !b.over && (!p.gear || isGearUp(b, p.gear))) {
+        const x = p.x, y = p.y - 2;
+        g.fillStyle = 'rgba(40,24,16,.25)'; g.beginPath(); g.ellipse(x + 1, y + 2, 10, 5, 0, 0, TAU); g.fill();
+        g.fillStyle = '#a63d26'; g.beginPath(); g.arc(x, y - 4, 9, 0, TAU); g.fill();
+        g.strokeStyle = 'rgba(255,240,225,.9)'; g.lineWidth = 1.2; g.stroke();
+        g.strokeStyle = '#fff6ea'; g.lineWidth = 2.4; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x - 4, y - 4); g.lineTo(x + 4, y - 4); g.moveTo(x, y - 8); g.lineTo(x, y); g.stroke(); g.lineCap = 'butt';
       }
     });
   }
 
+  /** A rift is a torn crack in the ground with a green edge, set fully on the map where foes climb out. */
   private drawRifts(T: number) {
     const g = this.g;
     this.rifts.forEach(({ x, y }, i) => {
+      const R = makeRng(70 + i);
       g.save(); g.translate(x, y);
-      L.shadow(g, 10, 30, 50, 10, 0.6);
-      g.fillStyle = '#020304'; g.beginPath();
-      for (let k = 0; k <= 24; k++) { const a = k / 24 * TAU, rr = 1 + 0.12 * Math.sin(a * 5 + T * 2 + i); g.lineTo(Math.cos(a) * 20 * rr, Math.sin(a) * 44 * rr); }
-      g.fill();
-      g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(90,200,170,.55)'; g.lineWidth = 1.2;
-      for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + T * 0.4 + i; g.beginPath(); g.moveTo(Math.cos(a) * 18, Math.sin(a) * 40); g.lineTo(Math.cos(a + 0.25) * 24, Math.sin(a + 0.25) * 50); g.stroke(); }
-      L.glow(g, 0, 0, 30, '#5ac8a8', 0.14);
+      // Scorched ground around it.
+      const sc = g.createRadialGradient(0, 0, 4, 0, 0, 58);
+      sc.addColorStop(0, 'rgba(24,30,26,.55)'); sc.addColorStop(1, 'rgba(24,30,26,0)');
+      g.save(); g.scale(1, 0.42); g.fillStyle = sc; g.beginPath(); g.arc(0, 0, 58, 0, TAU); g.fill(); g.restore();
+      // The tear: a jagged lens, darker at the centre.
+      const pts: Vec[] = [];
+      for (let k = 0; k <= 18; k++) {
+        const a = k / 18 * TAU, j = 0.75 + R() * 0.4;
+        pts.push([Math.cos(a) * 34 * j, Math.sin(a) * 12 * j]);
+      }
+      g.fillStyle = '#0a0d0c'; g.beginPath(); pts.forEach(([px, py], k) => k ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(96,226,180,.85)'; g.lineWidth = 1.6; g.stroke();
+      // Shards of the ground pushed up at its lips.
+      for (let k = 0; k < 4; k++) {
+        const a = Math.PI + 0.4 + k * 0.6, bx = Math.cos(a) * 30, by = Math.sin(a) * 11;
+        g.fillStyle = k % 2 ? '#3a3a34' : '#4a4840';
+        g.beginPath(); g.moveTo(bx - 5, by); g.lineTo(bx + 1, by - 12 - R() * 8); g.lineTo(bx + 6, by); g.closePath(); g.fill();
+      }
+      g.globalCompositeOperation = 'lighter';
+      L.glow(g, 0, -2, 40, '#5ac8a8', 0.32 + 0.04 * Math.sin(T * 1.5 + i));
       g.restore();
     });
   }
@@ -454,15 +563,32 @@ export class Scene {
 
   private drawTowerBase(t: Tower) {
     const g = this.g, S = Scene.towerScale(t);
+    // A tower on a lowered gear plot sinks back and fades, so it reads as off, not as a smudge.
+    if (t.down) { g.save(); g.globalAlpha = 0.42; }
     this.put(this.towerSprite(t), t.x, t.y);
     if (t.kind === 'cannon') X.cannonBarrel(g, t.x + 4 * S, t.y, S, t.aim, Math.max(0, 1 - t.fired * 4), 0);
-    const n = Math.min(t.lv, 3);
+    if (t.down) g.restore();
+    // Level plaque at the foot of the tower: one mark per level, all gold once it has split.
+    const n = Math.min(t.lv, 3), px = t.x, py = t.y + 20;
+    g.fillStyle = 'rgba(40,30,20,.3)'; g.fillRect(px - 18, py - 4, 38, 13);
+    g.fillStyle = 'rgba(246,240,228,.95)'; g.strokeStyle = 'rgba(70,56,40,.7)'; g.lineWidth = 1;
+    g.beginPath(); g.roundRect(px - 19, py - 6, 38, 13, 3); g.fill(); g.stroke();
     for (let i = 0; i < 3; i++) {
-      g.save(); g.translate(t.x - 14 + i * 14, t.y + 16); g.rotate(0.785);
-      g.fillStyle = i < n ? (t.lv === 4 ? '#ffd76a' : '#c8892a') : 'rgba(255,255,255,.14)'; g.fillRect(-3, -3, 6, 6); g.restore();
+      const qx = px - 14 + i * 10, qy = py - 3;
+      g.fillStyle = i < n ? (t.lv === 4 ? '#d9a23a' : '#a63d26') : 'rgba(70,56,40,.12)';
+      g.fillRect(qx, qy, 8, 7);
+      if (i >= n) { g.strokeStyle = 'rgba(70,56,40,.45)'; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
     }
     if (t.round) { const c = t.round === 'ember' ? '#ff8a3a' : t.round === 'frost' ? '#8fd0ff' : '#b9a8ff'; g.fillStyle = c; g.beginPath(); g.arc(t.x + 30, t.y + 8, 4, 0, TAU); g.fill(); }
-    if (t.down) { g.fillStyle = 'rgba(10,12,14,.45)'; g.beginPath(); g.ellipse(t.x, t.y - 40, 34, 60, 0, 0, TAU); g.fill(); }
+    if (t.down) {
+      // A small paper tag over the plaque: what is wrong and when it ends.
+      const ty = py - 22;
+      g.font = '800 12px Barlow, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const w = g.measureText('Rests this wave').width + 14;
+      g.fillStyle = 'rgba(246,240,228,.96)'; g.strokeStyle = 'rgba(70,56,40,.6)';
+      g.beginPath(); g.roundRect(px - w / 2, ty - 9, w, 18, 3); g.fill(); g.stroke();
+      g.fillStyle = '#3a3128'; g.fillText('Rests this wave', px, ty + 0.5);
+    }
   }
 
   private drawTowerEmit(b: Battle, t: Tower, T: number) {
@@ -486,9 +612,27 @@ export class Scene {
   }
 
   private drawFoe(f: Foe, pass: 'base' | 'emit', T: number) {
-    const g = this.g, seed = this.seedOf(f), face = f.dir || 1;
-    const bob = Math.sin(T * 8 + seed) * 0.4;
-    const x = f.x, y = f.y + bob;
+    const g = this.g, seed = this.seedOf(f);
+    const m = this.gaits.get(f.id), kind = gaitOf(f), gt = GAIT[kind];
+    const ph = m?.ph ?? seed, v = Math.min(1, m?.v ?? 1);
+    // A turn shows as the body swinging through side on; never thinner than a quarter, so it never vanishes.
+    const fs = m?.face ?? (f.dir || 1), face = Math.sign(fs || 1) * Math.max(0.25, Math.abs(fs));
+    // Crowds spread across the road instead of walking in single file, and weave a little as they go.
+    const hx = m?.hx ?? 1, hy = m?.hy ?? 0, hl = Math.hypot(hx, hy) || 1;
+    const lane = f.def.traits?.boss || f.def.flying ? 0 : Math.max(-8, Math.min(8, f.off * 0.45)) + Math.sin(T * 0.9 + seed * 3) * 2 * v;
+    const x = f.x - hy / hl * lane, y = f.y + hx / hl * lane * Y_SQUASH;
+    // Held by Wren: rear back and strike instead of walking in place.
+    const strike = f.blocked ? Math.max(0, Math.sin(T * 6 + seed)) ** 3 : 0;
+    // Each footfall lifts and drops the body; at rest only a slow breath remains.
+    const step = Math.abs(Math.sin(ph)) * gt.lift * v;
+    const breath = Math.sin(T * 2.2 + seed) * 0.5;
+    const by = y - step + breath * (1 - v);
+    const bx = x + strike * 5 * Math.sign(face);
+    // Nose up going up the screen, down going down; heavy walkers also rock side to side.
+    const tilt = (hy / hl) * 0.16 * Math.sign(face) + Math.sin(ph) * gt.rock * v - strike * 0.12 * Math.sign(face);
+    // Crawlers surge: stretch as they reach, bunch up as they pull.
+    const surge = Math.sin(ph * 2) * gt.surge * v;
+    const legs = f.blocked || v < 0.05 ? undefined : ph;
     if (f.under) {
       if (pass === 'base') {
         g.fillStyle = 'rgba(40,32,24,.9)'; g.beginPath(); g.ellipse(x, y, 14 * f.def.size, 6 * f.def.size, 0, 0, TAU); g.fill();
@@ -499,24 +643,34 @@ export class Scene {
     const hidden = f.hidden;
     if (hidden) g.globalAlpha = 0.3;
     const S = f.def.size;
+    // Small foes are drawn a fifth bigger than their art scale so they read at 3x and on phones.
+    const K = f.def.traits?.boss ? 1 : 1.2;
+    g.save();
+    g.translate(bx, by); g.rotate(tilt); g.scale(K * (1 + surge), K * (1 - surge * 0.8)); g.translate(-bx, -by);
+    // Wings beat: seen from the front, a flap reads as the wings folding in and opening out.
+    const flap = (k: number) => { g.save(); g.translate(bx, by); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -by); };
+    const mothY = by + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
     switch (f.kind) {
-      case 'grub': L.grub(g, x, y, 0.42, pass, seed, face); break;
-      case 'skitter': L.grub(g, x, y, 0.28, pass, seed + 3, face); break;
-      case 'mender': L.grub(g, x, y, 0.46, pass, seed + 5, face); if (pass === 'emit') ringGlow(g, x, y - 12, 26, '120,230,140', 0.2 + 0.1 * Math.sin(T * 4)); break;
-      case 'shade': L.grub(g, x, y, 0.4, pass, seed + 7, face); break;
-      case 'splitter': L.grub(g, x, y, 0.5, pass, seed + 1, face); if (pass === 'emit') ringGlow(g, x, y - 14, 20, '180,240,200', 0.15); break;
-      case 'burrower': L.grub(g, x, y, 0.4, pass, seed + 2, face); break;
-      case 'shell': L.shellback(g, x, y, 0.5, pass, seed, face, 1); break;
-      case 'sapper': L.shellback(g, x, y, 0.42, pass, seed + 4, face, 0); break;
-      case 'elite': L.shellback(g, x, y, 0.58, pass, seed + 6, face, 0); if (pass === 'base') { g.fillStyle = 'rgba(150,160,175,.35)'; g.beginPath(); g.ellipse(x, y - 22, 26, 12, 0, Math.PI, TAU); g.fill(); } break;
-      case 'warden': L.shellback(g, x, y, 0.66, pass, 66, face, 0); if (pass === 'emit') ringGlow(g, x, y - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3)); break;
-      case 'moth': L.moth(g, x, y + Math.sin(T * 3 + seed) * 3, 0.34, pass, seed, 60); break;
-      case 'ashmoth': L.moth(g, x, y + Math.sin(T * 3 + seed) * 3, 0.4, pass, seed + 9, 60); if (pass === 'emit') { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - 60, 22, '#ff7a3a', 0.35); g.restore(); } break;
-      case 'mireking': L.grub(g, x, y, 1.25, pass, 41, face); break;
-      case 'tidewyrm': L.grub(g, x, y, 1.05, pass, 47, face); if (pass === 'emit') ringGlow(g, x, y, 60, '120,190,230', 0.2); break;
-      case 'colossus': L.shellback(g, x, y, 1.2, pass, 61, face, (f.slowT > 0 || f.freezeT > 0) ? 1 : 0); break;
-      case 'queen': L.moth(g, x, y, 0.95, pass, 51, 40); L.shellback(g, x, y, 0.7, pass, 63, face, 0); if (pass === 'emit') ringGlow(g, x, y - 40, 80, '90,230,190', 0.25 + 0.1 * Math.sin(T * 2)); break;
+      case 'grub': L.grub(g, bx, by, 0.42, pass, seed, face, legs); break;
+      case 'skitter': L.grub(g, bx, by, 0.28, pass, seed + 3, face, legs); break;
+      case 'mender': L.grub(g, bx, by, 0.46, pass, seed + 5, face, legs); if (pass === 'emit') ringGlow(g, bx, by - 12, 26, '120,230,140', 0.2 + 0.1 * Math.sin(T * 4)); break;
+      case 'shade': L.grub(g, bx, by, 0.4, pass, seed + 7, face, legs); break;
+      case 'splitter': L.grub(g, bx, by, 0.5, pass, seed + 1, face, legs); if (pass === 'emit') ringGlow(g, bx, by - 14, 20, '180,240,200', 0.15); break;
+      case 'burrower': L.grub(g, bx, by, 0.4, pass, seed + 2, face, legs); break;
+      case 'shell': L.shellback(g, bx, by, 0.5, pass, seed, face, 1, legs); break;
+      case 'sapper': L.shellback(g, bx, by, 0.42, pass, seed + 4, face, 0, legs); break;
+      case 'elite': L.shellback(g, bx, by, 0.58, pass, seed + 6, face, 0, legs); if (pass === 'base') { g.fillStyle = 'rgba(150,160,175,.35)'; g.beginPath(); g.ellipse(bx, by - 22, 26, 12, 0, Math.PI, TAU); g.fill(); } break;
+      case 'warden': L.shellback(g, bx, by, 0.66, pass, 66, face, 0, legs); if (pass === 'emit') ringGlow(g, bx, by - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3)); break;
+      case 'moth': flap(0.35); L.moth(g, bx, mothY, 0.34, pass, seed, 60); g.restore(); break;
+      case 'ashmoth': flap(0.35); L.moth(g, bx, mothY, 0.4, pass, seed + 9, 60); g.restore(); if (pass === 'emit') { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 60, 22, '#ff7a3a', 0.35); g.restore(); } break;
+      case 'mireking': L.grub(g, bx, by, 1.25, pass, 41, face, legs); break;
+      case 'tidewyrm': L.grub(g, bx, by, 1.05, pass, 47, face, legs); if (pass === 'emit') ringGlow(g, bx, by, 60, '120,190,230', 0.2); break;
+      case 'colossus': L.shellback(g, bx, by, 1.2, pass, 61, face, (f.slowT > 0 || f.freezeT > 0) ? 1 : 0, legs); break;
+      case 'queen': flap(0.15); L.moth(g, bx, by, 0.95, pass, 51, 40); g.restore(); L.shellback(g, bx, by, 0.7, pass, 63, face, 0, legs); if (pass === 'emit') ringGlow(g, bx, by - 40, 80, '90,230,190', 0.25 + 0.1 * Math.sin(T * 2)); break;
     }
+    // The green glow in their seams: the one strong colour the Hollow owns.
+    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
+    g.restore();
     g.globalAlpha = 1;
     if (pass === 'base') {
       if (f.rootT > 0) { g.fillStyle = '#0d0f0a'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rx = x + Math.cos(a) * 14 * S, ry = y + Math.sin(a) * 4; g.beginPath(); g.moveTo(rx - 3, ry); g.lineTo(rx + Math.cos(a) * 3, ry - 12 - f.rootT * 4); g.lineTo(rx + 3, ry); g.fill(); } }
@@ -525,21 +679,27 @@ export class Scene {
     }
     if (pass === 'emit' && !hidden) {
       if (f.hp < f.max || f.def.traits?.boss) {
-        const w = f.def.traits?.boss ? 90 : 34, hy = y - f.def.bar;
+        const w = f.def.traits?.boss ? 90 : 34, hy = y - f.def.bar * K;
         bar0(g, x, hy, f.hp / f.max, f.def.traits?.boss ? '#e0503a' : f.shielded ? '#5ac8a8' : '#c8552e', w);
       }
       if (f.hitT > 0) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - f.def.bar * 0.5, 16 * S, '#ffffff', f.hitT * 2); g.restore(); }
     }
   }
 
-  private drawHero(b: Battle, pass: 'base' | 'emit', T: number) {
+  private drawHero(b: Battle, pass: 'base' | 'emit', T: number, still = false) {
     const g = this.g, h = b.hero;
     if (pass === 'base') {
+      // A pale ring of lantern light at her feet: the one unit you command never reads as a foe.
+      g.save();
+      g.fillStyle = 'rgba(255,244,214,.38)'; g.beginPath(); g.ellipse(h.x, h.y + 2, 30, 11, 0, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(255,236,190,.95)'; g.lineWidth = 2.5; g.beginPath(); g.ellipse(h.x, h.y + 2, 30, 11, 0, 0, TAU); g.stroke();
+      g.restore();
       L.wren(g, h.x, h.y, 1.4, 'base');
       if (h.swing > 0) { g.strokeStyle = `rgba(220,235,250,${h.swing * 3})`; g.lineWidth = 3; g.beginPath(); g.arc(h.x + h.face * 12, h.y - 30, 30, h.face > 0 ? -1.4 : Math.PI + 1.4, h.face > 0 ? 0.3 : Math.PI - 0.3, h.face < 0); g.stroke(); }
       return;
     }
     L.wren(g, h.x, h.y, 1.4, 'emit');
+    if (still) return;
     // Health and level above her head.
     bar0(g, h.x, h.y - 98, h.hp / b.heroMaxHp(), '#7fd06a', 46);
     g.font = '800 12px Barlow, sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)';
@@ -704,4 +864,24 @@ function makeDecor(b: Battle) {
     }
   }
   return { trees, stones, ruins, posts };
+}
+
+interface Gait { x: number; y: number; ph: number; v: number; face: number; hx: number; hy: number; tick: number }
+type GaitKind = 'crawl' | 'scuttle' | 'plod' | 'stomp' | 'fly';
+/** Per kind of walker: stride is ground covered per full leg cycle (world px); lift, rock and surge shape the body. */
+const GAIT: Record<GaitKind, { stride: number; lift: number; rock: number; surge: number }> = {
+  crawl: { stride: 30, lift: 0.8, rock: 0, surge: 0.035 },
+  scuttle: { stride: 16, lift: 2.2, rock: 0, surge: 0.02 },
+  plod: { stride: 34, lift: 1.4, rock: 0.035, surge: 0 },
+  stomp: { stride: 70, lift: 3, rock: 0.025, surge: 0.015 },
+  fly: { stride: 60, lift: 0, rock: 0.04, surge: 0 },
+};
+function gaitOf(f: Foe): GaitKind {
+  if (f.def.flying) return 'fly';
+  if (f.def.traits?.boss) return 'stomp';
+  switch (f.kind) {
+    case 'skitter': return 'scuttle';
+    case 'shell': case 'sapper': case 'elite': case 'warden': return 'plod';
+    default: return 'crawl';
+  }
 }

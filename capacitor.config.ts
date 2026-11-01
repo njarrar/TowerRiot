@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appId: 'com.njarrar.towerriot',
   appName: 'TowerRiot',
   webDir: 'dist',
-  backgroundColor: '#1d2417',
+  backgroundColor: '#f6f2ea',
   ios: { contentInset: 'never' },
   android: { allowMixedContent: false },
 };

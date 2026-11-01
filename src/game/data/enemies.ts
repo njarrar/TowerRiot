@@ -72,8 +72,8 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   queen: { kind: 'queen', name: 'The Hollow Queen', hp: 5500, speed: 22, gold: 400, leak: 12, dps: 90, bar: 130, size: 3.2, flying: false, traits: { boss: true, phases: [0.66, 0.33], summon: { kind: 'shade', n: 2, every: 7 } }, blurb: 'Rewrites the map as she falls. Three phases.' },
 };
 
-/** Health scale per stage so later stages hit harder. */
-export const hpScale = (stage: number) => 1 + (stage - 1) * 0.06;
+/** Health scale per stage so later stages hit harder. The Ashen Rift (16 to 20) climbs twice as fast, so the last region is the hardest. */
+export const hpScale = (stage: number) => 1 + (stage - 1) * 0.06 + Math.max(0, stage - 15) * 0.1;
 /** Gold per kill grows a little so later stages can afford their towers. */
 export const goldScale = (stage: number) => 1.4 + (stage - 1) * 0.05;
 /** Armor scales slower than health. */

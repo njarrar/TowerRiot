@@ -16,9 +16,9 @@ export interface Lfx {
   watchTower(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number): void;
   frostBell(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number): void;
   stormPylon(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, zap?: V | null): void;
-  grub(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number): void;
+  grub(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
   moth(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, alt: number): void;
-  shellback(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, frost: number): void;
+  shellback(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, frost: number, ph?: number): void;
   wren(c: Ctx, x: number, y: number, s: number, pass: Pass): void;
   gate(c: Ctx, x: number, y: number, pass: Pass): void;
   ruinWall(c: Ctx, x: number, y: number, len: number, seed: number): void;

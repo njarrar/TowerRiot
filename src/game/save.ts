@@ -4,7 +4,13 @@ import { buildMods, type Mods } from './mods';
 
 export const SAVE_KEY = 'towerriot.save.v1';
 
-export interface Settings { sound: boolean; reduceMotion: boolean; autoSkills: boolean }
+export interface Settings {
+  sound: boolean; reduceMotion: boolean;
+  /** Spend Wren's skill points for her. Null means the default: on in the first region, off after. */
+  autoSkills: boolean | null;
+  /** Show damage numbers over foes. */
+  dmgNumbers: boolean;
+}
 export interface Save {
   version: 1;
   /** Best stars per stage id. */
@@ -17,7 +23,7 @@ export interface Save {
 
 export const freshSave = (): Save => ({
   version: 1, stars: {}, nodes: [],
-  settings: { sound: true, reduceMotion: false, autoSkills: false },
+  settings: { sound: true, reduceMotion: false, autoSkills: null, dmgNumbers: false },
   seenIntro: false,
 });
 

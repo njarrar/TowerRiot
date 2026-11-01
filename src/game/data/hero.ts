@@ -17,6 +17,8 @@ export const HERO = {
   sight: 140,
   /** XP is shared by foes dying within this radius. */
   xpRadius: 420,
+  /** Share of XP she still gets from kills outside that radius. */
+  xpFar: 0.3,
   /** Extra gold when Wren lands the killing blow. */
   lastHit: 0.5,
   respawn: (level: number) => 4 + level,

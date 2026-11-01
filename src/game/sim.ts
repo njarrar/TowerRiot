@@ -220,7 +220,7 @@ export class Battle {
     this.stage = stage;
     this.mods = opts.mods ?? baseMods();
     this.rng = makeRng(opts.seed ?? 1234);
-    this.scale = hpScale(stage.id);
+    this.scale = hpScale(stage.id) * (stage.hpMul ?? 1);
     this.roads = stage.roads.map(def => {
       const path = makePath(def.id, smooth(def.ctrl));
       const rt: RoadRt = { def, path, closed: false, closeAt: null, barrier: null, belts: [] };
@@ -247,8 +247,9 @@ export class Battle {
     this.gold = stage.startGold + this.mods.gold;
     this.shiftOn = (stage.shifts ?? []).map(() => false);
     const lvl = 1 + this.mods.heroLevel;
+    const [sx, sy] = this.heroStartPoint();
     this.hero = {
-      x: stage.heroStart[0], y: stage.heroStart[1], tx: stage.heroStart[0], ty: stage.heroStart[1], anchorX: stage.heroStart[0], anchorY: stage.heroStart[1],
+      x: sx, y: sy, tx: sx, ty: sy, anchorX: sx, anchorY: sy,
       hp: 0, level: lvl, xp: 0, points: lvl + this.mods.heroSkillPoints, ranks: { q: 0, w: 0, e: 0, r: 0 }, cd: { q: 0, w: 0, e: 0, r: 0 },
       atkCd: 0, dead: false, respawnT: 0, focus: null, items: [], revived: false, haste: 0, double: 0, regenT: 0, sunriseT: 0, face: 1, swing: 0, moving: false,
     };
@@ -257,9 +258,46 @@ export class Battle {
     for (const r of this.roads) this.threat.set(r, 0);
   }
 
+  /**
+   * Where Wren starts. A start placed by the gate moves out to the main road, past its middle,
+   * so she meets the first foes and earns XP from the start.
+   */
+  private heroStartPoint(): Vec {
+    const st = this.stage.heroStart;
+    if (!this.gate.some(g => Math.hypot(g[0] - st[0], g[1] - st[1]) < 300)) return st;
+    const r = [...this.roads].sort((a, z) => z.path.tot - a.path.tot)[0];
+    const p = pointAt(r.path, r.path.tot * 0.62);
+    return [p.x, p.y];
+  }
+
   /* ------------------------------------------------------------------ commands */
 
   get totalWaves() { return this.stage.waves.length; }
+
+  /** What the next wave will send, after the early-wave ramp. Null once every wave has started. */
+  nextWave(): { n: number; hint: string; foes: { kind: EnemyKind; count: number }[] } | null {
+    const n = this.wave + 1;
+    const w = this.stage.waves[n - 1];
+    if (!w) return null;
+    const ramp = waveRamp(n, this.totalWaves);
+    const foes: { kind: EnemyKind; count: number }[] = [];
+    for (const g of w.groups) {
+      const count = Math.max(1, Math.round(g.n * ramp));
+      const had = foes.find(f => f.kind === g.kind);
+      if (had) had.count += count; else foes.push({ kind: g.kind, count });
+    }
+    return { n, hint: w.hint, foes };
+  }
+
+  /** True if the Hollow adapts when wave `n` starts. */
+  adaptsAt(n: number): boolean { const every = this.stage.adaptEvery ?? 3; return n > 1 && n <= this.totalWaves && (n - 1) % every === 0; }
+
+  /** The element the Hollow would harden against if it adapted now, if any. */
+  adaptLean(): Element | null {
+    let total = 0, top: Element | null = null;
+    for (const e of ELEMENTS) { total += this.dmgWindow[e]; if (!top || this.dmgWindow[e] > this.dmgWindow[top]) top = e; }
+    return top && total > 0 && this.dmgWindow[top] / total > 0.3 ? top : null;
+  }
 
   /** Start the next wave. Early calls pay gold for the time saved. */
   callWave(): boolean {
@@ -905,7 +943,8 @@ export class Battle {
     this.gold += gold;
     this.events.push({ t: 'kill', x: f.x, y: f.y, kind: f.kind, gold, hero: byHero });
     const h = this.hero;
-    if (!h.dead && Math.hypot(h.x - f.x, h.y - f.y) < HERO.xpRadius) this.giveXp(f.def.hp * 0.45 * this.scale);
+    // Full XP for kills near Wren, a share for kills anywhere else, so she grows wherever the fight is.
+    if (!h.dead) this.giveXp(f.def.hp * 0.45 * this.scale * (Math.hypot(h.x - f.x, h.y - f.y) < HERO.xpRadius ? 1 : HERO.xpFar));
     const sp = f.def.traits?.splitInto;
     if (sp) for (let i = 0; i < sp.n; i++) {
       const c = this.spawn(sp.kind, undefined, { road: f.road, d: Math.max(0, f.d - i * 14) });
@@ -1193,3 +1232,11 @@ export function inPoly(pt: Vec, poly: Vec[]): boolean {
 }
 
 export { distToPath };
+
+/** The fewest lives that still earn 3 and 2 stars, by the same rule as finish(): 90% and 50% of the lives you start with. */
+export function starLives(start: number) {
+  let three = start, two = start;
+  while (three > 0 && (three - 1) / start >= 0.9) three--;
+  while (two > 0 && (two - 1) / start >= 0.5) two--;
+  return { three, two };
+}

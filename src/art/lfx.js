@@ -218,8 +218,9 @@ function stormPylon(ctx,x,y,s,pass,seed,target){seed=seed||31;ctx.save();ctx.tra
 
 /* ---------- THE HOLLOW (origin = ground under the body) ---------- */
 // Grub: eyeless segmented larva. Glow lives in its seams, not in a face.
-function grub(ctx,x,y,s,pass,seed,face){seed=seed||41;face=face||1;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
- const segs=[];const n=9;for(let i=0;i<n;i++){const t=i/(n-1);const px=-48+t*92;const py=-10-Math.sin(t*Math.PI)*6+Math.sin(t*9+seed)*1.2;const r=6+Math.sin(t*Math.PI)*9-(t>.85?3:0);segs.push([px,py,r]);}
+// ph is the walk phase in radians; left out, the grub stands still (menu icons).
+function grub(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ const segs=[];const n=9;for(let i=0;i<n;i++){const t=i/(n-1);const px=-48+t*92;const py=-10-Math.sin(t*Math.PI)*6+Math.sin(t*9+seed)*1.2+(walk?Math.sin(ph-t*5)*1.8:0);const r=6+Math.sin(t*Math.PI)*9-(t>.85?3:0);segs.push([px,py,r]);}
  if(pass==='base'){
   // slime trail behind
   ctx.save();ctx.translate(-70,0);ctx.scale(1,.25);const tg=ctx.createLinearGradient(-50,0,40,0);tg.addColorStop(0,'rgba(20,30,28,0)');tg.addColorStop(1,'rgba(20,34,30,.75)');ctx.fillStyle=tg;ctx.beginPath();ctx.ellipse(0,0,50,14,0,0,TAU);ctx.fill();ctx.restore();
@@ -227,7 +228,8 @@ function grub(ctx,x,y,s,pass,seed,face){seed=seed||41;face=face||1;ctx.save();ct
   shadow(ctx,6,1,62,10,.8);
   // legs: hooked, many, under the body
   const r=rng(seed);ctx.strokeStyle='#0b0c0d';ctx.lineWidth=1.6;ctx.lineCap='round';
-  segs.forEach(([px,py,rr],i)=>{if(i==0||i==n-1)return;for(const side of[-1,1]){const lx=px+side*2;ctx.beginPath();ctx.moveTo(lx,py+rr*.5);ctx.quadraticCurveTo(lx+side*3+(r()-.5)*3,py+rr+3,lx+side*5,-.5);ctx.stroke();}});
+  // Walking, a ripple runs down the legs from tail to head, each one reaching forward then planting.
+  segs.forEach(([px,py,rr],i)=>{if(i==0||i==n-1)return;for(const side of[-1,1]){const lx=px+side*2,q=ph*2-i*1.1+(side>0?Math.PI:0),fx=walk?Math.sin(q)*3.5:0,fy=walk?Math.max(0,Math.cos(q))*2.2:0;ctx.beginPath();ctx.moveTo(lx,py+rr*.5);ctx.quadraticCurveTo(lx+side*3+(r()-.5)*3+fx*.5,py+rr+3-fy,lx+side*5+fx,-.5-fy);ctx.stroke();}});
   // segments from tail to head
   segs.forEach(([px,py,rr],i)=>{
    const g=ctx.createRadialGradient(px-rr*.4,py-rr*.6,1,px,py,rr*1.3);g.addColorStop(0,'#3a3d3f');g.addColorStop(.5,'#191b1c');g.addColorStop(1,'#08090a');
@@ -301,7 +303,8 @@ function moth(ctx,x,y,s,pass,seed,alt){seed=seed||51;alt=alt==null?60:alt;ctx.sa
 
 // Shellback, frost adapted: a long, hunched plated beast seen from the side.
 // Adaptation shows as rime on the plates and broken ice pushed out of the seams, mostly at the back.
-function shellback(ctx,x,y,s,pass,seed,face,frost){seed=seed||61;face=face||1;frost=frost==null?1:frost;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+// ph is the walk phase in radians; left out, it stands still.
+function shellback(ctx,x,y,s,pass,seed,face,frost,ph){seed=seed||61;face=face||1;frost=frost==null?1:frost;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
  const RX=54,RY=36,cy=-12,NB=8;
  const topY=px=>cy-RY*Math.sqrt(Math.max(0,1-(px/RX)*(px/RX)));
  const seamX=j=>-RX*.92+j*(RX*1.84/NB);
@@ -310,7 +313,8 @@ function shellback(ctx,x,y,s,pass,seed,face,frost){seed=seed||61;face=face||1;fr
   shadow(ctx,10,2,74,12,.85);
   const r=rng(seed);
   // legs: thick, jointed, mostly in shadow
-  [-36,-16,6,26].forEach((lx,i)=>{ctx.fillStyle='#0a0b0c';poly(ctx,[[lx-6,cy+2],[lx+6,cy+2],[lx+8,-6],[lx+10,0],[lx-2,0],[lx-4,-6]]);ctx.fill();ctx.fillStyle='rgba(180,170,150,.14)';ctx.fillRect(lx-2,-7,9,1);});
+  // Walking, legs swing in diagonal pairs: one pair plants and pushes back while the other lifts and reaches.
+  [-36,-16,6,26].forEach((lx,i)=>{const q=ph+(i%2)*Math.PI,fx=walk?Math.sin(q)*7:0,up=walk?Math.max(0,Math.cos(q))*4.5:0;ctx.fillStyle='#0a0b0c';poly(ctx,[[lx-6,cy+2],[lx+6,cy+2],[lx+8+fx*.5,-6-up*.6],[lx+10+fx,-up],[lx-2+fx,-up],[lx-4+fx*.5,-6-up*.6]]);ctx.fill();ctx.fillStyle='rgba(180,170,150,.14)';ctx.fillRect(lx-2+fx*.5,-7-up*.6,9,1);});
   // belly
   ctx.fillStyle='#0c0d0e';ctx.beginPath();ctx.ellipse(0,cy+2,RX*.98,9,0,0,TAU);ctx.fill();
   // head: low, armoured, tusks; tucked under the front plate
@@ -378,19 +382,39 @@ function ruinWall(ctx,x,y,len,seed){const r=rng(seed);let cx=x;const pieces=[];w
  shadow(ctx,x+len/2+12,y+3,len*.65,10,.6);pieces.forEach(([px,w,h],i)=>block(ctx,px,y,w,h,8,seed+i*7));
  // fallen stones
  for(let i=0;i<5;i++){const fx=x+r()*len,fy=y+4+r()*10;ctx.fillStyle=shade('#5a5852',.35+r()*.3);ctx.beginPath();ctx.ellipse(fx,fy,3+r()*4,2+r()*2,r(),0,TAU);ctx.fill();}}
-function deadTree(ctx,x,y,s,seed){const r=rng(seed);ctx.save();ctx.translate(x,y);shadow(ctx,30*s,2,50*s,8*s,.5);ctx.strokeStyle='#0c0b09';ctx.lineCap='round';
+function deadTree(ctx,x,y,s,seed,col){const r=rng(seed);ctx.save();ctx.translate(x,y);shadow(ctx,30*s,2,50*s,8*s,.5);ctx.strokeStyle=col||'#0c0b09';ctx.lineCap='round';
  const br=(bx,by,a,len,w,d)=>{if(d>6||len<3)return;const ex=bx+Math.cos(a)*len,ey=by+Math.sin(a)*len;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(bx,by);ctx.quadraticCurveTo((bx+ex)/2+(r()-.5)*len*.3,(by+ey)/2,ex,ey);ctx.stroke();
   const k=1+(r()<.7?1:0);for(let i=0;i<=k;i++)br(ex,ey,a+(r()-.5)*1.3,len*(.62+r()*.15),w*.62,d+1);};
  br(0,0,-Math.PI/2+(r()-.5)*.3,46*s,6*s,0);ctx.restore();}
+/* a living tree for day maps: dark trunk, clustered crown lit from the upper right */
+function leafyTree(ctx,x,y,s,seed,leaf){const r=rng(seed);leaf=leaf||'#4f7a3a';ctx.save();ctx.translate(x,y);
+ shadow(ctx,26*s,3,48*s,10*s,.38);
+ ctx.strokeStyle='#3a2c20';ctx.lineCap='round';ctx.lineWidth=6*s;ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(2*s,-18*s,0,-34*s);ctx.stroke();
+ ctx.lineWidth=3*s;ctx.beginPath();ctx.moveTo(0,-22*s);ctx.lineTo(-10*s,-34*s);ctx.moveTo(1*s,-26*s);ctx.lineTo(11*s,-38*s);ctx.stroke();
+ const blobs=[];for(let i=0;i<9;i++){const a=r()*TAU,d=r()*16*s;blobs.push([Math.cos(a)*d*1.2,-50*s+Math.sin(a)*d*.8,(11+r()*7)*s]);}
+ blobs.sort((a,b)=>a[1]-b[1]);
+ for(const[bx,by,br]of blobs){ctx.fillStyle=shade(leaf,.72);ctx.beginPath();ctx.arc(bx+1.5*s,by+2*s,br,0,TAU);ctx.fill();}
+ for(const[bx,by,br]of blobs){const g=ctx.createRadialGradient(bx+br*.35,by-br*.4,br*.1,bx,by,br);g.addColorStop(0,shade(leaf,1.35));g.addColorStop(1,leaf);ctx.fillStyle=g;ctx.beginPath();ctx.arc(bx,by,br,0,TAU);ctx.fill();}
+ for(let i=0;i<26;i++){const b=blobs[Math.floor(r()*blobs.length)];ctx.fillStyle=`rgba(255,250,210,${.12+r()*.15})`;ctx.fillRect(b[0]+(r()-.2)*b[2],b[1]-r()*b[2]*.8,1.6,1.2);}
+ ctx.restore();}
 function standingStone(ctx,x,y,h,seed){const r=rng(seed);shadow(ctx,x+10,y+2,18,5,.6);const w=8+r()*5;
  poly(ctx,[[x-w,y],[x+w,y],[x+w*.7,y-h],[x-w*.4,y-h-4]]);const g=ctx.createLinearGradient(x-w,0,x+w,0);g.addColorStop(0,'#55565a');g.addColorStop(.5,'#34353a');g.addColorStop(1,'#16171a');ctx.fillStyle=g;ctx.fill();
  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(x-2,y-h*.3);ctx.lineTo(x+1,y-h*.45);ctx.lineTo(x-1,y-h*.6);ctx.stroke();}
-function plot(ctx,x,y,seed,empty){const w=40,d=16;const r=rng(seed);
- // a low stone foundation seen from above, flush with the ground
- shadow(ctx,x+6,y+3,46,12,.5);
- masonry(ctx,[[x-w,y],[x+w,y],[x+w,y-5],[x-w,y-5]],x-w,y-5,x+w,y,'#5a5852',.55,seed,{ch:5,bw:12});
- masonry(ctx,[[x-w,y-5],[x+w,y-5],[x+w+d,y-5-d*.9],[x-w+d,y-5-d*.9]],x-w,y-6-d,x+w+d,y-5,'#5a5852',.85,seed+1,{ch:5,bw:16});
- if(empty){ctx.strokeStyle='rgba(255,178,64,.28)';ctx.lineWidth=1;ctx.setLineDash([3,4]);poly(ctx,[[x-w+6,y-7],[x+w-4,y-7],[x+w+d-8,y-4-d*.9+2],[x-w+d+2,y-4-d*.9+2]]);ctx.stroke();ctx.setLineDash([]);}}
+function plot(ctx,x,y,seed,empty){const r=rng(seed);
+ // a pale paved pad set into the ground, flat, so it reads as "build here" and not as a loose slab
+ shadow(ctx,x+2,y+3,46,13,.22);
+ ctx.save();ctx.translate(x,y);
+ ctx.fillStyle='#8a8172';ctx.beginPath();ctx.ellipse(0,0,40,17,0,0,TAU);ctx.fill();
+ const g=ctx.createLinearGradient(0,-16,0,14);g.addColorStop(0,'#e3dac6');g.addColorStop(1,'#c7bca5');
+ ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,-1.5,36,14,0,0,TAU);ctx.fill();
+ ctx.save();ctx.beginPath();ctx.ellipse(0,-1.5,36,14,0,0,TAU);ctx.clip();
+ ctx.strokeStyle='rgba(96,84,66,.32)';ctx.lineWidth=1;
+ ctx.beginPath();ctx.ellipse(0,-1.5,20,7.6,0,0,TAU);ctx.stroke();
+ for(let k=0;k<8;k++){const a=k/8*TAU+r()*.2;ctx.beginPath();ctx.moveTo(Math.cos(a)*20,-1.5+Math.sin(a)*7.6);ctx.lineTo(Math.cos(a)*38,-1.5+Math.sin(a)*15);ctx.stroke();}
+ for(let k=0;k<14;k++){ctx.fillStyle=`rgba(${90+r()*30},${110+r()*30},${60+r()*20},.35)`;const a=r()*TAU,d=24+r()*12;ctx.fillRect(Math.cos(a)*d,-1.5+Math.sin(a)*d*.39,1.5+r()*2,1);}
+ ctx.restore();
+ ctx.strokeStyle='rgba(255,250,236,.55)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(0,-1.5,36,14,0,Math.PI*1.05,Math.PI*1.95);ctx.stroke();
+ ctx.restore();}
 
 /* ---------- vignette tiles: one subject on its own patch of ground ---------- */
 function groundTile(ctx,W,H,seed,tint){const img=ctx.createImageData(W,H);const d=img.data;const nz=makeNoise(seed);
@@ -599,20 +623,24 @@ function paintField(ctx,W,H,M){
  const highM=mk(x=>{if(M.high&&M.high.length>2){x.fillStyle='#fff';poly(x,M.high);x.fill()}});
  const img=ctx.createImageData(W,H),d=img.data;const nA=makeNoise(3),nB=makeNoise(5);
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;const n=nA(x/90,y/45,5),m=nB(x/7,y/3.5,3),q=nA(x/22+300,y/11,3);
-  let c=[mix(22,34,n),mix(21,31,n),mix(18,24,n)];const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[mix(c[0],26,moss),mix(c[1],36,moss),mix(c[2],22,moss)];
-  if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=[mix(c[0],40,st*.6),mix(c[1],42,st*.6),mix(c[2],40,st*.6)];}
-  const k=.78+m*.42;c=c.map(v=>v*k);
+  const P=M.pal;let c;
+  if(P){const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[0,1,2].map(j=>mix(mix(P.grassLo[j],P.grassHi[j],n),P.moss[j],moss));
+   if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=c.map((v,j)=>mix(v,P.high[j],st*.55));}
+   const k=.9+m*.2;c=c.map(v=>v*k);}
+  else{c=[mix(22,34,n),mix(21,31,n),mix(18,24,n)];const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[mix(c[0],26,moss),mix(c[1],36,moss),mix(c[2],22,moss)];
+   if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=[mix(c[0],40,st*.6),mix(c[1],42,st*.6),mix(c[2],40,st*.6)];}
+   const k=.78+m*.42;c=c.map(v=>v*k);}
   const ra=roadM[i+3]/255;const road=ss(.42,.62,ra+(q-.5)*.5);
-  if(road>0){const rc=[mix(40,52,n)*(.85+m*.3),mix(37,46,n)*(.85+m*.3),mix(32,38,n)*(.85+m*.3)];c=c.map((v,j)=>mix(v,rc[j],road));}
+  if(road>0){const rk=P?(.93+m*.12):(.85+m*.3);const rc=P?[0,1,2].map(j=>mix(P.roadLo[j],P.roadHi[j],n)*rk):[mix(40,52,n)*rk,mix(37,46,n)*rk,mix(32,38,n)*rk];c=c.map((v,j)=>mix(v,rc[j],road));}
   const wa=waterM[i+3]/255;const bank=ss(.25,.45,wa+(q-.5)*.3),water=ss(.55,.7,wa+(q-.5)*.2);
-  if(bank>0)c=c.map(v=>v*(1-bank*.55));
-  if(water>0){const sh=Math.pow(nB(x/40,y/9,2),2.4)*.9;const wc=[13+sh*34,17+sh*40,22+sh*50];c=c.map((v,j)=>mix(v,wc[j],water));}
+  if(bank>0)c=c.map(v=>v*(1-bank*(P?.3:.55)));
+  if(water>0){const sh=Math.pow(nB(x/40,y/9,2),2.4)*.9;const wc=P?[P.water[0]+sh*50,P.water[1]+sh*55,P.water[2]+sh*50]:[13+sh*34,17+sh*40,22+sh*50];c=c.map((v,j)=>mix(v,wc[j],water));}
   d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;}
  ctx.putImageData(img,0,0);
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';const rn=makeNoise(31),r=rng(77);
- M.roads.forEach((R,k)=>{if(R.w<40)return;[[-10,1],[10,2],[-3,3]].forEach(([o,sd],ri)=>{const p=offset(R.pts,o,sd+k*5,7);for(let i=1;i<p.length;i++){const v=rn(i*.08,ri*9+k*3);if(v<.42)continue;ctx.strokeStyle=`rgba(10,9,7,${ri==2?.18:(v-.42)*1.2})`;ctx.lineWidth=ri==2?7:3+v*2;ctx.beginPath();ctx.moveTo(p[i-1][0],p[i-1][1]);ctx.lineTo(p[i][0],p[i][1]);ctx.stroke()}});
+ M.roads.forEach((R,k)=>{if(R.w<40)return;[[-10,1],[10,2],[-3,3]].forEach(([o,sd],ri)=>{const p=offset(R.pts,o,sd+k*5,7);for(let i=1;i<p.length;i++){const v=rn(i*.08,ri*9+k*3);if(v<.42)continue;ctx.strokeStyle=M.pal?`rgba(120,92,60,${ri==2?.12:(v-.42)*.7})`:`rgba(10,9,7,${ri==2?.18:(v-.42)*1.2})`;ctx.lineWidth=ri==2?7:3+v*2;ctx.beginPath();ctx.moveTo(p[i-1][0],p[i-1][1]);ctx.lineTo(p[i][0],p[i][1]);ctx.stroke()}});
   for(let i=0;i<9;i++){const p=R.pts[Math.floor(r()*R.pts.length)];const o=(r()<.5?-11:11);ctx.fillStyle='rgba(30,40,55,.8)';ctx.beginPath();ctx.ellipse(p[0]+o*.3,p[1]+o*.3,5+r()*7,2+r()*2,r(),0,TAU);ctx.fill();ctx.fillStyle='rgba(140,160,190,.2)';ctx.fillRect(p[0]+o*.3-3,p[1]+o*.3-1,4,1)}
-  for(let i=0;i<70;i++){const idx=Math.floor(r()*R.pts.length);const p=R.pts[idx];if(nA(idx*.05,1+k)<.45)continue;const ox=(r()-.5)*36,oy=(r()-.5)*24;const w=5+r()*7;ctx.fillStyle=`rgba(${70+r()*20},${68+r()*18},${62+r()*15},.6)`;ctx.beginPath();ctx.moveTo(p[0]+ox,p[1]+oy);ctx.lineTo(p[0]+ox+w,p[1]+oy+r()*2);ctx.lineTo(p[0]+ox+w-1,p[1]+oy+w*.5);ctx.lineTo(p[0]+ox-1,p[1]+oy+w*.45);ctx.fill();ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(p[0]+ox,p[1]+oy+w*.45,w-1,1.2)}});
+  for(let i=0;i<70;i++){const idx=Math.floor(r()*R.pts.length);const p=R.pts[idx];if(nA(idx*.05,1+k)<.45)continue;const ox=(r()-.5)*36,oy=(r()-.5)*24;const w=5+r()*7;const pb=M.pal?60:0;ctx.fillStyle=`rgba(${70+pb+r()*20},${68+pb+r()*18},${62+pb+r()*15},.6)`;ctx.beginPath();ctx.moveTo(p[0]+ox,p[1]+oy);ctx.lineTo(p[0]+ox+w,p[1]+oy+r()*2);ctx.lineTo(p[0]+ox+w-1,p[1]+oy+w*.5);ctx.lineTo(p[0]+ox-1,p[1]+oy+w*.45);ctx.fill();ctx.fillStyle=M.pal?'rgba(60,46,30,.3)':'rgba(0,0,0,.4)';ctx.fillRect(p[0]+ox,p[1]+oy+w*.45,w-1,1.2)}});
  // reeds
  M.waters.forEach((Wt,k)=>{const L=offset(Wt.pts,-Wt.w*.48,4+k,12),Rr=offset(Wt.pts,Wt.w*.48,6+k,12);[L,Rr].forEach(side=>{for(let i=0;i<side.length;i+=2){if(r()<.45)continue;const[px,py]=side[i];for(let j=0;j<4;j++){ctx.strokeStyle=`rgba(${30+r()*20},${36+r()*16},22,.9)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+j*2,py);ctx.quadraticCurveTo(px+j*2+(r()-.5)*6,py-6,px+j*2+(r()-.5)*8,py-10-r()*8);ctx.stroke()}}})});
  ctx.restore();
@@ -627,10 +655,10 @@ function paintField(ctx,W,H,M){
   ctx.fillStyle='#141412';ctx.fillRect(-bl,bW+7,bl*2,5);ctx.restore()});
  M.ruins.forEach(([x,y,l],i)=>ruinWall(ctx,x,y,l,501+i*10));
  M.stones.forEach(([x,y,h],i)=>standingStone(ctx,x,y,h,i+1));
- M.trees.forEach(([x,y,s],i)=>deadTree(ctx,x,y,s,7+i));
+ M.trees.forEach(([x,y,s],i)=>{if(M.pal&&M.pal.leafy&&i%3!==2)leafyTree(ctx,x,y,s,7+i,M.pal.leaf);else deadTree(ctx,x,y,s,7+i,M.pal?M.pal.bark:null);});
  M.plots.forEach(([x,y],i)=>plot(ctx,x,y,600+i*3,1));
 }
 const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField};
 
-return{watchTower,frostBell,stormPylon,grub,moth,shellback,wren,gate,block,ruinWall,deadTree,standingStone,plot,masonry,planks,shadow,glow,darkness,vignette,fog,makeNoise,rng,mix,ss,clamp,catmull,strokePts,offset,poly,bolt,shade,hex,rgb,groundTile,TAU,EXTRA:typeof EXTRA!=="undefined"?EXTRA:null};
+return{watchTower,frostBell,stormPylon,grub,moth,shellback,wren,gate,block,ruinWall,deadTree,leafyTree,standingStone,plot,masonry,planks,shadow,glow,darkness,vignette,fog,makeNoise,rng,mix,ss,clamp,catmull,strokePts,offset,poly,bolt,shade,hex,rgb,groundTile,TAU,EXTRA:typeof EXTRA!=="undefined"?EXTRA:null};
 })();

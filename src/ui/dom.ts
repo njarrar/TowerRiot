@@ -19,3 +19,11 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
 export const clear = (el: Element) => { while (el.firstChild) el.firstChild.remove(); };
 
 export function setText(el: Element | null, text: string) { if (el && el.textContent !== text) el.textContent = text; }
+
+/** A fixed SVG icon from icons.ts, wrapped in a span. Only pass the constant markup defined there, never text from data or players. */
+export function icon(markup: string, cls = 'svg-ico'): HTMLSpanElement {
+  const s = document.createElement('span');
+  s.className = cls;
+  s.innerHTML = markup;
+  return s;
+}
