@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TowerRiot</string>
+    <string name="title_activity_main">TowerRiot</string>
+    <string name="package_name">com.njarrar.towerriot</string>
+    <string name="custom_url_scheme">com.njarrar.towerriot</string>
+</resources>

@@ -596,7 +596,7 @@ function paintField(ctx,W,H,M){
  const mk=(fn)=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');fn(x);return x.getImageData(0,0,W,H).data;};
  const roadM=mk(x=>{x.filter='blur(9px)';x.strokeStyle='#fff';x.lineCap='round';x.lineJoin='round';const wn=makeNoise(91);M.roads.forEach(R=>{for(let i=1;i<R.pts.length;i++){x.lineWidth=R.w*(.8+wn(i*.06,R.w)*.7);x.beginPath();x.moveTo(R.pts[i-1][0],R.pts[i-1][1]);x.lineTo(R.pts[i][0],R.pts[i][1]);x.stroke()}})});
  const waterM=mk(x=>{x.filter='blur(12px)';x.strokeStyle='#fff';x.lineCap='round';x.lineJoin='round';M.waters.forEach(Wt=>{x.lineWidth=Wt.w;strokePts(x,Wt.pts);x.stroke()})});
- const highM=mk(x=>{x.fillStyle='#fff';poly(x,M.high);x.fill()});
+ const highM=mk(x=>{if(M.high&&M.high.length>2){x.fillStyle='#fff';poly(x,M.high);x.fill()}});
  const img=ctx.createImageData(W,H),d=img.data;const nA=makeNoise(3),nB=makeNoise(5);
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;const n=nA(x/90,y/45,5),m=nB(x/7,y/3.5,3),q=nA(x/22+300,y/11,3);
   let c=[mix(22,34,n),mix(21,31,n),mix(18,24,n)];const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[mix(c[0],26,moss),mix(c[1],36,moss),mix(c[2],22,moss)];
@@ -617,8 +617,8 @@ function paintField(ctx,W,H,M){
  M.waters.forEach((Wt,k)=>{const L=offset(Wt.pts,-Wt.w*.48,4+k,12),Rr=offset(Wt.pts,Wt.w*.48,6+k,12);[L,Rr].forEach(side=>{for(let i=0;i<side.length;i+=2){if(r()<.45)continue;const[px,py]=side[i];for(let j=0;j<4;j++){ctx.strokeStyle=`rgba(${30+r()*20},${36+r()*16},22,.9)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+j*2,py);ctx.quadraticCurveTo(px+j*2+(r()-.5)*6,py-6,px+j*2+(r()-.5)*8,py-10-r()*8);ctx.stroke()}}})});
  ctx.restore();
  // cliff face of the high ground
- const hp=M.high;for(let i=0;i<hp.length-1;i++){const[a,b]=hp[i],[e,f]=hp[i+1];if(b<4&&f<4)continue;if(a>=W-2&&e>=W-2)continue;const len=Math.hypot(e-a,f-b),n=Math.ceil(len/14);for(let k=0;k<n;k++){const u=k/n,px=mix(a,e,u),py=mix(b,f,u);masonry(ctx,[[px,py],[px+15,py+(f-b)/n],[px+15,py+(f-b)/n+24],[px,py+24]],px,py,px+15,py+30,'#4c4a45',.45+r()*.2,900+i*40+k,{ch:6,bw:7})}}
- ctx.save();ctx.strokeStyle='rgba(170,190,220,.16)';ctx.lineWidth=1.4;poly(ctx,hp.slice(1,-1));ctx.stroke();ctx.restore();
+ const hp=M.high||[];for(let i=0;i<hp.length-1;i++){const[a,b]=hp[i],[e,f]=hp[i+1];if(b<4&&f<4)continue;if(a>=W-2&&e>=W-2)continue;const len=Math.hypot(e-a,f-b),n=Math.ceil(len/14);for(let k=0;k<n;k++){const u=k/n,px=mix(a,e,u),py=mix(b,f,u);masonry(ctx,[[px,py],[px+15,py+(f-b)/n],[px+15,py+(f-b)/n+24],[px,py+24]],px,py,px+15,py+30,'#4c4a45',.45+r()*.2,900+i*40+k,{ch:6,bw:7})}}
+ if(hp.length>3){ctx.save();ctx.strokeStyle='rgba(170,190,220,.16)';ctx.lineWidth=1.4;poly(ctx,hp.slice(1,-1));ctx.stroke();ctx.restore();}
  // stone bridge
  M.bridges.forEach(([bx,by,ang,bl],bi)=>{ctx.save();ctx.translate(bx,by);ctx.rotate(ang);shadow(ctx,4,18,bl+10,12,.8);const bW=27;
   masonry(ctx,[[-bl,-bW],[bl,-bW],[bl,bW],[-bl,bW]],-bl,-bW,bl,bW,'#5a5852',.75,401+bi,{ch:6,bw:14});
