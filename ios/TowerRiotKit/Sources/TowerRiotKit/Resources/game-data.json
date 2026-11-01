@@ -1,0 +1,8980 @@
+{
+ "towers": [
+  {
+   "kind": "watch",
+   "name": "Watch tower",
+   "element": "pierce",
+   "blurb": "Ballista bolts. Fast, long range, single target.",
+   "cost": [
+    70,
+    60,
+    90
+   ],
+   "dmg": [
+    8,
+    14,
+    22
+   ],
+   "range": [
+    230,
+    250,
+    270
+   ],
+   "rate": [
+    0.6,
+    0.55,
+    0.5
+   ],
+   "hitsFlying": true,
+   "splits": [
+    {
+     "id": "a",
+     "name": "Longbow spire",
+     "desc": "+30% range. 25% of bolts crit for triple damage.",
+     "cost": 140
+    },
+    {
+     "id": "b",
+     "name": "Repeater",
+     "desc": "Fires more than twice as fast for 70% damage per bolt.",
+     "cost": 140
+    }
+   ]
+  },
+  {
+   "kind": "cannon",
+   "name": "Forge cannon",
+   "element": "fire",
+   "blurb": "Lobbed shells that burst on the road. Breaks groups and armor.",
+   "cost": [
+    100,
+    90,
+    130
+   ],
+   "dmg": [
+    16,
+    30,
+    48
+   ],
+   "range": [
+    200,
+    210,
+    220
+   ],
+   "rate": [
+    1.6,
+    1.5,
+    1.4
+   ],
+   "hitsFlying": false,
+   "splits": [
+    {
+     "id": "a",
+     "name": "Siege mortar",
+     "desc": "+50% range and +30% damage.",
+     "cost": 180
+    },
+    {
+     "id": "b",
+     "name": "Scatter gun",
+     "desc": "Three shells per shot, each with 60% damage.",
+     "cost": 180
+    }
+   ]
+  },
+  {
+   "kind": "bell",
+   "name": "Frost bell",
+   "element": "frost",
+   "blurb": "A ringing pulse that slows everything around it.",
+   "cost": [
+    90,
+    70,
+    100
+   ],
+   "dmg": [
+    2,
+    4,
+    6
+   ],
+   "range": [
+    140,
+    155,
+    170
+   ],
+   "rate": [
+    2,
+    1.9,
+    1.8
+   ],
+   "hitsFlying": true,
+   "splits": [
+    {
+     "id": "a",
+     "name": "Glacier",
+     "desc": "Every pulse freezes foes solid for 1 second.",
+     "cost": 160
+    },
+    {
+     "id": "b",
+     "name": "Chime",
+     "desc": "Slowed foes take 25% more damage from everything.",
+     "cost": 160
+    }
+   ]
+  },
+  {
+   "kind": "pylon",
+   "name": "Storm pylon",
+   "element": "storm",
+   "blurb": "Lightning that jumps between foes. Strong against swarms.",
+   "cost": [
+    120,
+    100,
+    140
+   ],
+   "dmg": [
+    10,
+    18,
+    28
+   ],
+   "range": [
+    190,
+    200,
+    210
+   ],
+   "rate": [
+    1.1,
+    1.05,
+    1
+   ],
+   "hitsFlying": true,
+   "splits": [
+    {
+     "id": "a",
+     "name": "Tesla crown",
+     "desc": "Lightning jumps to 3 more foes.",
+     "cost": 200
+    },
+    {
+     "id": "b",
+     "name": "Rail",
+     "desc": "One huge bolt for four times the damage. No jumps.",
+     "cost": 200
+    }
+   ]
+  },
+  {
+   "kind": "roots",
+   "name": "Root garden",
+   "element": "nature",
+   "blurb": "Thorns burst up through the road and hold a foe in place.",
+   "cost": [
+    80,
+    70,
+    100
+   ],
+   "dmg": [
+    6,
+    12,
+    18
+   ],
+   "range": [
+    160,
+    170,
+    180
+   ],
+   "rate": [
+    1.8,
+    1.7,
+    1.6
+   ],
+   "hitsFlying": false,
+   "splits": [
+    {
+     "id": "a",
+     "name": "Bramble",
+     "desc": "Roots catch every foe within a small area.",
+     "cost": 150
+    },
+    {
+     "id": "b",
+     "name": "Spore pod",
+     "desc": "Leaves a poison cloud that hurts foes standing in it.",
+     "cost": 150
+    }
+   ]
+  },
+  {
+   "kind": "beacon",
+   "name": "Beacon",
+   "element": "fire",
+   "blurb": "No attack. Its light boosts nearby towers and reveals Shades.",
+   "cost": [
+    90,
+    80,
+    120
+   ],
+   "dmg": [
+    0,
+    0,
+    0
+   ],
+   "range": [
+    170,
+    185,
+    200
+   ],
+   "rate": [
+    99,
+    99,
+    99
+   ],
+   "hitsFlying": false,
+   "splits": [
+    {
+     "id": "a",
+     "name": "War drum",
+     "desc": "Nearby towers also attack 20% faster.",
+     "cost": 160
+    },
+    {
+     "id": "b",
+     "name": "Watchfire",
+     "desc": "Nearby towers also gain 25% range.",
+     "cost": 160
+    }
+   ]
+  }
+ ],
+ "beaconBuff": [
+  0.15,
+  0.2,
+  0.25
+ ],
+ "enemies": [
+  {
+   "kind": "grub",
+   "name": "Grub",
+   "hp": 34,
+   "speed": 52,
+   "gold": 4,
+   "leak": 1,
+   "dps": 6,
+   "bar": 30,
+   "size": 1,
+   "blurb": "Slow and soft. Comes in crowds."
+  },
+  {
+   "kind": "skitter",
+   "name": "Skitter",
+   "hp": 18,
+   "speed": 104,
+   "gold": 3,
+   "leak": 1,
+   "dps": 4,
+   "bar": 22,
+   "size": 0.7,
+   "takes": {
+    "fire": 0.7
+   },
+   "blurb": "Very fast and frail. Fire struggles to catch it."
+  },
+  {
+   "kind": "shell",
+   "name": "Shellback",
+   "hp": 130,
+   "speed": 34,
+   "gold": 10,
+   "leak": 2,
+   "dps": 12,
+   "bar": 50,
+   "size": 1.3,
+   "takes": {
+    "pierce": 0.5,
+    "fire": 1.25
+   },
+   "blurb": "Heavy shell. Bolts do half damage, fire cracks it."
+  },
+  {
+   "kind": "moth",
+   "name": "Moth",
+   "hp": 30,
+   "speed": 78,
+   "gold": 5,
+   "leak": 1,
+   "dps": 0,
+   "bar": 62,
+   "size": 0.9,
+   "flying": true,
+   "blurb": "Flies. Cannons and roots cannot reach it, Wren cannot block it."
+  },
+  {
+   "kind": "warden",
+   "name": "Warden",
+   "hp": 220,
+   "speed": 30,
+   "gold": 20,
+   "leak": 3,
+   "dps": 18,
+   "bar": 66,
+   "size": 1.7,
+   "takes": {
+    "storm": 1.3
+   },
+   "traits": {
+    "shield": 110
+   },
+   "blurb": "Shields foes near it. Lightning hurts it most."
+  },
+  {
+   "kind": "mender",
+   "name": "Mender",
+   "hp": 60,
+   "speed": 44,
+   "gold": 8,
+   "leak": 1,
+   "dps": 5,
+   "bar": 34,
+   "size": 1,
+   "traits": {
+    "heal": 0.06
+   },
+   "blurb": "Heals foes around it. Kill it first."
+  },
+  {
+   "kind": "shade",
+   "name": "Shade",
+   "hp": 40,
+   "speed": 66,
+   "gold": 7,
+   "leak": 1,
+   "dps": 8,
+   "bar": 30,
+   "size": 0.95,
+   "traits": {
+    "stealth": true
+   },
+   "blurb": "Unseen until a Beacon or Wren lights it."
+  },
+  {
+   "kind": "splitter",
+   "name": "Splitter",
+   "hp": 70,
+   "speed": 48,
+   "gold": 6,
+   "leak": 1,
+   "dps": 8,
+   "bar": 36,
+   "size": 1.15,
+   "traits": {
+    "splitInto": {
+     "kind": "skitter",
+     "n": 3
+    }
+   },
+   "blurb": "Bursts into three Skitters when it dies."
+  },
+  {
+   "kind": "sapper",
+   "name": "Sapper",
+   "hp": 80,
+   "speed": 46,
+   "gold": 8,
+   "leak": 1,
+   "dps": 10,
+   "bar": 34,
+   "size": 1.05,
+   "takes": {
+    "nature": 1.3
+   },
+   "traits": {
+    "sapper": true
+   },
+   "blurb": "Chews through wrecks and walls to open new roads."
+  },
+  {
+   "kind": "burrower",
+   "name": "Burrower",
+   "hp": 90,
+   "speed": 58,
+   "gold": 9,
+   "leak": 1,
+   "dps": 9,
+   "bar": 30,
+   "size": 1.1,
+   "takes": {
+    "nature": 1.4
+   },
+   "traits": {
+    "burrow": [
+     2.2,
+     3
+    ]
+   },
+   "blurb": "Digs under the road where nothing can reach it."
+  },
+  {
+   "kind": "ashmoth",
+   "name": "Ash moth",
+   "hp": 48,
+   "speed": 84,
+   "gold": 7,
+   "leak": 1,
+   "dps": 0,
+   "bar": 62,
+   "size": 1,
+   "flying": true,
+   "takes": {
+    "fire": 0,
+    "frost": 1.3
+   },
+   "blurb": "Flies and cannot burn. Frost brings it down."
+  },
+  {
+   "kind": "elite",
+   "name": "Iron Shellback",
+   "hp": 200,
+   "speed": 32,
+   "gold": 16,
+   "leak": 2,
+   "dps": 16,
+   "bar": 54,
+   "size": 1.4,
+   "takes": {
+    "pierce": 0.8,
+    "fire": 1.2
+   },
+   "traits": {
+    "armor": 4
+   },
+   "blurb": "Armored. Every hit loses a few points. Big hits win."
+  },
+  {
+   "kind": "mireking",
+   "name": "The Mire King",
+   "hp": 2400,
+   "speed": 20,
+   "gold": 150,
+   "leak": 12,
+   "dps": 40,
+   "bar": 110,
+   "size": 3,
+   "traits": {
+    "boss": true,
+    "summon": {
+     "kind": "grub",
+     "n": 2,
+     "every": 5
+    }
+   },
+   "blurb": "Drags the swamp with him and spits out Grubs."
+  },
+  {
+   "kind": "tidewyrm",
+   "name": "The Tidewyrm",
+   "hp": 2000,
+   "speed": 26,
+   "gold": 200,
+   "leak": 12,
+   "dps": 50,
+   "bar": 90,
+   "size": 2.6,
+   "takes": {
+    "storm": 1.25
+   },
+   "traits": {
+    "boss": true,
+    "dive": {
+     "every": 9,
+     "dur": 3
+    }
+   },
+   "blurb": "Dives under the tide to heal. Hit it while it is up."
+  },
+  {
+   "kind": "colossus",
+   "name": "The Brass Colossus",
+   "hp": 6000,
+   "speed": 16,
+   "gold": 260,
+   "leak": 12,
+   "dps": 70,
+   "bar": 140,
+   "size": 3.4,
+   "traits": {
+    "boss": true,
+    "plated": 0.35
+   },
+   "blurb": "Brass plates turn most damage. Chill it and the plates crack."
+  },
+  {
+   "kind": "queen",
+   "name": "The Hollow Queen",
+   "hp": 5500,
+   "speed": 22,
+   "gold": 400,
+   "leak": 12,
+   "dps": 90,
+   "bar": 130,
+   "size": 3.2,
+   "flying": false,
+   "traits": {
+    "boss": true,
+    "phases": [
+     0.66,
+     0.33
+    ],
+    "summon": {
+     "kind": "shade",
+     "n": 2,
+     "every": 7
+    }
+   },
+   "blurb": "Rewrites the map as she falls. Three phases."
+  }
+ ],
+ "hero": {
+  "maxLevel": 16,
+  "hp": 320,
+  "hpPerLevel": 34,
+  "dmg": 22,
+  "dmgPerLevel": 3.5,
+  "atkRate": 0.8,
+  "reach": 62,
+  "aggro": 120,
+  "speed": 130,
+  "regen": 3,
+  "gateRegen": 40,
+  "gateRadius": 170,
+  "blocks": 2,
+  "sight": 140,
+  "xpRadius": 420,
+  "lastHit": 0.5,
+  "respawnBase": 4
+ },
+ "skills": [
+  {
+   "key": "q",
+   "name": "Spear Sweep",
+   "desc": "Sweeps her spear in a circle. Hits every foe around her.",
+   "maxRank": 4,
+   "cd": [
+    10,
+    9,
+    8,
+    7
+   ],
+   "needLevel": [
+    1,
+    3,
+    5,
+    7
+   ]
+  },
+  {
+   "key": "w",
+   "name": "Lantern Snare",
+   "desc": "Throws a lantern. Foes where it lands are held in place and burned.",
+   "maxRank": 4,
+   "cd": [
+    16,
+    15,
+    14,
+    13
+   ],
+   "needLevel": [
+    1,
+    3,
+    5,
+    7
+   ]
+  },
+  {
+   "key": "e",
+   "name": "Attune",
+   "desc": "Passive. Towers near Wren attack faster.",
+   "maxRank": 4,
+   "cd": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "needLevel": [
+    1,
+    3,
+    5,
+    7
+   ]
+  },
+  {
+   "key": "r",
+   "name": "Sunrise",
+   "desc": "Every tower fires twice as fast, and every hidden foe shows.",
+   "maxRank": 3,
+   "cd": [
+    70,
+    60,
+    50
+   ],
+   "needLevel": [
+    6,
+    11,
+    16
+   ]
+  }
+ ],
+ "sweep": {
+  "dmg": [
+   60,
+   100,
+   150,
+   220
+  ],
+  "radius": 100
+ },
+ "snare": {
+  "hold": [
+   1.2,
+   1.6,
+   2,
+   2.4
+  ],
+  "dmg": [
+   30,
+   60,
+   90,
+   130
+  ],
+  "radius": 85,
+  "range": 340
+ },
+ "attune": {
+  "rate": [
+   0.1,
+   0.18,
+   0.26,
+   0.34
+  ],
+  "radius": 160
+ },
+ "sunrise": {
+  "dur": [
+   5,
+   7,
+   9
+  ]
+ },
+ "items": [
+  {
+   "id": "boots",
+   "name": "Clockwork boots",
+   "cost": 60,
+   "after": 0,
+   "speed": 0.4,
+   "desc": "+40% move speed."
+  },
+  {
+   "id": "blade",
+   "name": "Ember blade",
+   "cost": 110,
+   "after": 0,
+   "dmg": 12,
+   "desc": "+12 spear damage."
+  },
+  {
+   "id": "ring",
+   "name": "Ring of moss",
+   "cost": 80,
+   "after": 0,
+   "regen": 7,
+   "desc": "+7 health a second."
+  },
+  {
+   "id": "plate",
+   "name": "Warden's plate",
+   "cost": 150,
+   "after": 0,
+   "hp": 260,
+   "armor": 0.2,
+   "desc": "+260 health, takes 20% less damage."
+  },
+  {
+   "id": "cleave",
+   "name": "Cleaving spear",
+   "cost": 260,
+   "after": 11,
+   "cleave": 0.5,
+   "desc": "Each strike also hits foes beside the target for half damage."
+  },
+  {
+   "id": "lantern",
+   "name": "Brass lantern",
+   "cost": 120,
+   "after": 13,
+   "sight": 100,
+   "desc": "Wren lights hidden foes 100 px further away."
+  },
+  {
+   "id": "dawnspear",
+   "name": "Spear of dawn",
+   "cost": 380,
+   "after": 14,
+   "dmg": 30,
+   "atkSpeed": 0.25,
+   "desc": "+30 damage and 25% faster strikes."
+  },
+  {
+   "id": "seconddawn",
+   "name": "Second dawn",
+   "cost": 420,
+   "after": 18,
+   "revive": true,
+   "desc": "The first time Wren falls, she stands right back up. Used up."
+  }
+ ],
+ "itemSlots": 4,
+ "sellItem": 0.5,
+ "runes": [
+  {
+   "kind": "haste",
+   "name": "Haste",
+   "desc": "Wren moves twice as fast.",
+   "dur": 15,
+   "color": "#ff6a4a"
+  },
+  {
+   "kind": "double",
+   "name": "Double damage",
+   "desc": "Wren and towers near her hit twice as hard.",
+   "dur": 15,
+   "color": "#5ab4ff"
+  },
+  {
+   "kind": "regen",
+   "name": "Regeneration",
+   "desc": "Wren heals fast.",
+   "dur": 6,
+   "color": "#7fe07a"
+  },
+  {
+   "kind": "bounty",
+   "name": "Bounty",
+   "desc": "Gold and XP at once.",
+   "dur": 0,
+   "color": "#ffc845"
+  }
+ ],
+ "runeFirst": 30,
+ "runeEvery": 60,
+ "trees": [
+  {
+   "id": "towerworks",
+   "name": "Towerworks",
+   "blurb": "Stronger towers.",
+   "after": 0,
+   "nodes": [
+    {
+     "id": "tw-bolts",
+     "name": "Sharp bolts",
+     "desc": "Watch towers deal 15% more damage.",
+     "cost": 2,
+     "effect": {
+      "k": "towerDmg",
+      "tower": "watch",
+      "v": 0.15
+     }
+    },
+    {
+     "id": "tw-iron",
+     "name": "Hot iron",
+     "desc": "Cannon blasts are 20% wider.",
+     "cost": 2,
+     "effect": {
+      "k": "blast",
+      "v": 0.2
+     }
+    },
+    {
+     "id": "tw-chill",
+     "name": "Deep chill",
+     "desc": "Frost bells slow 15% more.",
+     "cost": 2,
+     "req": "tw-bolts",
+     "effect": {
+      "k": "slow",
+      "v": 0.15
+     }
+    },
+    {
+     "id": "tw-arcs",
+     "name": "Long arcs",
+     "desc": "Lightning jumps to one more foe.",
+     "cost": 3,
+     "req": "tw-iron",
+     "effect": {
+      "k": "jumps",
+      "v": 1
+     }
+    },
+    {
+     "id": "tw-roots",
+     "name": "Old roots",
+     "desc": "Roots hold foes 0.4 s longer.",
+     "cost": 2,
+     "req": "tw-chill",
+     "effect": {
+      "k": "hold",
+      "v": 0.4
+     }
+    },
+    {
+     "id": "tw-mason",
+     "name": "Masonry",
+     "desc": "Every tower costs 10% less.",
+     "cost": 4,
+     "req": "tw-arcs",
+     "effect": {
+      "k": "costMul",
+      "v": -0.1
+     }
+    }
+   ]
+  },
+  {
+   "id": "armory",
+   "name": "Armory",
+   "blurb": "Rounds you load into towers.",
+   "after": 7,
+   "nodes": [
+    {
+     "id": "ar-ember",
+     "name": "Ember rounds",
+     "desc": "Load a tower with ember rounds: hits burn for two seconds.",
+     "cost": 2,
+     "effect": {
+      "k": "round",
+      "round": "ember"
+     }
+    },
+    {
+     "id": "ar-frost",
+     "name": "Frost rounds",
+     "desc": "Load a tower with frost rounds: hits chill the foe.",
+     "cost": 2,
+     "effect": {
+      "k": "round",
+      "round": "frost"
+     }
+    },
+    {
+     "id": "ar-storm",
+     "name": "Storm rounds",
+     "desc": "Load a tower with storm rounds: hits can jump to a second foe.",
+     "cost": 2,
+     "effect": {
+      "k": "round",
+      "round": "storm"
+     }
+    },
+    {
+     "id": "ar-shatter",
+     "name": "Shatter",
+     "desc": "Chilled foes take 50% more fire damage.",
+     "cost": 3,
+     "req": "ar-frost",
+     "effect": {
+      "k": "shatter"
+     }
+    },
+    {
+     "id": "ar-overload",
+     "name": "Overload",
+     "desc": "Lightning on a held or frozen foe jumps two more times.",
+     "cost": 3,
+     "req": "ar-storm",
+     "effect": {
+      "k": "overload"
+     }
+    },
+    {
+     "id": "ar-quick",
+     "name": "Quick load",
+     "desc": "Every tower attacks 8% faster.",
+     "cost": 4,
+     "req": "ar-ember",
+     "effect": {
+      "k": "rateAll",
+      "v": 0.08
+     }
+    }
+   ]
+  },
+  {
+   "id": "wren",
+   "name": "Wren",
+   "blurb": "Talents for the hero.",
+   "after": 2,
+   "nodes": [
+    {
+     "id": "wr-spear",
+     "name": "Spearwork",
+     "desc": "Spear Sweep deals 25% more damage.",
+     "cost": 2,
+     "effect": {
+      "k": "sweep",
+      "v": 0.25
+     }
+    },
+    {
+     "id": "wr-hunt",
+     "name": "Bounty hunter",
+     "desc": "Last hits give 25% more gold on top.",
+     "cost": 2,
+     "effect": {
+      "k": "lastHit",
+      "v": 0.25
+     }
+    },
+    {
+     "id": "wr-snare",
+     "name": "Long snare",
+     "desc": "Lantern Snare holds 0.5 s longer.",
+     "cost": 2,
+     "req": "wr-spear",
+     "effect": {
+      "k": "snare",
+      "v": 0.5
+     }
+    },
+    {
+     "id": "wr-attune",
+     "name": "Bright attune",
+     "desc": "Attune gives 10% more attack speed.",
+     "cost": 3,
+     "req": "wr-hunt",
+     "effect": {
+      "k": "attune",
+      "v": 0.1
+     }
+    },
+    {
+     "id": "wr-veteran",
+     "name": "Veteran",
+     "desc": "Wren starts every stage at level 3.",
+     "cost": 3,
+     "req": "wr-snare",
+     "effect": {
+      "k": "heroLevel",
+      "v": 2
+     }
+    },
+    {
+     "id": "wr-dawn",
+     "name": "Long dawn",
+     "desc": "Sunrise lasts 2 s longer.",
+     "cost": 3,
+     "req": "wr-attune",
+     "effect": {
+      "k": "sunrise",
+      "v": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "bulwark",
+   "name": "Bulwark",
+   "blurb": "The Keep and its purse.",
+   "after": 12,
+   "nodes": [
+    {
+     "id": "bw-walls",
+     "name": "Thick walls",
+     "desc": "+3 lives every stage.",
+     "cost": 2,
+     "effect": {
+      "k": "lives",
+      "v": 3
+     }
+    },
+    {
+     "id": "bw-chest",
+     "name": "War chest",
+     "desc": "+80 starting gold.",
+     "cost": 3,
+     "effect": {
+      "k": "gold",
+      "v": 80
+     }
+    },
+    {
+     "id": "bw-salvage",
+     "name": "Salvage",
+     "desc": "Selling a tower returns 85% instead of 70%.",
+     "cost": 2,
+     "req": "bw-chest",
+     "effect": {
+      "k": "sell",
+      "v": 0.15
+     }
+    },
+    {
+     "id": "bw-early",
+     "name": "Early bell",
+     "desc": "Calling a wave early pays 50% more.",
+     "cost": 1,
+     "req": "bw-walls",
+     "effect": {
+      "k": "early",
+      "v": 0.5
+     }
+    },
+    {
+     "id": "bw-gate",
+     "name": "Iron gate",
+     "desc": "The first foe to reach the gate each wave costs no lives.",
+     "cost": 4,
+     "req": "bw-early",
+     "effect": {
+      "k": "ironGate"
+     }
+    },
+    {
+     "id": "bw-interest",
+     "name": "Interest",
+     "desc": "Earn 5% of banked gold after each wave, up to 40.",
+     "cost": 4,
+     "req": "bw-salvage",
+     "effect": {
+      "k": "interest",
+      "v": 0.05
+     }
+    }
+   ]
+  }
+ ],
+ "regions": [
+  {
+   "name": "Mosslight Vale",
+   "rule": "Forks, night and the swamp",
+   "color": "#7fae6a"
+  },
+  {
+   "name": "Saltglass Coast",
+   "rule": "Tides, wrecks and storms",
+   "color": "#5fa8d0"
+  },
+  {
+   "name": "Cogwheel Foundry",
+   "rule": "Belts, gears and steam",
+   "color": "#d99a3a"
+  },
+  {
+   "name": "Ashen Rift",
+   "rule": "Lava, high ground and the Queen",
+   "color": "#d0603a"
+  }
+ ],
+ "stages": [
+  {
+   "id": 1,
+   "name": "Lantern Road",
+   "region": 0,
+   "twist": "One road, one gate. Learn to build, upgrade and send Wren where she is needed.",
+   "newFoe": "Grub",
+   "unlocks": "Watch tower, Forge cannon",
+   "startGold": 240,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon"
+   ],
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 54,
+     "ctrl": [
+      [
+       -40,
+       300
+      ],
+      [
+       140,
+       300
+      ],
+      [
+       300,
+       470
+      ],
+      [
+       470,
+       470
+      ],
+      [
+       570,
+       260
+      ],
+      [
+       700,
+       250
+      ],
+      [
+       800,
+       260
+      ],
+      [
+       900,
+       420
+      ],
+      [
+       1060,
+       450
+      ],
+      [
+       1222,
+       440
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 70,
+     "ctrl": [
+      [
+       702,
+       -40
+      ],
+      [
+       692,
+       120
+      ],
+      [
+       706,
+       250
+      ],
+      [
+       684,
+       420
+      ],
+      [
+       716,
+       580
+      ],
+      [
+       700,
+       770
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      190,
+      440
+     ]
+    },
+    {
+     "at": [
+      380,
+      370
+     ]
+    },
+    {
+     "at": [
+      400,
+      570
+     ]
+    },
+    {
+     "at": [
+      574,
+      394
+     ]
+    },
+    {
+     "at": [
+      600,
+      150
+     ]
+    },
+    {
+     "at": [
+      806,
+      386
+     ]
+    },
+    {
+     "at": [
+      960,
+      330
+     ]
+    },
+    {
+     "at": [
+      980,
+      550
+     ]
+    },
+    {
+     "at": [
+      1120,
+      340
+     ]
+    }
+   ],
+   "bridges": [
+    [
+     703,
+     253,
+     0.02,
+     60
+    ]
+   ],
+   "rune": [
+    480,
+    640
+   ],
+   "heroStart": [
+    1060,
+    380
+   ],
+   "waves": [
+    {
+     "hint": "Grubs crawl in",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 1.3,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "More grubs",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 1,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Skitters, fast and frail",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 6,
+       "gap": 0.5,
+       "delay": 6
+      }
+     ]
+    },
+    {
+     "hint": "A skitter swarm",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.55,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "The road fills up",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.7,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 8
+      }
+     ]
+    },
+    {
+     "hint": "A Shellback leads them",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 1,
+       "gap": 2.2,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 18,
+       "gap": 0.6,
+       "delay": 3
+      },
+      {
+       "kind": "skitter",
+       "n": 12,
+       "gap": 0.5,
+       "delay": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Fork in the Moss",
+   "region": 0,
+   "twist": "The road splits around a pond. Foes take the side with fewer towers.",
+   "newFoe": "Skitter",
+   "unlocks": "Frost bell, Wren's W skill",
+   "startGold": 280,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell"
+   ],
+   "roads": [
+    {
+     "id": "north",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       370
+      ],
+      [
+       200,
+       370
+      ],
+      [
+       330,
+       220
+      ],
+      [
+       600,
+       170
+      ],
+      [
+       840,
+       240
+      ],
+      [
+       960,
+       370
+      ],
+      [
+       1222,
+       380
+      ]
+     ]
+    },
+    {
+     "id": "south",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       370
+      ],
+      [
+       200,
+       370
+      ],
+      [
+       330,
+       540
+      ],
+      [
+       620,
+       590
+      ],
+      [
+       850,
+       500
+      ],
+      [
+       960,
+       370
+      ],
+      [
+       1222,
+       380
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 76,
+     "ctrl": [
+      [
+       440,
+       380
+      ],
+      [
+       560,
+       370
+      ],
+      [
+       690,
+       390
+      ],
+      [
+       760,
+       410
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      150,
+      480
+     ]
+    },
+    {
+     "at": [
+      300,
+      380
+     ]
+    },
+    {
+     "at": [
+      470,
+      270
+     ]
+    },
+    {
+     "at": [
+      470,
+      490
+     ]
+    },
+    {
+     "at": [
+      640,
+      270
+     ]
+    },
+    {
+     "at": [
+      660,
+      490
+     ]
+    },
+    {
+     "at": [
+      760,
+      110
+     ]
+    },
+    {
+     "at": [
+      760,
+      660
+     ]
+    },
+    {
+     "at": [
+      868,
+      382
+     ]
+    },
+    {
+     "at": [
+      1080,
+      290
+     ]
+    },
+    {
+     "at": [
+      1080,
+      480
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    600,
+    300
+   ],
+   "heroStart": [
+    1040,
+    380
+   ],
+   "waves": [
+    {
+     "hint": "Grubs test both roads",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 1.1,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Skitters split up",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 12,
+       "gap": 0.7,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Mixed pack",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.9,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 8,
+       "gap": 0.6,
+       "delay": 5
+      }
+     ]
+    },
+    {
+     "hint": "They find your weak side",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.45,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Heavy grubs",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.55,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Shellbacks",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 3,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.8,
+       "delay": 4
+      }
+     ]
+    },
+    {
+     "hint": "Swarm",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 24,
+       "gap": 0.35,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.7,
+       "delay": 6
+      }
+     ]
+    },
+    {
+     "hint": "Everything at once",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 4,
+       "gap": 2.4,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.4,
+       "delay": 3
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Switchback Hill",
+   "region": 0,
+   "twist": "The road winds down the hill three times. A tower in the middle covers two passes.",
+   "newFoe": "Shellback",
+   "unlocks": "Root garden",
+   "startGold": 300,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "roots"
+   ],
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       130
+      ],
+      [
+       300,
+       128
+      ],
+      [
+       700,
+       132
+      ],
+      [
+       1000,
+       150
+      ],
+      [
+       1110,
+       230
+      ],
+      [
+       1050,
+       330
+      ],
+      [
+       880,
+       345
+      ],
+      [
+       520,
+       340
+      ],
+      [
+       260,
+       360
+      ],
+      [
+       190,
+       450
+      ],
+      [
+       270,
+       545
+      ],
+      [
+       560,
+       570
+      ],
+      [
+       900,
+       575
+      ],
+      [
+       1222,
+       560
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 34,
+     "ctrl": [
+      [
+       1300,
+       300
+      ],
+      [
+       1200,
+       380
+      ],
+      [
+       1190,
+       470
+      ],
+      [
+       1300,
+       520
+      ]
+     ]
+    }
+   ],
+   "high": [
+    [
+     0,
+     0
+    ],
+    [
+     1280,
+     0
+    ],
+    [
+     1280,
+     210
+    ],
+    [
+     1160,
+     240
+    ],
+    [
+     1000,
+     230
+    ],
+    [
+     700,
+     220
+    ],
+    [
+     300,
+     225
+    ],
+    [
+     0,
+     230
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "plots": [
+    {
+     "at": [
+      200,
+      240
+     ]
+    },
+    {
+     "at": [
+      480,
+      236
+     ]
+    },
+    {
+     "at": [
+      780,
+      240
+     ]
+    },
+    {
+     "at": [
+      1170,
+      120
+     ]
+    },
+    {
+     "at": [
+      380,
+      450
+     ]
+    },
+    {
+     "at": [
+      620,
+      455
+     ]
+    },
+    {
+     "at": [
+      860,
+      455
+     ]
+    },
+    {
+     "at": [
+      1100,
+      450
+     ]
+    },
+    {
+     "at": [
+      100,
+      350
+     ]
+    },
+    {
+     "at": [
+      700,
+      660
+     ]
+    },
+    {
+     "at": [
+      1030,
+      660
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    600,
+    455
+   ],
+   "heroStart": [
+    1000,
+    470
+   ],
+   "waves": [
+    {
+     "hint": "Grubs down the hill",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 1,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Skitters",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "The first Shellback",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 2,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "A long column",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.6,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Shells and swarms",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 4,
+       "gap": 2.4,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 18,
+       "gap": 0.4,
+       "delay": 5
+      }
+     ]
+    },
+    {
+     "hint": "Fast and heavy",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.35,
+       "delay": 0
+      },
+      {
+       "kind": "shell",
+       "n": 4,
+       "gap": 2.2,
+       "delay": 6
+      }
+     ]
+    },
+    {
+     "hint": "A wall of shells",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 8,
+       "gap": 1.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Everything rolls down",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.5,
+       "delay": 2
+      },
+      {
+       "kind": "skitter",
+       "n": 24,
+       "gap": 0.35,
+       "delay": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "Firefly Night",
+   "region": 0,
+   "twist": "Night falls on even waves. Shades slip past anything that cannot see them, so light the road.",
+   "newFoe": "Shade",
+   "unlocks": "Beacon",
+   "startGold": 340,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "roots",
+    "beacon"
+   ],
+   "night": true,
+   "roads": [
+    {
+     "id": "north",
+     "spawn": "n",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       160
+      ],
+      [
+       220,
+       170
+      ],
+      [
+       420,
+       260
+      ],
+      [
+       560,
+       360
+      ],
+      [
+       700,
+       360
+      ],
+      [
+       820,
+       280
+      ],
+      [
+       980,
+       260
+      ],
+      [
+       1100,
+       360
+      ],
+      [
+       1222,
+       380
+      ]
+     ]
+    },
+    {
+     "id": "south",
+     "spawn": "s",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       580
+      ],
+      [
+       200,
+       560
+      ],
+      [
+       400,
+       470
+      ],
+      [
+       560,
+       360
+      ],
+      [
+       700,
+       360
+      ],
+      [
+       820,
+       280
+      ],
+      [
+       980,
+       260
+      ],
+      [
+       1100,
+       360
+      ],
+      [
+       1222,
+       380
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 60,
+     "ctrl": [
+      [
+       690,
+       600
+      ],
+      [
+       800,
+       612
+      ],
+      [
+       900,
+       580
+      ],
+      [
+       960,
+       540
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      160,
+      260
+     ]
+    },
+    {
+     "at": [
+      160,
+      480
+     ]
+    },
+    {
+     "at": [
+      300,
+      370
+     ]
+    },
+    {
+     "at": [
+      440,
+      370
+     ]
+    },
+    {
+     "at": [
+      640,
+      250
+     ]
+    },
+    {
+     "at": [
+      640,
+      470
+     ]
+    },
+    {
+     "at": [
+      820,
+      400
+     ]
+    },
+    {
+     "at": [
+      900,
+      160
+     ]
+    },
+    {
+     "at": [
+      1000,
+      380
+     ]
+    },
+    {
+     "at": [
+      1130,
+      250
+     ]
+    },
+    {
+     "at": [
+      1120,
+      490
+     ]
+    },
+    {
+     "at": [
+      380,
+      110
+     ]
+    },
+    {
+     "at": [
+      380,
+      630
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    560,
+    600
+   ],
+   "heroStart": [
+    960,
+    400
+   ],
+   "waves": [
+    {
+     "hint": "Two rifts open",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 1,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Night: Shades walk",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 6,
+       "gap": 1.4,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Shellbacks in the morning",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 3,
+       "gap": 3,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "shell",
+       "n": 3,
+       "gap": 3,
+       "delay": 1,
+       "spawn": "s"
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 6,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Night: a Shade pack",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 10,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Morning rush",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.4,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.6,
+       "delay": 0,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Night: shadows and shells",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 8,
+       "gap": 1.1,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "shell",
+       "n": 4,
+       "gap": 2.2,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "shade",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 8,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Daybreak column",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "skitter",
+       "n": 12,
+       "gap": 0.5,
+       "delay": 10,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Night: the long dark",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 16,
+       "gap": 0.8,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "shade",
+       "n": 16,
+       "gap": 0.8,
+       "delay": 2,
+       "spawn": "s"
+      },
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2.2,
+       "delay": 10,
+       "spawn": "n"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "name": "The Mire King",
+   "region": 0,
+   "twist": "Boss. The road spirals into the swamp and the swamp swallows a plot every other wave.",
+   "newFoe": "The Mire King",
+   "unlocks": "Relic: Mire crown (+10% tower damage)",
+   "startGold": 420,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       620
+      ],
+      [
+       200,
+       640
+      ],
+      [
+       600,
+       655
+      ],
+      [
+       1000,
+       640
+      ],
+      [
+       1170,
+       520
+      ],
+      [
+       1190,
+       300
+      ],
+      [
+       1090,
+       140
+      ],
+      [
+       800,
+       92
+      ],
+      [
+       400,
+       100
+      ],
+      [
+       210,
+       200
+      ],
+      [
+       190,
+       380
+      ],
+      [
+       300,
+       480
+      ],
+      [
+       600,
+       512
+      ],
+      [
+       880,
+       482
+      ],
+      [
+       980,
+       370
+      ],
+      [
+       890,
+       262
+      ],
+      [
+       700,
+       250
+      ],
+      [
+       600,
+       330
+      ],
+      [
+       700,
+       380
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 40,
+     "ctrl": [
+      [
+       420,
+       380
+      ],
+      [
+       480,
+       370
+      ],
+      [
+       520,
+       410
+      ]
+     ]
+    },
+    {
+     "w": 36,
+     "ctrl": [
+      [
+       1040,
+       280
+      ],
+      [
+       1080,
+       360
+      ],
+      [
+       1060,
+       420
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      400,
+      575
+     ]
+    },
+    {
+     "at": [
+      800,
+      578
+     ]
+    },
+    {
+     "at": [
+      1068,
+      554
+     ]
+    },
+    {
+     "at": [
+      1126,
+      355
+     ],
+     "sinkAt": 8
+    },
+    {
+     "at": [
+      600,
+      175
+     ]
+    },
+    {
+     "at": [
+      900,
+      178
+     ]
+    },
+    {
+     "at": [
+      300,
+      300
+     ],
+     "sinkAt": 4
+    },
+    {
+     "at": [
+      423,
+      428
+     ],
+     "sinkAt": 6
+    },
+    {
+     "at": [
+      780,
+      400
+     ]
+    },
+    {
+     "at": [
+      520,
+      250
+     ]
+    },
+    {
+     "at": [
+      80,
+      480
+     ]
+    },
+    {
+     "at": [
+      1230,
+      640
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    340,
+    180
+   ],
+   "heroStart": [
+    800,
+    420
+   ],
+   "waves": [
+    {
+     "hint": "The swamp stirs",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Skitters skim the mud",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.45,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Shells in the reeds",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 5,
+       "gap": 2.2,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 4
+      }
+     ]
+    },
+    {
+     "hint": "Shades at dusk",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 10,
+       "gap": 1,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 3
+      }
+     ]
+    },
+    {
+     "hint": "A heavy tide",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 24,
+       "gap": 0.35,
+       "delay": 4
+      }
+     ]
+    },
+    {
+     "hint": "The court of the King",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 8,
+       "gap": 1.8,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 2
+      },
+      {
+       "kind": "shade",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 10
+      }
+     ]
+    },
+    {
+     "hint": "The Mire King rises",
+     "groups": [
+      {
+       "kind": "mireking",
+       "n": 1,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 1,
+       "delay": 5
+      },
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 3,
+       "delay": 20
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Low Tide",
+   "region": 1,
+   "twist": "Two rifts, one bridge. The tide floods the south ford and the Hollow takes the long way round.",
+   "newFoe": "Moth",
+   "unlocks": "Storm pylon",
+   "startGold": 420,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "north",
+     "spawn": "n",
+     "w": 52,
+     "ctrl": [
+      [
+       -40,
+       150
+      ],
+      [
+       130,
+       158
+      ],
+      [
+       260,
+       214
+      ],
+      [
+       390,
+       206
+      ],
+      [
+       478,
+       292
+      ],
+      [
+       548,
+       362
+      ],
+      [
+       620,
+       364
+      ],
+      [
+       700,
+       366
+      ],
+      [
+       790,
+       330
+      ],
+      [
+       880,
+       252
+      ],
+      [
+       1000,
+       244
+      ],
+      [
+       1075,
+       322
+      ],
+      [
+       1085,
+       448
+      ],
+      [
+       1150,
+       512
+      ],
+      [
+       1222,
+       520
+      ]
+     ]
+    },
+    {
+     "id": "south",
+     "spawn": "s",
+     "w": 52,
+     "ctrl": [
+      [
+       -40,
+       612
+      ],
+      [
+       140,
+       610
+      ],
+      [
+       246,
+       546
+      ],
+      [
+       330,
+       500
+      ],
+      [
+       432,
+       440
+      ],
+      [
+       548,
+       362
+      ],
+      [
+       620,
+       364
+      ],
+      [
+       700,
+       366
+      ],
+      [
+       790,
+       330
+      ],
+      [
+       880,
+       252
+      ],
+      [
+       1000,
+       244
+      ],
+      [
+       1075,
+       322
+      ],
+      [
+       1085,
+       448
+      ],
+      [
+       1150,
+       512
+      ],
+      [
+       1222,
+       520
+      ]
+     ]
+    },
+    {
+     "id": "detour",
+     "spawn": "s",
+     "w": 30,
+     "ctrl": [
+      [
+       -40,
+       612
+      ],
+      [
+       140,
+       610
+      ],
+      [
+       246,
+       546
+      ],
+      [
+       206,
+       420
+      ],
+      [
+       252,
+       300
+      ],
+      [
+       262,
+       216
+      ],
+      [
+       390,
+       206
+      ],
+      [
+       478,
+       292
+      ],
+      [
+       548,
+       362
+      ],
+      [
+       620,
+       364
+      ],
+      [
+       700,
+       366
+      ],
+      [
+       790,
+       330
+      ],
+      [
+       880,
+       252
+      ],
+      [
+       1000,
+       244
+      ],
+      [
+       1075,
+       322
+      ],
+      [
+       1085,
+       448
+      ],
+      [
+       1150,
+       512
+      ],
+      [
+       1222,
+       520
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 78,
+     "ctrl": [
+      [
+       702,
+       -40
+      ],
+      [
+       668,
+       110
+      ],
+      [
+       690,
+       250
+      ],
+      [
+       670,
+       365
+      ],
+      [
+       640,
+       500
+      ],
+      [
+       662,
+       620
+      ],
+      [
+       640,
+       770
+      ]
+     ]
+    },
+    {
+     "w": 30,
+     "ctrl": [
+      [
+       284,
+       770
+      ],
+      [
+       304,
+       640
+      ],
+      [
+       330,
+       500
+      ],
+      [
+       440,
+       556
+      ],
+      [
+       560,
+       566
+      ],
+      [
+       646,
+       516
+      ]
+     ]
+    }
+   ],
+   "high": [
+    [
+     790,
+     0
+    ],
+    [
+     1280,
+     0
+    ],
+    [
+     1280,
+     150
+    ],
+    [
+     1150,
+     170
+    ],
+    [
+     990,
+     160
+    ],
+    [
+     880,
+     128
+    ],
+    [
+     800,
+     86
+    ],
+    [
+     790,
+     0
+    ]
+   ],
+   "plots": [
+    {
+     "at": [
+      380,
+      330
+     ]
+    },
+    {
+     "at": [
+      575,
+      470
+     ]
+    },
+    {
+     "at": [
+      800,
+      480
+     ]
+    },
+    {
+     "at": [
+      955,
+      352
+     ]
+    },
+    {
+     "at": [
+      965,
+      110
+     ]
+    },
+    {
+     "at": [
+      1012,
+      560
+     ]
+    },
+    {
+     "at": [
+      140,
+      480
+     ]
+    },
+    {
+     "at": [
+      120,
+      300
+     ]
+    },
+    {
+     "at": [
+      590,
+      245
+     ]
+    },
+    {
+     "at": [
+      830,
+      600
+     ]
+    },
+    {
+     "at": [
+      380,
+      90
+     ]
+    }
+   ],
+   "bridges": [
+    [
+     668,
+     365,
+     0.02499479361892016,
+     64
+    ]
+   ],
+   "rune": [
+    480,
+    640
+   ],
+   "heroStart": [
+    1000,
+    440
+   ],
+   "shifts": [
+    {
+     "kind": "tide",
+     "closes": [
+      "south"
+     ],
+     "every": 40,
+     "start": 18,
+     "dur": 16,
+     "at": [
+      330,
+      500
+     ],
+     "r": 48,
+     "label": "The tide floods the south ford"
+    }
+   ],
+   "waves": [
+    {
+     "hint": "Two rifts open",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 2,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Skitters on both roads",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.7,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.7,
+       "delay": 1,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Moths over the river",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 8,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Shellbacks, armored",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 3,
+       "gap": 3,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.8,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "A Mender walks with them",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.7,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "skitter",
+       "n": 14,
+       "gap": 0.6,
+       "delay": 3,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Skitter swarm",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 22,
+       "gap": 0.4,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "skitter",
+       "n": 22,
+       "gap": 0.4,
+       "delay": 2,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "A Warden shields the pack",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "grub",
+       "n": 18,
+       "gap": 0.6,
+       "delay": 1.5,
+       "spawn": "s"
+      },
+      {
+       "kind": "moth",
+       "n": 10,
+       "gap": 0.8,
+       "delay": 4,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Moth cloud",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 20,
+       "gap": 0.55,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "moth",
+       "n": 12,
+       "gap": 0.7,
+       "delay": 3,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Shellback column",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2.2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 8,
+       "delay": 2,
+       "spawn": "n"
+      },
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Elite wave",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 10,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "shell",
+       "n": 5,
+       "gap": 2.5,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.5,
+       "delay": 4,
+       "spawn": "n"
+      },
+      {
+       "kind": "moth",
+       "n": 14,
+       "gap": 0.7,
+       "delay": 6,
+       "spawn": "s"
+      },
+      {
+       "kind": "mender",
+       "n": 3,
+       "gap": 4,
+       "delay": 8,
+       "spawn": "s"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Shipwreck Cove",
+   "region": 1,
+   "twist": "A wreck blocks the short beach road. Sappers chew through it, and then the Hollow has a shortcut.",
+   "newFoe": "Sapper",
+   "unlocks": "Armory tree: tower rounds",
+   "startGold": 440,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "cliff",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       420
+      ],
+      [
+       160,
+       405
+      ],
+      [
+       300,
+       260
+      ],
+      [
+       520,
+       160
+      ],
+      [
+       800,
+       150
+      ],
+      [
+       1000,
+       225
+      ],
+      [
+       1100,
+       360
+      ],
+      [
+       1222,
+       420
+      ]
+     ]
+    },
+    {
+     "id": "beach",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       420
+      ],
+      [
+       160,
+       435
+      ],
+      [
+       320,
+       555
+      ],
+      [
+       640,
+       588
+      ],
+      [
+       900,
+       560
+      ],
+      [
+       1100,
+       470
+      ],
+      [
+       1222,
+       420
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 170,
+     "ctrl": [
+      [
+       -60,
+       790
+      ],
+      [
+       400,
+       760
+      ],
+      [
+       800,
+       775
+      ],
+      [
+       1340,
+       750
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      300,
+      400
+     ]
+    },
+    {
+     "at": [
+      480,
+      300
+     ]
+    },
+    {
+     "at": [
+      650,
+      280
+     ]
+    },
+    {
+     "at": [
+      830,
+      290
+     ]
+    },
+    {
+     "at": [
+      980,
+      360
+     ]
+    },
+    {
+     "at": [
+      700,
+      450
+     ]
+    },
+    {
+     "at": [
+      480,
+      450
+     ]
+    },
+    {
+     "at": [
+      140,
+      290
+     ]
+    },
+    {
+     "at": [
+      140,
+      560
+     ]
+    },
+    {
+     "at": [
+      1150,
+      240
+     ]
+    },
+    {
+     "at": [
+      1170,
+      560
+     ]
+    },
+    {
+     "at": [
+      820,
+      60
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    640,
+    380
+   ],
+   "heroStart": [
+    1000,
+    440
+   ],
+   "barriers": [
+    {
+     "road": "beach",
+     "at": 0.45,
+     "hp": 500
+    }
+   ],
+   "waves": [
+    {
+     "hint": "The cliff road",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.9,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Sappers on the beach",
+     "groups": [
+      {
+       "kind": "sapper",
+       "n": 2,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.6,
+       "delay": 3
+      }
+     ]
+    },
+    {
+     "hint": "Moths off the sea",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 10,
+       "gap": 0.8,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "More Sappers",
+     "groups": [
+      {
+       "kind": "sapper",
+       "n": 4,
+       "gap": 2,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.7,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Splitting tide",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 4,
+       "gap": 2.4,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.4,
+       "delay": 3
+      }
+     ]
+    },
+    {
+     "hint": "Wardens wade in",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.6,
+       "delay": 1
+      },
+      {
+       "kind": "sapper",
+       "n": 3,
+       "gap": 3,
+       "delay": 4
+      }
+     ]
+    },
+    {
+     "hint": "Moth cloud",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 24,
+       "gap": 0.5,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Shells and sappers",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 0
+      },
+      {
+       "kind": "sapper",
+       "n": 4,
+       "gap": 2,
+       "delay": 2
+      },
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.35,
+       "delay": 8
+      }
+     ]
+    },
+    {
+     "hint": "The storm fleet",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 8,
+       "delay": 0
+      },
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 2
+      },
+      {
+       "kind": "moth",
+       "n": 16,
+       "gap": 0.6,
+       "delay": 4
+      },
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 6,
+       "delay": 6
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "name": "Lighthouse Rock",
+   "region": 1,
+   "twist": "Two roads wrap the rock. Towers on the rock see further, and the lighthouse shows every Shade in its beam.",
+   "newFoe": "Splitter",
+   "unlocks": "Wren's ultimate: Sunrise",
+   "startGold": 560,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "lighthouse": [
+    640,
+    360
+   ],
+   "roads": [
+    {
+     "id": "north",
+     "spawn": "n",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       200
+      ],
+      [
+       300,
+       140
+      ],
+      [
+       640,
+       128
+      ],
+      [
+       980,
+       180
+      ],
+      [
+       1100,
+       330
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "south",
+     "spawn": "s",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       560
+      ],
+      [
+       300,
+       615
+      ],
+      [
+       640,
+       625
+      ],
+      [
+       980,
+       560
+      ],
+      [
+       1100,
+       400
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 90,
+     "ctrl": [
+      [
+       -40,
+       -10
+      ],
+      [
+       400,
+       10
+      ],
+      [
+       900,
+       -5
+      ],
+      [
+       1320,
+       20
+      ]
+     ]
+    }
+   ],
+   "high": [
+    [
+     470,
+     300
+    ],
+    [
+     520,
+     240
+    ],
+    [
+     640,
+     225
+    ],
+    [
+     770,
+     245
+    ],
+    [
+     820,
+     320
+    ],
+    [
+     810,
+     440
+    ],
+    [
+     740,
+     505
+    ],
+    [
+     610,
+     515
+    ],
+    [
+     500,
+     470
+    ],
+    [
+     460,
+     380
+    ],
+    [
+     470,
+     300
+    ]
+   ],
+   "plots": [
+    {
+     "at": [
+      540,
+      320
+     ]
+    },
+    {
+     "at": [
+      740,
+      320
+     ]
+    },
+    {
+     "at": [
+      560,
+      450
+     ]
+    },
+    {
+     "at": [
+      720,
+      450
+     ]
+    },
+    {
+     "at": [
+      200,
+      380
+     ]
+    },
+    {
+     "at": [
+      400,
+      380
+     ]
+    },
+    {
+     "at": [
+      880,
+      380
+     ]
+    },
+    {
+     "at": [
+      1010,
+      370
+     ]
+    },
+    {
+     "at": [
+      900,
+      260
+     ]
+    },
+    {
+     "at": [
+      900,
+      480
+     ]
+    },
+    {
+     "at": [
+      300,
+      260
+     ]
+    },
+    {
+     "at": [
+      300,
+      500
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    1000,
+    640
+   ],
+   "heroStart": [
+    960,
+    370
+   ],
+   "waves": [
+    {
+     "hint": "Both roads wake",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 1,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Splitters",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 4,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "splitter",
+       "n": 4,
+       "gap": 2,
+       "delay": 1,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Shades in the beam",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 6,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "shade",
+       "n": 6,
+       "gap": 1.2,
+       "delay": 2,
+       "spawn": "s"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 4,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Moths and Menders",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 12,
+       "gap": 0.7,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 5,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.9,
+       "delay": 1,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Splitter swarm",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 3,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Wardens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 3,
+       "spawn": "s"
+      },
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.6,
+       "delay": 1,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.6,
+       "delay": 4,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Shells in the dark",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 5,
+       "gap": 2.2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "shade",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Moth cloud",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "moth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 2,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "The breakers",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 8,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 6,
+       "spawn": "n"
+      },
+      {
+       "kind": "shade",
+       "n": 12,
+       "gap": 0.8,
+       "delay": 10,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Last light",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.1,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.1,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 4,
+       "delay": 4,
+       "spawn": "n"
+      },
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.35,
+       "delay": 8,
+       "spawn": "s"
+      },
+      {
+       "kind": "moth",
+       "n": 10,
+       "gap": 0.6,
+       "delay": 12,
+       "spawn": "n"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Storm Shelf",
+   "region": 1,
+   "twist": "Rain soaks everything. Lightning jumps twice as far and fire burns weaker. The road crosses itself on a stone viaduct.",
+   "newFoe": "Warden",
+   "unlocks": "Tower splits at level 4",
+   "startGold": 480,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "weather": "rain",
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 48,
+     "ctrl": [
+      [
+       -40,
+       180
+      ],
+      [
+       260,
+       190
+      ],
+      [
+       460,
+       300
+      ],
+      [
+       640,
+       392
+      ],
+      [
+       820,
+       480
+      ],
+      [
+       1000,
+       545
+      ],
+      [
+       1130,
+       440
+      ],
+      [
+       1140,
+       280
+      ],
+      [
+       1010,
+       200
+      ],
+      [
+       820,
+       300
+      ],
+      [
+       640,
+       392
+      ],
+      [
+       460,
+       486
+      ],
+      [
+       280,
+       560
+      ],
+      [
+       140,
+       600
+      ]
+     ]
+    }
+   ],
+   "waters": [],
+   "plots": [
+    {
+     "at": [
+      640,
+      260
+     ]
+    },
+    {
+     "at": [
+      640,
+      530
+     ]
+    },
+    {
+     "at": [
+      470,
+      395
+     ]
+    },
+    {
+     "at": [
+      810,
+      395
+     ]
+    },
+    {
+     "at": [
+      1010,
+      370
+     ]
+    },
+    {
+     "at": [
+      300,
+      320
+     ]
+    },
+    {
+     "at": [
+      300,
+      420
+     ]
+    },
+    {
+     "at": [
+      960,
+      640
+     ]
+    },
+    {
+     "at": [
+      180,
+      420
+     ]
+    },
+    {
+     "at": [
+      820,
+      160
+     ]
+    },
+    {
+     "at": [
+      460,
+      160
+     ]
+    },
+    {
+     "at": [
+      1220,
+      370
+     ]
+    }
+   ],
+   "bridges": [
+    [
+     640,
+     392,
+     0.48,
+     46
+    ]
+   ],
+   "rune": [
+    980,
+    380
+   ],
+   "heroStart": [
+    600,
+    390
+   ],
+   "waves": [
+    {
+     "hint": "Rain on the shelf",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Wardens march",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.7,
+       "delay": 1
+      }
+     ]
+    },
+    {
+     "hint": "Skitter rush",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 24,
+       "gap": 0.35,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Splitters",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 6,
+       "gap": 1.4,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 3
+      }
+     ]
+    },
+    {
+     "hint": "Moths in the storm",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 18,
+       "gap": 0.55,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Two Wardens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 8,
+       "delay": 0
+      },
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Menders and shells",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 3,
+       "gap": 4,
+       "delay": 0
+      },
+      {
+       "kind": "shell",
+       "n": 8,
+       "gap": 1.8,
+       "delay": 1
+      }
+     ]
+    },
+    {
+     "hint": "Splitting storm",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 10,
+       "gap": 1,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 24,
+       "gap": 0.3,
+       "delay": 5
+      }
+     ]
+    },
+    {
+     "hint": "Shade squall",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 16,
+       "gap": 0.6,
+       "delay": 0
+      },
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 6,
+       "delay": 4
+      }
+     ]
+    },
+    {
+     "hint": "The thunderhead",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 3,
+       "gap": 6,
+       "delay": 0
+      },
+      {
+       "kind": "shell",
+       "n": 10,
+       "gap": 1.6,
+       "delay": 2
+      },
+      {
+       "kind": "moth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 6
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 4,
+       "delay": 8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "name": "The Tidewyrm",
+   "region": 1,
+   "twist": "Boss. Two bridges, two tides. Each bridge floods in turn, and the Wyrm dives under to heal.",
+   "newFoe": "The Tidewyrm",
+   "unlocks": "Relic: Tide pearl (+15% tower range near water)",
+   "startGold": 640,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "north",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       360
+      ],
+      [
+       140,
+       360
+      ],
+      [
+       300,
+       230
+      ],
+      [
+       560,
+       185
+      ],
+      [
+       740,
+       190
+      ],
+      [
+       1000,
+       250
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "south",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       360
+      ],
+      [
+       140,
+       360
+      ],
+      [
+       300,
+       500
+      ],
+      [
+       560,
+       540
+      ],
+      [
+       740,
+       532
+      ],
+      [
+       1000,
+       470
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 92,
+     "ctrl": [
+      [
+       652,
+       -40
+      ],
+      [
+       632,
+       190
+      ],
+      [
+       650,
+       360
+      ],
+      [
+       632,
+       540
+      ],
+      [
+       652,
+       770
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      280,
+      360
+     ]
+    },
+    {
+     "at": [
+      440,
+      360
+     ]
+    },
+    {
+     "at": [
+      440,
+      90
+     ]
+    },
+    {
+     "at": [
+      440,
+      640
+     ]
+    },
+    {
+     "at": [
+      860,
+      360
+     ]
+    },
+    {
+     "at": [
+      860,
+      100
+     ]
+    },
+    {
+     "at": [
+      860,
+      620
+     ]
+    },
+    {
+     "at": [
+      1060,
+      360
+     ]
+    },
+    {
+     "at": [
+      540,
+      360
+     ]
+    },
+    {
+     "at": [
+      770,
+      360
+     ]
+    },
+    {
+     "at": [
+      160,
+      120
+     ]
+    },
+    {
+     "at": [
+      160,
+      600
+     ]
+    }
+   ],
+   "bridges": [
+    [
+     636,
+     188,
+     0.03,
+     64
+    ],
+    [
+     636,
+     538,
+     -0.03,
+     64
+    ]
+   ],
+   "rune": [
+    1100,
+    640
+   ],
+   "heroStart": [
+    940,
+    360
+   ],
+   "shifts": [
+    {
+     "kind": "tide",
+     "closes": [
+      "north"
+     ],
+     "every": 50,
+     "start": 10,
+     "dur": 18,
+     "at": [
+      636,
+      188
+     ],
+     "r": 60,
+     "label": "High tide on the north bridge"
+    },
+    {
+     "kind": "tide",
+     "closes": [
+      "south"
+     ],
+     "every": 50,
+     "start": 35,
+     "dur": 18,
+     "at": [
+      636,
+      538
+     ],
+     "r": 60,
+     "label": "High tide on the south bridge"
+    }
+   ],
+   "waves": [
+    {
+     "hint": "The water rises",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.7,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Splitters on the bridges",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Wardens and moths",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 6,
+       "delay": 0
+      },
+      {
+       "kind": "moth",
+       "n": 10,
+       "gap": 0.7,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Shells",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 7,
+       "gap": 1.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Menders",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 1
+      }
+     ]
+    },
+    {
+     "hint": "Shades on the foam",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 20,
+       "gap": 0.6,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Spray of skitters",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 40,
+       "gap": 0.25,
+       "delay": 0
+      },
+      {
+       "kind": "warden",
+       "n": 3,
+       "gap": 5,
+       "delay": 6
+      }
+     ]
+    },
+    {
+     "hint": "The Tidewyrm",
+     "groups": [
+      {
+       "kind": "tidewyrm",
+       "n": 1,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "moth",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 6
+      },
+      {
+       "kind": "shell",
+       "n": 4,
+       "gap": 3,
+       "delay": 12
+      },
+      {
+       "kind": "splitter",
+       "n": 6,
+       "gap": 1.6,
+       "delay": 24
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "name": "Conveyor Hall",
+   "region": 2,
+   "twist": "Iron belts carry foes faster. Slow them before the belts, hit them after.",
+   "newFoe": "Mender",
+   "unlocks": "Shop item: Cleaving spear",
+   "startGold": 520,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       140
+      ],
+      [
+       420,
+       150
+      ],
+      [
+       440,
+       330
+      ],
+      [
+       220,
+       360
+      ],
+      [
+       200,
+       560
+      ],
+      [
+       640,
+       580
+      ],
+      [
+       660,
+       330
+      ],
+      [
+       880,
+       150
+      ],
+      [
+       1100,
+       160
+      ],
+      [
+       1120,
+       400
+      ],
+      [
+       900,
+       560
+      ],
+      [
+       1222,
+       610
+      ]
+     ]
+    }
+   ],
+   "waters": [],
+   "plots": [
+    {
+     "at": [
+      300,
+      255
+     ]
+    },
+    {
+     "at": [
+      570,
+      240
+     ]
+    },
+    {
+     "at": [
+      100,
+      460
+     ]
+    },
+    {
+     "at": [
+      330,
+      460
+     ]
+    },
+    {
+     "at": [
+      540,
+      450
+     ]
+    },
+    {
+     "at": [
+      780,
+      380
+     ]
+    },
+    {
+     "at": [
+      1000,
+      290
+     ]
+    },
+    {
+     "at": [
+      780,
+      630
+     ]
+    },
+    {
+     "at": [
+      993,
+      430
+     ]
+    },
+    {
+     "at": [
+      1200,
+      470
+     ]
+    },
+    {
+     "at": [
+      760,
+      60
+     ]
+    },
+    {
+     "at": [
+      1240,
+      230
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    100,
+    640
+   ],
+   "heroStart": [
+    960,
+    420
+   ],
+   "belts": [
+    {
+     "road": "main",
+     "from": 0.16,
+     "to": 0.32,
+     "mult": 1.7
+    },
+    {
+     "road": "main",
+     "from": 0.58,
+     "to": 0.74,
+     "mult": 1.7
+    }
+   ],
+   "waves": [
+    {
+     "hint": "Grubs on the belt",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 18,
+       "gap": 0.6,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Menders keep them going",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 3,
+       "gap": 4,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 14,
+       "gap": 0.7,
+       "delay": 1
+      }
+     ]
+    },
+    {
+     "hint": "Skitters at speed",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 30,
+       "gap": 0.3,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Iron shells",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 8,
+       "gap": 1.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Splitters",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 10,
+       "gap": 1,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Wardens on the line",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 6,
+       "delay": 0
+      },
+      {
+       "kind": "mender",
+       "n": 3,
+       "gap": 4,
+       "delay": 2
+      },
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.6,
+       "delay": 3
+      }
+     ]
+    },
+    {
+     "hint": "Moths in the rafters",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 24,
+       "gap": 0.45,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Shift change",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 10,
+       "gap": 1.4,
+       "delay": 0
+      },
+      {
+       "kind": "mender",
+       "n": 6,
+       "gap": 3,
+       "delay": 3
+      },
+      {
+       "kind": "skitter",
+       "n": 30,
+       "gap": 0.25,
+       "delay": 10
+      }
+     ]
+    },
+    {
+     "hint": "Full output",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 5,
+       "delay": 0
+      },
+      {
+       "kind": "splitter",
+       "n": 12,
+       "gap": 1,
+       "delay": 2
+      },
+      {
+       "kind": "moth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 8
+      },
+      {
+       "kind": "mender",
+       "n": 6,
+       "gap": 3,
+       "delay": 12
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "name": "Gear Garden",
+   "region": 2,
+   "twist": "The garden turns. Gear plots rise on alternate waves: gold plots on odd waves, iron plots on even ones.",
+   "newFoe": "Burrower",
+   "unlocks": "Bulwark tree",
+   "startGold": 560,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       600
+      ],
+      [
+       180,
+       590
+      ],
+      [
+       300,
+       440
+      ],
+      [
+       320,
+       250
+      ],
+      [
+       460,
+       130
+      ],
+      [
+       700,
+       120
+      ],
+      [
+       860,
+       240
+      ],
+      [
+       880,
+       440
+      ],
+      [
+       1000,
+       600
+      ],
+      [
+       1222,
+       600
+      ]
+     ]
+    },
+    {
+     "id": "top",
+     "spawn": "n",
+     "w": 46,
+     "ctrl": [
+      [
+       1000,
+       -40
+      ],
+      [
+       1010,
+       120
+      ],
+      [
+       1100,
+       300
+      ],
+      [
+       1060,
+       470
+      ],
+      [
+       1000,
+       600
+      ],
+      [
+       1222,
+       600
+      ]
+     ]
+    }
+   ],
+   "waters": [],
+   "plots": [
+    {
+     "at": [
+      160,
+      450
+     ],
+     "gear": "a"
+    },
+    {
+     "at": [
+      470,
+      290
+     ],
+     "gear": "a"
+    },
+    {
+     "at": [
+      720,
+      300
+     ],
+     "gear": "a"
+    },
+    {
+     "at": [
+      960,
+      470
+     ],
+     "gear": "a"
+    },
+    {
+     "at": [
+      460,
+      470
+     ],
+     "gear": "b"
+    },
+    {
+     "at": [
+      600,
+      400
+     ],
+     "gear": "b"
+    },
+    {
+     "at": [
+      740,
+      460
+     ],
+     "gear": "b"
+    },
+    {
+     "at": [
+      1180,
+      420
+     ],
+     "gear": "b"
+    },
+    {
+     "at": [
+      180,
+      250
+     ]
+    },
+    {
+     "at": [
+      600,
+      250
+     ]
+    },
+    {
+     "at": [
+      960,
+      280
+     ]
+    },
+    {
+     "at": [
+      1140,
+      120
+     ]
+    },
+    {
+     "at": [
+      600,
+      640
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    600,
+    520
+   ],
+   "heroStart": [
+    960,
+    560
+   ],
+   "waves": [
+    {
+     "hint": "The garden wakes",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.7,
+       "delay": 0,
+       "spawn": "w"
+      }
+     ]
+    },
+    {
+     "hint": "Burrowers dig in",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 4,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.8,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Two fronts",
+     "groups": [
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.35,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Shells and menders",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 6,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 5,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Under the roots",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 10,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "burrower",
+       "n": 6,
+       "gap": 1.6,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Splitters",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 10,
+       "gap": 1.1,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "splitter",
+       "n": 4,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Moths",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "moth",
+       "n": 10,
+       "gap": 0.6,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Wardens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 2,
+       "spawn": "w"
+      }
+     ]
+    },
+    {
+     "hint": "Iron and earth",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 10,
+       "gap": 1.4,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "burrower",
+       "n": 10,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 6,
+       "spawn": "w"
+      }
+     ]
+    },
+    {
+     "hint": "The garden turns",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 3,
+       "gap": 5,
+       "delay": 0,
+       "spawn": "w"
+      },
+      {
+       "kind": "burrower",
+       "n": 14,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "splitter",
+       "n": 14,
+       "gap": 0.9,
+       "delay": 6,
+       "spawn": "w"
+      },
+      {
+       "kind": "moth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 10,
+       "spawn": "n"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "name": "Steam Vents",
+   "region": 2,
+   "twist": "Two halls run side by side. Vents blast foes on the road, and Wren standing on a vent makes it fire twice as often.",
+   "newFoe": "Ash moth",
+   "unlocks": "Shop item: Brass lantern",
+   "startGold": 580,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "upper",
+     "spawn": "a",
+     "w": 48,
+     "ctrl": [
+      [
+       -40,
+       160
+      ],
+      [
+       300,
+       170
+      ],
+      [
+       520,
+       300
+      ],
+      [
+       760,
+       300
+      ],
+      [
+       960,
+       180
+      ],
+      [
+       1100,
+       250
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "lower",
+     "spawn": "b",
+     "w": 48,
+     "ctrl": [
+      [
+       -40,
+       560
+      ],
+      [
+       300,
+       560
+      ],
+      [
+       520,
+       420
+      ],
+      [
+       760,
+       420
+      ],
+      [
+       960,
+       540
+      ],
+      [
+       1100,
+       460
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    }
+   ],
+   "waters": [],
+   "plots": [
+    {
+     "at": [
+      732,
+      360
+     ]
+    },
+    {
+     "at": [
+      400,
+      360
+     ]
+    },
+    {
+     "at": [
+      880,
+      360
+     ]
+    },
+    {
+     "at": [
+      300,
+      270
+     ]
+    },
+    {
+     "at": [
+      300,
+      460
+     ]
+    },
+    {
+     "at": [
+      560,
+      190
+     ]
+    },
+    {
+     "at": [
+      560,
+      530
+     ]
+    },
+    {
+     "at": [
+      780,
+      190
+     ]
+    },
+    {
+     "at": [
+      780,
+      530
+     ]
+    },
+    {
+     "at": [
+      1000,
+      360
+     ]
+    },
+    {
+     "at": [
+      160,
+      360
+     ]
+    },
+    {
+     "at": [
+      1100,
+      120
+     ]
+    },
+    {
+     "at": [
+      1100,
+      600
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    160,
+    640
+   ],
+   "heroStart": [
+    960,
+    360
+   ],
+   "vents": [
+    {
+     "road": "upper",
+     "at": 0.45,
+     "every": 7,
+     "dmg": 60
+    },
+    {
+     "road": "lower",
+     "at": 0.45,
+     "every": 7,
+     "dmg": 60
+    },
+    {
+     "road": "upper",
+     "at": 0.78,
+     "every": 9,
+     "dmg": 80
+    },
+    {
+     "road": "lower",
+     "at": 0.78,
+     "every": 9,
+     "dmg": 80
+    }
+   ],
+   "waves": [
+    {
+     "hint": "Steam rising",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.8,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.8,
+       "delay": 1,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Ash moths",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 2,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Burrowers",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 6,
+       "gap": 1.4,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "burrower",
+       "n": 6,
+       "gap": 1.4,
+       "delay": 1,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Shells",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 5,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "shell",
+       "n": 5,
+       "gap": 2,
+       "delay": 1,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Menders on both halls",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 5,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "mender",
+       "n": 2,
+       "gap": 5,
+       "delay": 0,
+       "spawn": "b"
+      },
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.4,
+       "delay": 2,
+       "spawn": "a"
+      },
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.4,
+       "delay": 3,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Ash cloud",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 3,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Wardens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 2,
+       "spawn": "b"
+      },
+      {
+       "kind": "splitter",
+       "n": 10,
+       "gap": 1,
+       "delay": 3,
+       "spawn": "a"
+      },
+      {
+       "kind": "splitter",
+       "n": 10,
+       "gap": 1,
+       "delay": 4,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Heavy steam",
+     "groups": [
+      {
+       "kind": "shell",
+       "n": 8,
+       "gap": 1.6,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "burrower",
+       "n": 8,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "b"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 12,
+       "gap": 0.6,
+       "delay": 8,
+       "spawn": "a"
+      }
+     ]
+    },
+    {
+     "hint": "Pressure",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "a"
+      },
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "b"
+      },
+      {
+       "kind": "shell",
+       "n": 10,
+       "gap": 1.5,
+       "delay": 2,
+       "spawn": "b"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 6,
+       "spawn": "a"
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 10,
+       "spawn": "b"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "name": "Assembly Line",
+   "region": 2,
+   "twist": "Three lines feed one gate. Iron Shellbacks come off the line armored, so small hits barely scratch them.",
+   "newFoe": "Iron Shellback",
+   "unlocks": "Shop item: Spear of dawn",
+   "startGold": 620,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "top",
+     "spawn": "t",
+     "w": 46,
+     "ctrl": [
+      [
+       380,
+       -40
+      ],
+      [
+       400,
+       140
+      ],
+      [
+       560,
+       280
+      ],
+      [
+       800,
+       360
+      ],
+      [
+       960,
+       360
+      ],
+      [
+       1060,
+       240
+      ],
+      [
+       1180,
+       300
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "mid",
+     "spawn": "m",
+     "w": 46,
+     "ctrl": [
+      [
+       -40,
+       360
+      ],
+      [
+       300,
+       360
+      ],
+      [
+       560,
+       360
+      ],
+      [
+       800,
+       360
+      ],
+      [
+       960,
+       360
+      ],
+      [
+       1060,
+       240
+      ],
+      [
+       1180,
+       300
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "bot",
+     "spawn": "b",
+     "w": 46,
+     "ctrl": [
+      [
+       380,
+       760
+      ],
+      [
+       400,
+       580
+      ],
+      [
+       560,
+       440
+      ],
+      [
+       800,
+       360
+      ],
+      [
+       960,
+       360
+      ],
+      [
+       1060,
+       240
+      ],
+      [
+       1180,
+       300
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    }
+   ],
+   "waters": [],
+   "plots": [
+    {
+     "at": [
+      240,
+      250
+     ]
+    },
+    {
+     "at": [
+      240,
+      470
+     ]
+    },
+    {
+     "at": [
+      440,
+      270
+     ]
+    },
+    {
+     "at": [
+      440,
+      450
+     ]
+    },
+    {
+     "at": [
+      680,
+      250
+     ]
+    },
+    {
+     "at": [
+      680,
+      470
+     ]
+    },
+    {
+     "at": [
+      880,
+      270
+     ]
+    },
+    {
+     "at": [
+      880,
+      450
+     ]
+    },
+    {
+     "at": [
+      1060,
+      380
+     ]
+    },
+    {
+     "at": [
+      1160,
+      160
+     ]
+    },
+    {
+     "at": [
+      600,
+      100
+     ]
+    },
+    {
+     "at": [
+      600,
+      620
+     ]
+    },
+    {
+     "at": [
+      1100,
+      540
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    140,
+    140
+   ],
+   "heroStart": [
+    960,
+    420
+   ],
+   "waves": [
+    {
+     "hint": "Three lines start",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "t"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 1,
+       "spawn": "m"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 2,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Iron off the line",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 2,
+       "gap": 4,
+       "delay": 0,
+       "spawn": "m"
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "t"
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Burrowers",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 6,
+       "gap": 1.4,
+       "delay": 0,
+       "spawn": "t"
+      },
+      {
+       "kind": "burrower",
+       "n": 6,
+       "gap": 1.4,
+       "delay": 1,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Ash moths",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 12,
+       "gap": 0.6,
+       "delay": 0,
+       "spawn": "m"
+      },
+      {
+       "kind": "elite",
+       "n": 6,
+       "gap": 2.5,
+       "delay": 4,
+       "spawn": "m"
+      }
+     ]
+    },
+    {
+     "hint": "Menders",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 3,
+       "gap": 4,
+       "delay": 0,
+       "spawn": "t"
+      },
+      {
+       "kind": "mender",
+       "n": 3,
+       "gap": 4,
+       "delay": 0,
+       "spawn": "b"
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "m"
+      }
+     ]
+    },
+    {
+     "hint": "Splitters",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.1,
+       "delay": 0,
+       "spawn": "t"
+      },
+      {
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.1,
+       "delay": 0,
+       "spawn": "b"
+      }
+     ]
+    },
+    {
+     "hint": "Heavy line",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 8,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "m"
+      },
+      {
+       "kind": "warden",
+       "n": 2,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "t"
+      }
+     ]
+    },
+    {
+     "hint": "Full shift",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 6,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "t"
+      },
+      {
+       "kind": "elite",
+       "n": 6,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "b"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 4,
+       "spawn": "m"
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 8,
+       "spawn": "m"
+      }
+     ]
+    },
+    {
+     "hint": "Overtime",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 3,
+       "gap": 5,
+       "delay": 0,
+       "spawn": "m"
+      },
+      {
+       "kind": "elite",
+       "n": 10,
+       "gap": 1.6,
+       "delay": 0,
+       "spawn": "t"
+      },
+      {
+       "kind": "burrower",
+       "n": 12,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "b"
+      },
+      {
+       "kind": "splitter",
+       "n": 16,
+       "gap": 0.8,
+       "delay": 10,
+       "spawn": "m"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 15,
+   "name": "The Brass Colossus",
+   "region": 2,
+   "twist": "Boss. Brass plates turn most damage away. Chill the Colossus with frost and the plates crack.",
+   "newFoe": "The Brass Colossus",
+   "unlocks": "Relic: Brass heart (+1 Wren skill point)",
+   "startGold": 680,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 54,
+     "ctrl": [
+      [
+       -40,
+       120
+      ],
+      [
+       500,
+       120
+      ],
+      [
+       900,
+       125
+      ],
+      [
+       1120,
+       250
+      ],
+      [
+       1130,
+       470
+      ],
+      [
+       900,
+       600
+      ],
+      [
+       500,
+       605
+      ],
+      [
+       200,
+       580
+      ],
+      [
+       130,
+       460
+      ],
+      [
+       -40,
+       440
+      ]
+     ]
+    }
+   ],
+   "waters": [],
+   "high": [
+    [
+     320,
+     260
+    ],
+    [
+     900,
+     250
+    ],
+    [
+     960,
+     360
+    ],
+    [
+     900,
+     470
+    ],
+    [
+     320,
+     470
+    ],
+    [
+     260,
+     360
+    ],
+    [
+     320,
+     260
+    ]
+   ],
+   "plots": [
+    {
+     "at": [
+      400,
+      300
+     ]
+    },
+    {
+     "at": [
+      620,
+      300
+     ]
+    },
+    {
+     "at": [
+      840,
+      300
+     ]
+    },
+    {
+     "at": [
+      400,
+      430
+     ]
+    },
+    {
+     "at": [
+      620,
+      430
+     ]
+    },
+    {
+     "at": [
+      840,
+      430
+     ]
+    },
+    {
+     "at": [
+      1000,
+      360
+     ]
+    },
+    {
+     "at": [
+      300,
+      360
+     ]
+    },
+    {
+     "at": [
+      700,
+      220
+     ]
+    },
+    {
+     "at": [
+      700,
+      510
+     ]
+    },
+    {
+     "at": [
+      1240,
+      360
+     ]
+    },
+    {
+     "at": [
+      200,
+      220
+     ]
+    },
+    {
+     "at": [
+      1000,
+      660
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    1240,
+    120
+   ],
+   "heroStart": [
+    200,
+    440
+   ],
+   "waves": [
+    {
+     "hint": "The foundry floor",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Iron Shellbacks",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 6,
+       "gap": 2,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Ash moths",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Burrowers and menders",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 10,
+       "gap": 1,
+       "delay": 0
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Wardens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 3,
+       "gap": 5,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 20,
+       "gap": 0.3,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Splitter pile",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 16,
+       "gap": 0.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "The Colossus wakes",
+     "groups": [
+      {
+       "kind": "colossus",
+       "n": 1,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "elite",
+       "n": 8,
+       "gap": 3,
+       "delay": 8
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 4,
+       "delay": 14
+      },
+      {
+       "kind": "ashmoth",
+       "n": 20,
+       "gap": 0.6,
+       "delay": 24
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "name": "Ember Pass",
+   "region": 3,
+   "lava": true,
+   "twist": "Three roads through the pass. Lava closes one of them at a time, so the fight moves.",
+   "newFoe": "Burrower swarm",
+   "unlocks": "Wren gear: Ember spear",
+   "startGold": 680,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "top",
+     "spawn": "w",
+     "w": 46,
+     "ctrl": [
+      [
+       -40,
+       360
+      ],
+      [
+       160,
+       360
+      ],
+      [
+       300,
+       180
+      ],
+      [
+       640,
+       130
+      ],
+      [
+       980,
+       180
+      ],
+      [
+       1100,
+       330
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "mid",
+     "spawn": "w",
+     "w": 46,
+     "ctrl": [
+      [
+       -40,
+       360
+      ],
+      [
+       160,
+       360
+      ],
+      [
+       400,
+       380
+      ],
+      [
+       640,
+       345
+      ],
+      [
+       880,
+       380
+      ],
+      [
+       1100,
+       355
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "bot",
+     "spawn": "w",
+     "w": 46,
+     "ctrl": [
+      [
+       -40,
+       360
+      ],
+      [
+       160,
+       360
+      ],
+      [
+       300,
+       540
+      ],
+      [
+       640,
+       600
+      ],
+      [
+       980,
+       540
+      ],
+      [
+       1100,
+       390
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 36,
+     "ctrl": [
+      [
+       640,
+       -40
+      ],
+      [
+       660,
+       60
+      ],
+      [
+       630,
+       110
+      ]
+     ]
+    },
+    {
+     "w": 36,
+     "ctrl": [
+      [
+       640,
+       770
+      ],
+      [
+       620,
+       680
+      ],
+      [
+       650,
+       630
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      420,
+      270
+     ]
+    },
+    {
+     "at": [
+      640,
+      240
+     ]
+    },
+    {
+     "at": [
+      860,
+      270
+     ]
+    },
+    {
+     "at": [
+      420,
+      470
+     ]
+    },
+    {
+     "at": [
+      640,
+      470
+     ]
+    },
+    {
+     "at": [
+      860,
+      470
+     ]
+    },
+    {
+     "at": [
+      160,
+      220
+     ]
+    },
+    {
+     "at": [
+      160,
+      500
+     ]
+    },
+    {
+     "at": [
+      1000,
+      270
+     ]
+    },
+    {
+     "at": [
+      1000,
+      460
+     ]
+    },
+    {
+     "at": [
+      300,
+      70
+     ]
+    },
+    {
+     "at": [
+      1180,
+      220
+     ]
+    },
+    {
+     "at": [
+      1180,
+      500
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    100,
+    640
+   ],
+   "heroStart": [
+    1080,
+    360
+   ],
+   "shifts": [
+    {
+     "kind": "lava",
+     "closes": [
+      "top"
+     ],
+     "every": 54,
+     "start": 0,
+     "dur": 18,
+     "at": [
+      640,
+      130
+     ],
+     "r": 56,
+     "label": "Lava floods the high pass"
+    },
+    {
+     "kind": "lava",
+     "closes": [
+      "mid"
+     ],
+     "every": 54,
+     "start": 18,
+     "dur": 18,
+     "at": [
+      640,
+      345
+     ],
+     "r": 56,
+     "label": "Lava floods the middle road"
+    },
+    {
+     "kind": "lava",
+     "closes": [
+      "bot"
+     ],
+     "every": 54,
+     "start": 36,
+     "dur": 18,
+     "at": [
+      640,
+      600
+     ],
+     "r": 56,
+     "label": "Lava floods the low road"
+    }
+   ],
+   "waves": [
+    {
+     "hint": "Ash on the wind",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Burrower swarm",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 14,
+       "gap": 0.7,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Ash moths",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 20,
+       "gap": 0.45,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Iron",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 8,
+       "gap": 1.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Splitters",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 14,
+       "gap": 0.8,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Wardens and menders",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 3,
+       "gap": 5,
+       "delay": 0
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 2
+      },
+      {
+       "kind": "grub",
+       "n": 20,
+       "gap": 0.4,
+       "delay": 3
+      }
+     ]
+    },
+    {
+     "hint": "Shades through the smoke",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 24,
+       "gap": 0.5,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Deep burrow",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 24,
+       "gap": 0.5,
+       "delay": 0
+      },
+      {
+       "kind": "elite",
+       "n": 6,
+       "gap": 2,
+       "delay": 6
+      }
+     ]
+    },
+    {
+     "hint": "The pass burns",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 4,
+       "delay": 0
+      },
+      {
+       "kind": "elite",
+       "n": 12,
+       "gap": 1.4,
+       "delay": 2
+      },
+      {
+       "kind": "ashmoth",
+       "n": 24,
+       "gap": 0.4,
+       "delay": 8
+      },
+      {
+       "kind": "burrower",
+       "n": 16,
+       "gap": 0.6,
+       "delay": 14
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "name": "Avalanche Ridge",
+   "region": 3,
+   "lava": true,
+   "twist": "The ridge gives range to towers on it, but avalanches bury ridge plots as the waves go on.",
+   "newFoe": "Iron swarm",
+   "unlocks": "Wren gear: Dawn mantle",
+   "startGold": 720,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "main",
+     "spawn": "w",
+     "w": 50,
+     "ctrl": [
+      [
+       -40,
+       640
+      ],
+      [
+       200,
+       620
+      ],
+      [
+       400,
+       520
+      ],
+      [
+       520,
+       400
+      ],
+      [
+       700,
+       420
+      ],
+      [
+       860,
+       560
+      ],
+      [
+       1060,
+       600
+      ],
+      [
+       1160,
+       450
+      ],
+      [
+       1110,
+       300
+      ],
+      [
+       1222,
+       250
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 34,
+     "ctrl": [
+      [
+       300,
+       770
+      ],
+      [
+       340,
+       690
+      ],
+      [
+       430,
+       660
+      ]
+     ]
+    }
+   ],
+   "high": [
+    [
+     0,
+     0
+    ],
+    [
+     1000,
+     0
+    ],
+    [
+     1010,
+     160
+    ],
+    [
+     900,
+     280
+    ],
+    [
+     700,
+     300
+    ],
+    [
+     400,
+     310
+    ],
+    [
+     0,
+     330
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "plots": [
+    {
+     "at": [
+      200,
+      200
+     ]
+    },
+    {
+     "at": [
+      400,
+      210
+     ],
+     "sinkAt": 7
+    },
+    {
+     "at": [
+      600,
+      220
+     ],
+     "sinkAt": 4
+    },
+    {
+     "at": [
+      800,
+      210
+     ],
+     "sinkAt": 10
+    },
+    {
+     "at": [
+      940,
+      120
+     ]
+    },
+    {
+     "at": [
+      300,
+      430
+     ]
+    },
+    {
+     "at": [
+      640,
+      540
+     ]
+    },
+    {
+     "at": [
+      820,
+      420
+     ]
+    },
+    {
+     "at": [
+      1000,
+      470
+     ]
+    },
+    {
+     "at": [
+      1240,
+      400
+     ]
+    },
+    {
+     "at": [
+      1040,
+      680
+     ]
+    },
+    {
+     "at": [
+      120,
+      520
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    500,
+    640
+   ],
+   "heroStart": [
+    1000,
+    520
+   ],
+   "waves": [
+    {
+     "hint": "Up the ridge",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.45,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Iron swarm",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 10,
+       "gap": 1.4,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Ash moths",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 24,
+       "gap": 0.4,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Burrowers",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 20,
+       "gap": 0.6,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Splitters",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 16,
+       "gap": 0.7,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Wardens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 4,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 24,
+       "gap": 0.25,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Menders and iron",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 6,
+       "gap": 2,
+       "delay": 0
+      },
+      {
+       "kind": "elite",
+       "n": 12,
+       "gap": 1.2,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Shades in the snow",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 30,
+       "gap": 0.4,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Rockfall",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 16,
+       "gap": 1,
+       "delay": 0
+      },
+      {
+       "kind": "burrower",
+       "n": 20,
+       "gap": 0.5,
+       "delay": 6
+      }
+     ]
+    },
+    {
+     "hint": "The ridge breaks",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 5,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "splitter",
+       "n": 20,
+       "gap": 0.6,
+       "delay": 3
+      },
+      {
+       "kind": "ashmoth",
+       "n": 30,
+       "gap": 0.35,
+       "delay": 10
+      },
+      {
+       "kind": "mender",
+       "n": 8,
+       "gap": 2,
+       "delay": 16
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "name": "Mirror Lake",
+   "region": 3,
+   "lava": true,
+   "twist": "Two gates across a lake of fire. Foes copy your weak side, so defend both and keep Wren moving.",
+   "newFoe": "Everything doubled",
+   "unlocks": "Shop item: Second dawn",
+   "startGold": 760,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "north",
+     "spawn": "w",
+     "w": 48,
+     "ctrl": [
+      [
+       -40,
+       380
+      ],
+      [
+       160,
+       380
+      ],
+      [
+       300,
+       240
+      ],
+      [
+       600,
+       180
+      ],
+      [
+       900,
+       200
+      ],
+      [
+       1222,
+       200
+      ]
+     ]
+    },
+    {
+     "id": "south",
+     "spawn": "w",
+     "w": 48,
+     "ctrl": [
+      [
+       -40,
+       380
+      ],
+      [
+       160,
+       380
+      ],
+      [
+       300,
+       520
+      ],
+      [
+       600,
+       580
+      ],
+      [
+       900,
+       560
+      ],
+      [
+       1222,
+       560
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 92,
+     "ctrl": [
+      [
+       360,
+       382
+      ],
+      [
+       600,
+       372
+      ],
+      [
+       880,
+       380
+      ],
+      [
+       1000,
+       385
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      440,
+      90
+     ]
+    },
+    {
+     "at": [
+      760,
+      90
+     ]
+    },
+    {
+     "at": [
+      440,
+      660
+     ]
+    },
+    {
+     "at": [
+      760,
+      660
+     ]
+    },
+    {
+     "at": [
+      1100,
+      380
+     ]
+    },
+    {
+     "at": [
+      1100,
+      90
+     ]
+    },
+    {
+     "at": [
+      1100,
+      660
+     ]
+    },
+    {
+     "at": [
+      600,
+      270
+     ]
+    },
+    {
+     "at": [
+      600,
+      480
+     ]
+    },
+    {
+     "at": [
+      880,
+      290
+     ]
+    },
+    {
+     "at": [
+      880,
+      470
+     ]
+    },
+    {
+     "at": [
+      180,
+      250
+     ]
+    },
+    {
+     "at": [
+      180,
+      510
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    1240,
+    380
+   ],
+   "heroStart": [
+    1100,
+    300
+   ],
+   "waves": [
+    {
+     "hint": "Reflections",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.4,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Twins",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 10,
+       "gap": 0.9,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Iron",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 12,
+       "gap": 1.2,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Ash moths",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 18,
+       "gap": 0.4,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.5,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Burrowers",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 14,
+       "gap": 0.7,
+       "delay": 0
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Wardens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 3,
+       "delay": 0
+      },
+      {
+       "kind": "mender",
+       "n": 6,
+       "gap": 2,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Shades",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 24,
+       "gap": 0.45,
+       "delay": 0
+      },
+      {
+       "kind": "elite",
+       "n": 8,
+       "gap": 1.5,
+       "delay": 4
+      }
+     ]
+    },
+    {
+     "hint": "Mirror storm",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 16,
+       "gap": 0.9,
+       "delay": 0
+      },
+      {
+       "kind": "skitter",
+       "n": 30,
+       "gap": 0.2,
+       "delay": 2
+      }
+     ]
+    },
+    {
+     "hint": "Double image",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 4,
+       "delay": 0
+      },
+      {
+       "kind": "splitter",
+       "n": 14,
+       "gap": 0.6,
+       "delay": 3
+      },
+      {
+       "kind": "ashmoth",
+       "n": 20,
+       "gap": 0.4,
+       "delay": 10
+      },
+      {
+       "kind": "mender",
+       "n": 6,
+       "gap": 2.5,
+       "delay": 14
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 19,
+   "name": "The Hollow Gate",
+   "region": 3,
+   "lava": true,
+   "twist": "Four rifts, every foe. The Hollow adapts after every wave, not every third one.",
+   "newFoe": "All of them",
+   "unlocks": "Capstones in every tree",
+   "startGold": 820,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "adaptEvery": 1,
+   "roads": [
+    {
+     "id": "nw",
+     "spawn": "nw",
+     "w": 44,
+     "ctrl": [
+      [
+       -40,
+       160
+      ],
+      [
+       240,
+       200
+      ],
+      [
+       480,
+       330
+      ],
+      [
+       640,
+       360
+      ],
+      [
+       800,
+       360
+      ],
+      [
+       960,
+       250
+      ],
+      [
+       1100,
+       300
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "sw",
+     "spawn": "sw",
+     "w": 44,
+     "ctrl": [
+      [
+       -40,
+       560
+      ],
+      [
+       240,
+       520
+      ],
+      [
+       480,
+       390
+      ],
+      [
+       640,
+       360
+      ],
+      [
+       800,
+       360
+      ],
+      [
+       960,
+       250
+      ],
+      [
+       1100,
+       300
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "n",
+     "spawn": "n",
+     "w": 44,
+     "ctrl": [
+      [
+       620,
+       -40
+      ],
+      [
+       600,
+       120
+      ],
+      [
+       640,
+       360
+      ],
+      [
+       800,
+       360
+      ],
+      [
+       960,
+       250
+      ],
+      [
+       1100,
+       300
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    },
+    {
+     "id": "s",
+     "spawn": "s",
+     "w": 44,
+     "ctrl": [
+      [
+       620,
+       760
+      ],
+      [
+       600,
+       600
+      ],
+      [
+       640,
+       360
+      ],
+      [
+       800,
+       360
+      ],
+      [
+       960,
+       250
+      ],
+      [
+       1100,
+       300
+      ],
+      [
+       1222,
+       360
+      ]
+     ]
+    }
+   ],
+   "waters": [],
+   "plots": [
+    {
+     "at": [
+      395,
+      222
+     ]
+    },
+    {
+     "at": [
+      408,
+      490
+     ]
+    },
+    {
+     "at": [
+      760,
+      240
+     ]
+    },
+    {
+     "at": [
+      760,
+      480
+     ]
+    },
+    {
+     "at": [
+      500,
+      140
+     ]
+    },
+    {
+     "at": [
+      500,
+      580
+     ]
+    },
+    {
+     "at": [
+      960,
+      380
+     ]
+    },
+    {
+     "at": [
+      1100,
+      180
+     ]
+    },
+    {
+     "at": [
+      1100,
+      470
+     ]
+    },
+    {
+     "at": [
+      220,
+      360
+     ]
+    },
+    {
+     "at": [
+      880,
+      640
+     ]
+    },
+    {
+     "at": [
+      880,
+      80
+     ]
+    },
+    {
+     "at": [
+      1240,
+      560
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    200,
+    640
+   ],
+   "heroStart": [
+    960,
+    420
+   ],
+   "waves": [
+    {
+     "hint": "Four rifts tear open",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "nw"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 1,
+       "spawn": "sw"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 2,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 3,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Iron from the north",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 6,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "skitter",
+       "n": 10,
+       "gap": 0.4,
+       "delay": 0,
+       "spawn": "sw"
+      }
+     ]
+    },
+    {
+     "hint": "Shades from the south",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 10,
+       "gap": 0.8,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "burrower",
+       "n": 6,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "nw"
+      }
+     ]
+    },
+    {
+     "hint": "Ash and splitters",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "nw"
+      },
+      {
+       "kind": "splitter",
+       "n": 10,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "sw"
+      }
+     ]
+    },
+    {
+     "hint": "Wardens from all sides",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "nw"
+      },
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "sw"
+      },
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "warden",
+       "n": 1,
+       "gap": 6,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.3,
+       "delay": 4,
+       "spawn": "nw"
+      }
+     ]
+    },
+    {
+     "hint": "Menders",
+     "groups": [
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "mender",
+       "n": 4,
+       "gap": 3,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "elite",
+       "n": 12,
+       "gap": 1.4,
+       "delay": 0,
+       "spawn": "nw"
+      }
+     ]
+    },
+    {
+     "hint": "Burrow everywhere",
+     "groups": [
+      {
+       "kind": "burrower",
+       "n": 8,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "nw"
+      },
+      {
+       "kind": "burrower",
+       "n": 8,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "sw"
+      },
+      {
+       "kind": "burrower",
+       "n": 6,
+       "gap": 1.2,
+       "delay": 0,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Moth storm",
+     "groups": [
+      {
+       "kind": "moth",
+       "n": 24,
+       "gap": 0.4,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 24,
+       "gap": 0.4,
+       "delay": 0,
+       "spawn": "s"
+      }
+     ]
+    },
+    {
+     "hint": "Iron tide",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 12,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "nw"
+      },
+      {
+       "kind": "elite",
+       "n": 12,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "sw"
+      },
+      {
+       "kind": "warden",
+       "n": 3,
+       "gap": 4,
+       "delay": 4,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "The Gate opens",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 4,
+       "delay": 0,
+       "spawn": "nw"
+      },
+      {
+       "kind": "splitter",
+       "n": 16,
+       "gap": 0.7,
+       "delay": 0,
+       "spawn": "sw"
+      },
+      {
+       "kind": "shade",
+       "n": 30,
+       "gap": 0.3,
+       "delay": 0,
+       "spawn": "s"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 24,
+       "gap": 0.4,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "mender",
+       "n": 8,
+       "gap": 2,
+       "delay": 10,
+       "spawn": "nw"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "name": "The Hollow Queen",
+   "region": 3,
+   "lava": true,
+   "twist": "Final boss. The Queen walks from the far rifts. Each time she breaks a phase, the lava moves and new roads open.",
+   "newFoe": "The Hollow Queen",
+   "unlocks": "The ending",
+   "startGold": 1000,
+   "lives": 20,
+   "towers": [
+    "watch",
+    "cannon",
+    "bell",
+    "pylon",
+    "roots",
+    "beacon"
+   ],
+   "roads": [
+    {
+     "id": "high",
+     "spawn": "ne",
+     "w": 46,
+     "ctrl": [
+      [
+       1320,
+       120
+      ],
+      [
+       1000,
+       130
+      ],
+      [
+       700,
+       200
+      ],
+      [
+       400,
+       160
+      ],
+      [
+       200,
+       260
+      ],
+      [
+       150,
+       440
+      ],
+      [
+       160,
+       620
+      ]
+     ]
+    },
+    {
+     "id": "mid",
+     "spawn": "ne",
+     "w": 46,
+     "ctrl": [
+      [
+       1320,
+       120
+      ],
+      [
+       1000,
+       130
+      ],
+      [
+       900,
+       360
+      ],
+      [
+       600,
+       420
+      ],
+      [
+       300,
+       560
+      ],
+      [
+       160,
+       620
+      ]
+     ]
+    },
+    {
+     "id": "low",
+     "spawn": "se",
+     "w": 46,
+     "ctrl": [
+      [
+       1320,
+       600
+      ],
+      [
+       1000,
+       620
+      ],
+      [
+       700,
+       600
+      ],
+      [
+       400,
+       650
+      ],
+      [
+       160,
+       620
+      ]
+     ]
+    }
+   ],
+   "waters": [
+    {
+     "w": 40,
+     "ctrl": [
+      [
+       1300,
+       380
+      ],
+      [
+       1150,
+       360
+      ],
+      [
+       1060,
+       400
+      ]
+     ]
+    }
+   ],
+   "plots": [
+    {
+     "at": [
+      700,
+      300
+     ]
+    },
+    {
+     "at": [
+      500,
+      290
+     ]
+    },
+    {
+     "at": [
+      300,
+      380
+     ]
+    },
+    {
+     "at": [
+      800,
+      500
+     ]
+    },
+    {
+     "at": [
+      520,
+      520
+     ]
+    },
+    {
+     "at": [
+      1100,
+      250
+     ]
+    },
+    {
+     "at": [
+      1100,
+      480
+     ]
+    },
+    {
+     "at": [
+      850,
+      60
+     ]
+    },
+    {
+     "at": [
+      560,
+      60
+     ]
+    },
+    {
+     "at": [
+      80,
+      300
+     ]
+    },
+    {
+     "at": [
+      253,
+      688
+     ]
+    },
+    {
+     "at": [
+      993,
+      688
+     ]
+    },
+    {
+     "at": [
+      970,
+      360
+     ]
+    }
+   ],
+   "bridges": [],
+   "rune": [
+    700,
+    420
+   ],
+   "heroStart": [
+    300,
+    520
+   ],
+   "shifts": [
+    {
+     "kind": "lava",
+     "closes": [
+      "mid"
+     ],
+     "every": 60,
+     "start": 20,
+     "dur": 20,
+     "at": [
+      900,
+      360
+     ],
+     "r": 60,
+     "label": "Lava cuts the middle road"
+    },
+    {
+     "kind": "lava",
+     "closes": [
+      "high"
+     ],
+     "every": 60,
+     "start": 45,
+     "dur": 15,
+     "at": [
+      400,
+      160
+     ],
+     "r": 56,
+     "label": "Lava cuts the high road"
+    }
+   ],
+   "waves": [
+    {
+     "hint": "Her heralds",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 24,
+       "gap": 0.4,
+       "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "se"
+      }
+     ]
+    },
+    {
+     "hint": "Iron court",
+     "groups": [
+      {
+       "kind": "elite",
+       "n": 8,
+       "gap": 1.5,
+       "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "burrower",
+       "n": 8,
+       "gap": 1,
+       "delay": 0,
+       "spawn": "se"
+      }
+     ]
+    },
+    {
+     "hint": "Ash wings",
+     "groups": [
+      {
+       "kind": "ashmoth",
+       "n": 18,
+       "gap": 0.45,
+       "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "moth",
+       "n": 14,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "se"
+      },
+      {
+       "kind": "grub",
+       "n": 12,
+       "gap": 0.5,
+       "delay": 4,
+       "spawn": "ne"
+      }
+     ]
+    },
+    {
+     "hint": "Splitter tide",
+     "groups": [
+      {
+       "kind": "splitter",
+       "n": 20,
+       "gap": 0.6,
+       "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "mender",
+       "n": 6,
+       "gap": 2,
+       "delay": 0,
+       "spawn": "se"
+      }
+     ]
+    },
+    {
+     "hint": "The guard",
+     "groups": [
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 4,
+       "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "elite",
+       "n": 10,
+       "gap": 1.4,
+       "delay": 0,
+       "spawn": "se"
+      }
+     ]
+    },
+    {
+     "hint": "Shadows",
+     "groups": [
+      {
+       "kind": "shade",
+       "n": 14,
+       "gap": 0.6,
+       "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "burrower",
+       "n": 8,
+       "gap": 0.9,
+       "delay": 0,
+       "spawn": "se"
+      },
+      {
+       "kind": "grub",
+       "n": 10,
+       "gap": 0.5,
+       "delay": 3,
+       "spawn": "ne"
+      }
+     ]
+    },
+    {
+     "hint": "The Hollow Queen",
+     "groups": [
+      {
+       "kind": "queen",
+       "n": 1,
+       "gap": 3,
+       "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "warden",
+       "n": 4,
+       "gap": 5,
+       "delay": 4,
+       "spawn": "se"
+      },
+      {
+       "kind": "elite",
+       "n": 12,
+       "gap": 1.5,
+       "delay": 12,
+       "spawn": "ne"
+      },
+      {
+       "kind": "ashmoth",
+       "n": 18,
+       "gap": 0.5,
+       "delay": 20,
+       "spawn": "se"
+      },
+      {
+       "kind": "mender",
+       "n": 6,
+       "gap": 3,
+       "delay": 30,
+       "spawn": "ne"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
