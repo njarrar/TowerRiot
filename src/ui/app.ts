@@ -2,15 +2,17 @@
 import { STAGES, REGIONS, stageById } from '../game/data/stages';
 import { TREES, NODES } from '../game/data/trees';
 import { ENEMIES } from '../game/data/enemies';
-import { TOWERS, TOWER_ORDER } from '../game/data/towers';
+import { TOWERS } from '../game/data/towers';
 import {
   browserStore, loadSave, writeSave, cleared, isUnlocked, embers, canBuyNode, buyNode, resetTrees, recordResult, modsFor, totalStars, freshSave,
   type Save, type Store,
 } from '../game/save';
 import { Audio } from '../audio/sfx';
-import { h, clear } from './dom';
-import { towerIcon } from './icons';
+import { h, clear, icon } from './dom';
+import { towerIcon, LOCK_ICON } from './icons';
 import { BattleScreen } from './battle';
+import { Battle } from '../game/sim';
+import { Scene, W as MAP_W, H as MAP_H } from '../render/scene';
 
 export class App {
   private readonly store: Store = browserStore();
@@ -49,18 +51,44 @@ export class App {
 
   title() {
     this.screen = 'title';
-    const c = cleared(this.save);
-    const tw = h('div', { class: 'title-towers', 'aria-hidden': 'true' }, ...TOWER_ORDER.map(k => h('img', { src: towerIcon(k, 120), alt: '' })));
-    this.mount(h('section', { class: 'screen title' },
+    const c = cleared(this.save), next = Math.min(20, c + 1);
+    const map = h('canvas', { class: 'title-map', 'aria-hidden': 'true' });
+    const el = h('section', { class: 'screen title' }, map,
       h('div', { class: 'title-inner' },
-        h('h1', { class: 'logo', text: 'TowerRiot' }),
-        h('p', { class: 'tag', text: 'Hold the Lantern Keep. Build towers, raise Wren from level 1 to 16 in every fight, and outthink a Hollow that learns.' }),
-        h('div', { class: 'title-btns' },
-          h('button', { class: 'btn primary big', onclick: () => this.campaign() }, c > 0 ? `Continue: stage ${Math.min(20, c + 1)}` : 'Play'),
-          h('button', { class: 'btn big', onclick: () => this.trees() }, 'Skill trees'),
-          h('button', { class: 'btn big', onclick: () => this.settings() }, 'Settings')),
-        h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars. Plays fully offline.` })),
-      tw));
+        h('div', { class: 'title-panel' },
+          h('h1', { class: 'logo', text: 'TowerRiot' }),
+          h('p', { class: 'tag', text: 'Hold the Lantern Keep. Build towers, raise Wren from level 1 to 16 in every fight, and outthink a Hollow that learns.' }),
+          h('div', { class: 'title-btns' },
+            h('button', { class: 'btn primary big', onclick: () => this.campaign() }, c > 0 ? `Continue: stage ${next}` : 'Play'),
+            h('button', { class: 'btn big', onclick: () => this.trees() }, 'Skill trees'),
+            h('button', { class: 'btn big', onclick: () => this.settings() }, 'Settings')),
+          h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars. Plays fully offline.` }))));
+    this.mount(el);
+    // Paint the next stage behind the menu once the buttons are up. The paint is slow on phones, so it waits a frame.
+    requestAnimationFrame(() => setTimeout(() => { if (map.isConnected) this.paintTitleMap(map, next); }, 30));
+  }
+
+  /** A still frame of a real fight on the next stage: a few towers, Wren and the first foes on the road. */
+  private paintTitleMap(cv: HTMLCanvasElement, stageId: number) {
+    // Rain, night and lava stages make a murky backdrop; show the first stage of that region instead.
+    let st = stageById(stageId);
+    if (st.weather || st.night || st.lava) st = STAGES.find(x => x.region === st.region)!;
+    const b = new Battle(st, { mods: modsFor(this.save), seed: 7 });
+    b.gold = 99999;
+    b.plots.slice(0, 4).forEach((_, i) => b.build(i, st.towers[i % st.towers.length]));
+    b.gold = 0;
+    b.callWave();
+    for (let i = 0; i < 260 && !b.over; i++) b.step(0.05);
+    b.drain();
+    const r = cv.getBoundingClientRect();
+    const cw = Math.max(1, r.width), ch = Math.max(1, r.height);
+    // Cover the screen: scale up until both sides are filled, and keep the right side, where the gate is, in view.
+    const k = Math.max(cw / MAP_W, ch / MAP_H);
+    const scene = new Scene(cv);
+    scene.resize(cw, ch, { x: cw - MAP_W * k, y: (ch - MAP_H * k) / 2, w: MAP_W * k, h: MAP_H * k });
+    scene.load(b);
+    scene.draw(b, { selPlot: null, selTower: null, preview: null, aimW: null, reduceMotion: true, dmgNumbers: false }, 0, 0);
+    cv.classList.add('ready');
   }
 
   /* ------------------------------------------------------------------ campaign */
@@ -88,18 +116,36 @@ export class App {
     };
     const regions = h('div', { class: 'regions' }, ...REGIONS.map((r, ri) => {
       const own = STAGES.filter(st => st.region === ri);
-      // A region you cannot enter yet is one quiet line, not five grey rows.
-      if (!isUnlocked(s, own[0].id)) return h('div', { class: `region r${ri} sealed`, style: `--rc:${r.color}` },
-        h('h3', { text: r.name }), h('p', { class: 'fine', text: `Stages ${own[0].id} to ${own[own.length - 1].id}. Opens after stage ${own[0].id - 1}.` }));
-      return h('div', { class: `region r${ri}`, style: `--rc:${r.color}` },
-      h('h3', { text: r.name }), h('p', { class: 'fine', text: r.rule }),
-      h('div', { class: 'nodes' }, ...STAGES.filter(st => st.region === ri).map(st => {
+      const sealed = !isUnlocked(s, own[0].id);
+      // Each region is a strip of its own ground with a road through it; the stages are stops on the road.
+      const stops = own.map((_, i) => ({ x: 9 + i * (82 / (own.length - 1)), y: [66, 34, 62, 30, 52][i % 5] }));
+      const d = stops.map((p, i) => {
+        if (i === 0) return `M -20 ${p.y + 6} C 0 ${p.y + 6} ${p.x - 4} ${p.y} ${p.x} ${p.y}`;
+        const q = stops[i - 1], mx = (q.x + p.x) / 2;
+        return `C ${mx} ${q.y} ${mx} ${p.y} ${p.x} ${p.y}`;
+      }).join(' ') + ` C 104 ${stops[stops.length - 1].y} 104 ${stops[stops.length - 1].y} 120 ${stops[stops.length - 1].y}`;
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+      for (const [cls, w] of [['edge', 15], ['road', 11]] as const) {
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', d); path.setAttribute('class', cls); path.setAttribute('stroke-width', String(w));
+        svg.append(path);
+      }
+      const route = h('div', { class: 'route' }, svg, ...own.map((st, i) => {
         const open = isUnlocked(s, st.id), best = s.stars[st.id] ?? 0;
         return h('button', {
-          class: `node ${open ? '' : 'locked'} ${best ? 'done' : ''} ${st.id % 5 === 0 ? 'boss' : ''}`, 'data-id': String(st.id),
+          class: `node ${open ? '' : 'locked'} ${best ? 'done' : ''} ${!best && open ? 'next' : ''} ${st.id % 5 === 0 ? 'boss' : ''}`, 'data-id': String(st.id),
+          style: `left:${stops[i].x}%;top:${stops[i].y}%`,
           'aria-label': `Stage ${st.id}, ${st.name}${open ? '' : ', locked'}`, onclick: () => show(st.id),
-        }, h('span', { class: 'num', text: String(st.id) }), h('span', { class: 'nm', text: st.name }), h('span', { class: `st ${!best && open ? 'next' : ''}`, text: best ? '★'.repeat(best) : open ? 'Next' : '' }));
-      })));
+        }, open ? h('span', { class: 'num', text: String(st.id) }) : h('span', { class: 'num' }, icon(LOCK_ICON)),
+          h('span', { class: 'nm', text: st.name }),
+          best ? h('span', { class: 'st', text: '★'.repeat(best) }) : null);
+      }));
+      return h('div', { class: `region r${ri} ${sealed ? 'sealed' : ''}`, style: `--rc:${r.color}` },
+        h('div', { class: 'region-head' }, h('h3', { text: r.name }),
+          h('p', { class: 'fine', text: sealed ? `Stages ${own[0].id} to ${own[own.length - 1].id}. Opens after stage ${own[0].id - 1}.` : r.rule })),
+        route);
     }));
     const e = embers(s);
     this.mount(h('section', { class: 'screen campaign' },
@@ -143,8 +189,10 @@ export class App {
   settings() {
     this.screen = 'settings';
     const st = this.save.settings;
-    const toggle = (label: string, key: keyof typeof st, note: string) => h('label', { class: 'toggle' },
-      h('input', { type: 'checkbox', checked: st[key], onchange: (e: Event) => { st[key] = (e.target as HTMLInputElement).checked; this.applySettings(); } }),
+    type Flag = 'sound' | 'reduceMotion' | 'autoSkills' | 'dmgNumbers';
+    // Auto skills starts unset: on for the first region, then off. Showing it ticked matches what a new player gets first.
+    const toggle = (label: string, key: Flag, note: string) => h('label', { class: 'toggle' },
+      h('input', { type: 'checkbox', checked: st[key] ?? true, onchange: (e: Event) => { st[key] = (e.target as HTMLInputElement).checked; this.applySettings(); } }),
       h('span', {}, h('b', { text: label }), h('small', { text: note })));
     // Two steps on the page itself: browser dialogs look foreign here and do nothing in some app views.
     const erase = h('div', { class: 'erase' });
@@ -165,7 +213,8 @@ export class App {
       h('div', { class: 'panel' },
         toggle('Sound', 'sound', 'Tower fire, hits and Wren.'),
         toggle('Calm motion', 'reduceMotion', 'No screen shake, fog drift or light shafts.'),
-        toggle('Auto skill points', 'autoSkills', 'Spend Wren\'s points for you as she levels.'),
+        toggle('Auto skill points', 'autoSkills', 'Spend Wren\'s points for you as she levels. On by default in Mosslight Vale.'),
+        toggle('Damage numbers', 'dmgNumbers', 'Show the damage of big hits over foes.'),
         h('h3', { text: 'How to play' }),
         h('ul', { class: 'howto' },
           h('li', { text: 'Tap a stone plot to build. Tap a tower to upgrade, split, aim or sell it.' }),
@@ -194,7 +243,8 @@ export class App {
         audio: this.audio,
         mods: modsFor(this.save),
         reduceMotion: this.save.settings.reduceMotion,
-        autoSkills: this.save.settings.autoSkills,
+        autoSkills: this.save.settings.autoSkills ?? stageById(id).region === 0,
+        dmgNumbers: this.save.settings.dmgNumbers,
         onExit: () => this.campaign(id),
         onResult: (sid, stars) => { const g = recordResult(this.save, sid, stars); this.save.seenIntro = true; this.persist(); return g; },
         onNext: sid => this.play(sid),

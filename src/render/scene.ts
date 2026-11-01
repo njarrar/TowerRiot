@@ -21,14 +21,27 @@ type Light = [number, number, number, number, string?];
 interface Sprite { c: HTMLCanvasElement; w: number; h: number; ox: number; oy: number }
 interface Part { x: number; y: number; vx: number; vy: number; life: number; max: number; c: string; s: number; kind: 'smoke' | 'spark' | 'chip'; grav?: number }
 interface Fx { k: 'ring' | 'arc' | 'boom' | 'slash' | 'flash' | 'steam' | 'lantern' | 'sun' | 'splash'; x: number; y: number; r: number; max: number; life: number; c?: string; pts?: Vec[]; seed?: number }
-interface Float { x: number; y: number; text: string; c: string; big: boolean; life: number; max: number }
+interface Float { x: number; y: number; text: string; c: string; big: boolean; life: number; max: number; gold?: number }
 
 const LIGHT: Record<TowerKind, [string, number]> = {
   watch: ['#ff9a3a', 120], cannon: ['#ff8a2a', 72], bell: ['#8fd0ff', 70], pylon: ['#a99cff', 150], roots: ['#7fd06a', 50], beacon: ['#ffb050', 150],
 };
 const EL_COLOR: Record<string, string> = { pierce: '#f0d6a8', fire: '#ffb27a', frost: '#bfe6ff', storm: '#cfc6ff', nature: '#b8e6a0', hero: '#e8f2ff', env: '#ffd9a0' };
 
-/** Region looks laid over the same painted ground: [screen lift, water tint, sun warmth]. */
+type RGB = [number, number, number];
+/** Day ground colours per region, painted straight into the field. The Ashen Rift has none and keeps its dark, lava-lit ground. */
+interface DayPal { grassLo: RGB; grassHi: RGB; moss: RGB; high: RGB; roadLo: RGB; roadHi: RGB; water: RGB; leafy: boolean; leaf: string; bark: string }
+const DAY_PAL: (DayPal | null)[] = [
+  // Mosslight Vale: fresh grass, a pale dirt road, clear water.
+  { grassLo: [92, 124, 66], grassHi: [122, 152, 80], moss: [84, 128, 70], high: [150, 148, 132], roadLo: [196, 178, 142], roadHi: [216, 200, 164], water: [64, 118, 140], leafy: true, leaf: '#4f7d3a', bark: '#3a2e24' },
+  // Saltglass Coast: pale sand and dune grass, a darker packed road, blue sea.
+  { grassLo: [184, 174, 134], grassHi: [204, 194, 152], moss: [150, 162, 112], high: [170, 166, 150], roadLo: [160, 142, 110], roadHi: [178, 160, 126], water: [60, 130, 160], leafy: true, leaf: '#6a8a48', bark: '#5a4a3a' },
+  // Cogwheel Foundry: slate and soot, a swept stone road, grey water.
+  { grassLo: [122, 124, 116], grassHi: [144, 144, 134], moss: [112, 122, 96], high: [160, 156, 148], roadLo: [186, 174, 152], roadHi: [200, 190, 168], water: [92, 110, 122], leafy: false, leaf: '#56704a', bark: '#2e2a26' },
+  null,
+];
+
+/** Region looks laid over the same painted ground: [screen lift, water tint, sun warmth]. Only the Ashen Rift still uses the lift. */
 const REGION_LOOK = [
   { lift: 'rgb(40,50,30)', water: 'rgb(120,165,200)', sunA: 'rgba(255,214,150,.6)', sunB: 'rgba(210,225,170,.4)', sunC: 'rgba(190,215,230,.5)' },
   { lift: 'rgb(62,58,44)', water: 'rgb(100,170,205)', sunA: 'rgba(255,224,170,.6)', sunB: 'rgba(225,220,180,.4)', sunC: 'rgba(190,215,235,.5)' },
@@ -45,6 +58,8 @@ export interface View {
   /** Show the W skill's landing circle at this point. */
   aimW: Vec | null;
   reduceMotion: boolean;
+  /** Show damage numbers over foes. Gold and lives always show. */
+  dmgNumbers: boolean;
 }
 
 export class Scene {
@@ -85,7 +100,7 @@ export class Scene {
     this.posts = decor.posts;
     this.rifts = [...b.spawns.values()].map(rs => {
       const p = pointAt(rs[0].path, 30);
-      return { x: Math.max(24, Math.min(W - 24, p.x)), y: Math.max(40, Math.min(H - 30, p.y)) };
+      return { x: Math.max(64, Math.min(W - 64, p.x)), y: Math.max(80, Math.min(H - 50, p.y)) };
     });
     const bg = document.createElement('canvas');
     bg.width = W; bg.height = H;
@@ -94,6 +109,7 @@ export class Scene {
       roads: b.roads.map(r => ({ pts: r.path.pts, w: r.def.w })).sort((a, z) => a.w - z.w),
       waters: this.waterPts, high: st.high ?? [], bridges: st.bridges,
       ruins: decor.ruins, stones: decor.stones, trees: decor.trees, plots: [],
+      pal: st.lava ? null : DAY_PAL[st.region],
     });
     this.washRegion(c, st);
     b.plots.forEach((p, i) => L.plot(c, p.x, p.y, 600 + i * 3, 1));
@@ -103,6 +119,14 @@ export class Scene {
 
   private washRegion(c: CanvasRenderingContext2D, st: StageDef) {
     const look = REGION_LOOK[st.region];
+    if (!st.lava && DAY_PAL[st.region]) {
+      // Day ground is already in colour. Add only low sun from the upper right and a cool touch in the far shade.
+      c.save(); c.globalCompositeOperation = 'soft-light';
+      const sg = c.createLinearGradient(W, 0, 0, H);
+      sg.addColorStop(0, 'rgba(255,226,170,.45)'); sg.addColorStop(0.55, 'rgba(255,255,255,0)'); sg.addColorStop(1, 'rgba(120,150,190,.35)');
+      c.fillStyle = sg; c.fillRect(0, 0, W, H); c.restore();
+      return;
+    }
     c.save();
     c.globalCompositeOperation = 'screen'; c.fillStyle = look.lift; c.fillRect(0, 0, W, H);
     c.globalCompositeOperation = st.lava ? 'source-over' : 'multiply';
@@ -168,7 +192,7 @@ export class Scene {
 
   /* ------------------------------------------------------------------ events to effects */
 
-  consume(b: Battle, events: BattleEvent[]) {
+  consume(b: Battle, events: BattleEvent[], dmgNumbers = false) {
     const R = this.r;
     for (const e of events) {
       switch (e.t) {
@@ -183,12 +207,12 @@ export class Scene {
         case 'root': for (let i = 0; i < 8; i++) this.parts.push({ x: e.x + (R() - 0.5) * 30, y: e.y, vx: (R() - 0.5) * 40, vy: -50 - R() * 50, life: 0.6, max: 0.6, c: '#3a3326', s: 2.6, kind: 'chip', grav: 1 }); break;
         case 'hit':
           for (let i = 0; i < 3; i++) { const a = R() * TAU; this.parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * 80, vy: Math.sin(a) * 80, life: 0.3, max: 0.3, c: EL_COLOR[e.el] ?? '#fff', s: 1.6, kind: 'spark' }); }
-          if (e.crit) this.float(e.x, e.y - 10, `${Math.round(e.dmg)}!`, '#ffe6b0', true);
-          else if (e.el === 'hero') this.float(e.x, e.y - 6, `${Math.round(e.dmg)}`, '#e8f2ff', false);
+          if (dmgNumbers && e.crit) this.float(e.x, e.y - 10, `${Math.round(e.dmg)}!`, '#ffe6b0', true);
+          else if (dmgNumbers && e.el === 'hero') this.float(e.x, e.y - 6, `${Math.round(e.dmg)}`, '#e8f2ff', false);
           break;
         case 'kill': {
           this.coins.push({ sx: e.x, sy: e.y - 20, u: 0, x: e.x, y: e.y });
-          this.float(e.x + 12, e.y - 46, `+${e.gold}`, e.hero ? '#ffd76a' : '#e8b34a', e.hero);
+          this.goldPop(e.x + 12, e.y - 46, e.gold, e.hero);
           for (let i = 0; i < 10; i++) { const a = R() * TAU; this.parts.push({ x: e.x, y: e.y - 10, vx: Math.cos(a) * 60, vy: -30 - R() * 60, life: 0.9, max: 0.9, c: '#5ac8a8', s: 1.8, kind: 'spark' }); }
           for (let i = 0; i < 3; i++) this.parts.push({ x: e.x + (R() - 0.5) * 20, y: e.y - 6, vx: 0, vy: -16, life: 1.3, max: 1.3, c: 'rgba(30,40,38,', s: 8, kind: 'smoke' });
           if (e.kind === 'mireking' || e.kind === 'tidewyrm' || e.kind === 'colossus' || e.kind === 'queen') { this.shake = 12; this.flash = 0.6; }
@@ -201,7 +225,8 @@ export class Scene {
           if (e.key === 'w') this.fx.push({ k: 'lantern', x: e.x, y: e.y, r: SNARE.radius, max: 0.7, life: 0.7 });
           if (e.key === 'r') { this.fx.push({ k: 'sun', x: e.x, y: e.y, r: 0, max: 1.4, life: 1.4 }); this.shake = 7; }
           break;
-        case 'level': this.fx.push({ k: 'ring', x: b.hero.x, y: b.hero.y, r: 0, max: 70, life: 1, c: '255,215,140' }); this.float(b.hero.x, b.hero.y - 90, `Level ${e.level}`, '#ffe2a0', true); break;
+        // The level number itself shows on the hero card; on the map a ring is enough.
+        case 'level': this.fx.push({ k: 'ring', x: b.hero.x, y: b.hero.y, r: 0, max: 70, life: 1, c: '255,215,140' }); break;
         case 'phase': this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 360, life: 1, c: '120,230,200' }); this.shake = 10; break;
         case 'dive': this.fx.push({ k: 'splash', x: e.x, y: e.y, r: 0, max: 0.8, life: 0.8 }); break;
         case 'build': case 'upgrade':
@@ -213,6 +238,18 @@ export class Scene {
         default: break;
       }
     }
+  }
+
+  /** Gold from kills close together in time and place adds up in one number instead of a stack. */
+  private goldPop(x: number, y: number, gold: number, hero: boolean) {
+    const f = this.floats.find(o => o.gold !== undefined && o.max - o.life < 0.5 && Math.hypot(o.x - x, o.y - y) < 140);
+    if (f) {
+      f.gold! += gold; f.text = `+${f.gold}`; f.life = f.max;
+      if (hero) { f.c = '#ffd76a'; f.big = true; }
+      return;
+    }
+    this.float(x, y, `+${gold}`, hero ? '#ffd76a' : '#e8b34a', hero);
+    this.floats[this.floats.length - 1].gold = gold;
   }
 
   private float(x: number, y: number, text: string, c: string, big: boolean) {
@@ -286,7 +323,7 @@ export class Scene {
     if (!b.night) {
       g.save(); g.globalCompositeOperation = 'soft-light';
       const sun = g.createRadialGradient(W * 0.92, -60, 40, W * 0.92, -60, W * 1.1);
-      sun.addColorStop(0, st.lava ? 'rgba(255,170,110,.55)' : 'rgba(255,225,160,.6)'); sun.addColorStop(1, 'rgba(255,225,160,0)');
+      sun.addColorStop(0, st.lava ? 'rgba(255,170,110,.55)' : 'rgba(255,232,180,.32)'); sun.addColorStop(1, 'rgba(255,225,160,0)');
       g.fillStyle = sun; g.fillRect(0, 0, W, H);
       if (!view.reduceMotion) {
         g.globalCompositeOperation = 'screen';
@@ -411,6 +448,7 @@ export class Scene {
 
   private drawPlots(b: Battle, view: View, T: number) {
     const g = this.g;
+    const canAfford = b.stage.towers.some(k => b.gold >= b.costOf(k));
     b.plots.forEach((p, i) => {
       const used = b.towers.some(t => t.plot === i);
       if (p.sunk) { g.fillStyle = 'rgba(40,52,40,.9)'; g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.fill(); g.strokeStyle = 'rgba(150,180,150,.25)'; g.stroke(); return; }
@@ -422,27 +460,49 @@ export class Scene {
         g.beginPath(); g.arc(0, 0, 34, 0, TAU); g.stroke(); g.restore();
         if (!up) { g.fillStyle = 'rgba(10,12,10,.45)'; g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.fill(); }
       }
-      if (!used && view.selPlot === i) {
+      if (used) return;
+      if (view.selPlot === i) {
         g.strokeStyle = `rgba(255,214,140,${0.6 + 0.3 * Math.sin(T * 6)})`; g.lineWidth = 2.5;
-        g.beginPath(); g.ellipse(p.x, p.y, 36, 15, 0, 0, TAU); g.stroke();
-      } else if (!used && b.status === 'prep') {
-        g.strokeStyle = `rgba(255,214,140,${0.25 + 0.2 * Math.sin(T * 3 + i)})`; g.lineWidth = 1.5;
-        g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.stroke();
+        g.beginPath(); g.ellipse(p.x, p.y - 1.5, 39, 16, 0, 0, TAU); g.stroke();
+      }
+      // A small rust mark on every plot you can afford to build on right now.
+      if (canAfford && !b.over && (!p.gear || isGearUp(b, p.gear))) {
+        const x = p.x, y = p.y - 2;
+        g.fillStyle = 'rgba(40,24,16,.25)'; g.beginPath(); g.ellipse(x + 1, y + 2, 10, 5, 0, 0, TAU); g.fill();
+        g.fillStyle = '#a63d26'; g.beginPath(); g.arc(x, y - 4, 9, 0, TAU); g.fill();
+        g.strokeStyle = 'rgba(255,240,225,.9)'; g.lineWidth = 1.2; g.stroke();
+        g.strokeStyle = '#fff6ea'; g.lineWidth = 2.4; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x - 4, y - 4); g.lineTo(x + 4, y - 4); g.moveTo(x, y - 8); g.lineTo(x, y); g.stroke(); g.lineCap = 'butt';
       }
     });
   }
 
+  /** A rift is a torn crack in the ground with a green edge, set fully on the map where foes climb out. */
   private drawRifts(T: number) {
     const g = this.g;
     this.rifts.forEach(({ x, y }, i) => {
+      const R = makeRng(70 + i);
       g.save(); g.translate(x, y);
-      L.shadow(g, 10, 30, 50, 10, 0.6);
-      g.fillStyle = '#020304'; g.beginPath();
-      for (let k = 0; k <= 24; k++) { const a = k / 24 * TAU, rr = 1 + 0.12 * Math.sin(a * 5 + T * 2 + i); g.lineTo(Math.cos(a) * 20 * rr, Math.sin(a) * 44 * rr); }
-      g.fill();
-      g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(90,200,170,.55)'; g.lineWidth = 1.2;
-      for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + T * 0.4 + i; g.beginPath(); g.moveTo(Math.cos(a) * 18, Math.sin(a) * 40); g.lineTo(Math.cos(a + 0.25) * 24, Math.sin(a + 0.25) * 50); g.stroke(); }
-      L.glow(g, 0, 0, 30, '#5ac8a8', 0.14);
+      // Scorched ground around it.
+      const sc = g.createRadialGradient(0, 0, 4, 0, 0, 58);
+      sc.addColorStop(0, 'rgba(24,30,26,.55)'); sc.addColorStop(1, 'rgba(24,30,26,0)');
+      g.save(); g.scale(1, 0.42); g.fillStyle = sc; g.beginPath(); g.arc(0, 0, 58, 0, TAU); g.fill(); g.restore();
+      // The tear: a jagged lens, darker at the centre.
+      const pts: Vec[] = [];
+      for (let k = 0; k <= 18; k++) {
+        const a = k / 18 * TAU, j = 0.75 + R() * 0.4;
+        pts.push([Math.cos(a) * 34 * j, Math.sin(a) * 12 * j]);
+      }
+      g.fillStyle = '#0a0d0c'; g.beginPath(); pts.forEach(([px, py], k) => k ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(96,226,180,.85)'; g.lineWidth = 1.6; g.stroke();
+      // Shards of the ground pushed up at its lips.
+      for (let k = 0; k < 4; k++) {
+        const a = Math.PI + 0.4 + k * 0.6, bx = Math.cos(a) * 30, by = Math.sin(a) * 11;
+        g.fillStyle = k % 2 ? '#3a3a34' : '#4a4840';
+        g.beginPath(); g.moveTo(bx - 5, by); g.lineTo(bx + 1, by - 12 - R() * 8); g.lineTo(bx + 6, by); g.closePath(); g.fill();
+      }
+      g.globalCompositeOperation = 'lighter';
+      L.glow(g, 0, -2, 40, '#5ac8a8', 0.32 + 0.04 * Math.sin(T * 1.5 + i));
       g.restore();
     });
   }
@@ -461,10 +521,16 @@ export class Scene {
     const g = this.g, S = Scene.towerScale(t);
     this.put(this.towerSprite(t), t.x, t.y);
     if (t.kind === 'cannon') X.cannonBarrel(g, t.x + 4 * S, t.y, S, t.aim, Math.max(0, 1 - t.fired * 4), 0);
-    const n = Math.min(t.lv, 3);
+    // Level plaque at the foot of the tower: one mark per level, all gold once it has split.
+    const n = Math.min(t.lv, 3), px = t.x, py = t.y + 20;
+    g.fillStyle = 'rgba(40,30,20,.3)'; g.fillRect(px - 18, py - 4, 38, 13);
+    g.fillStyle = 'rgba(246,240,228,.95)'; g.strokeStyle = 'rgba(70,56,40,.7)'; g.lineWidth = 1;
+    g.beginPath(); g.roundRect(px - 19, py - 6, 38, 13, 3); g.fill(); g.stroke();
     for (let i = 0; i < 3; i++) {
-      g.save(); g.translate(t.x - 14 + i * 14, t.y + 16); g.rotate(0.785);
-      g.fillStyle = i < n ? (t.lv === 4 ? '#ffd76a' : '#c8892a') : 'rgba(255,255,255,.14)'; g.fillRect(-3, -3, 6, 6); g.restore();
+      const qx = px - 14 + i * 10, qy = py - 3;
+      g.fillStyle = i < n ? (t.lv === 4 ? '#d9a23a' : '#a63d26') : 'rgba(70,56,40,.12)';
+      g.fillRect(qx, qy, 8, 7);
+      if (i >= n) { g.strokeStyle = 'rgba(70,56,40,.45)'; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
     }
     if (t.round) { const c = t.round === 'ember' ? '#ff8a3a' : t.round === 'frost' ? '#8fd0ff' : '#b9a8ff'; g.fillStyle = c; g.beginPath(); g.arc(t.x + 30, t.y + 8, 4, 0, TAU); g.fill(); }
     if (t.down) { g.fillStyle = 'rgba(10,12,14,.45)'; g.beginPath(); g.ellipse(t.x, t.y - 40, 34, 60, 0, 0, TAU); g.fill(); }
@@ -504,6 +570,9 @@ export class Scene {
     const hidden = f.hidden;
     if (hidden) g.globalAlpha = 0.3;
     const S = f.def.size;
+    // Small foes are drawn a fifth bigger than their art scale so they read at 3x and on phones.
+    const K = f.def.traits?.boss ? 1 : 1.2;
+    if (K !== 1) { g.save(); g.translate(x, y); g.scale(K, K); g.translate(-x, -y); }
     switch (f.kind) {
       case 'grub': L.grub(g, x, y, 0.42, pass, seed, face); break;
       case 'skitter': L.grub(g, x, y, 0.28, pass, seed + 3, face); break;
@@ -522,6 +591,9 @@ export class Scene {
       case 'colossus': L.shellback(g, x, y, 1.2, pass, 61, face, (f.slowT > 0 || f.freezeT > 0) ? 1 : 0); break;
       case 'queen': L.moth(g, x, y, 0.95, pass, 51, 40); L.shellback(g, x, y, 0.7, pass, 63, face, 0); if (pass === 'emit') ringGlow(g, x, y - 40, 80, '90,230,190', 0.25 + 0.1 * Math.sin(T * 2)); break;
     }
+    // The green glow in their seams: the one strong colour the Hollow owns.
+    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
+    if (K !== 1) g.restore();
     g.globalAlpha = 1;
     if (pass === 'base') {
       if (f.rootT > 0) { g.fillStyle = '#0d0f0a'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rx = x + Math.cos(a) * 14 * S, ry = y + Math.sin(a) * 4; g.beginPath(); g.moveTo(rx - 3, ry); g.lineTo(rx + Math.cos(a) * 3, ry - 12 - f.rootT * 4); g.lineTo(rx + 3, ry); g.fill(); } }
@@ -530,7 +602,7 @@ export class Scene {
     }
     if (pass === 'emit' && !hidden) {
       if (f.hp < f.max || f.def.traits?.boss) {
-        const w = f.def.traits?.boss ? 90 : 34, hy = y - f.def.bar;
+        const w = f.def.traits?.boss ? 90 : 34, hy = y - f.def.bar * K;
         bar0(g, x, hy, f.hp / f.max, f.def.traits?.boss ? '#e0503a' : f.shielded ? '#5ac8a8' : '#c8552e', w);
       }
       if (f.hitT > 0) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - f.def.bar * 0.5, 16 * S, '#ffffff', f.hitT * 2); g.restore(); }
