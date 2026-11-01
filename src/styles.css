@@ -345,10 +345,6 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .result .embers { color: var(--ink); font-weight: 800; }
 .result .act-row { justify-content: center; }
 
-.rotate { display: none; }
-@media (orientation: portrait) and (max-width: 700px) {
-  .rotate { display: grid; place-items: center; position: fixed; inset: 0; z-index: 50; background: linear-gradient(var(--sky-top), var(--sky-low)); color: var(--ink); font-family: var(--display); font-weight: 700; font-size: 1.3rem; text-align: center; padding: 24px; }
-}
 
 /* Small landscape phones: tighter HUD. */
 @media (max-height: 480px) {
@@ -502,3 +498,43 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .build.armed { border-color: var(--accent); background: var(--paper); }
 .build.armed .br { display: none; }
 .build.armed .again { display: block; font-size: 0.68rem; font-weight: 800; color: var(--accent); text-align: center; line-height: 1.15; max-width: 92px; min-height: 2.3em; }
+
+/* Phone held upright: a strip on top (lives, gold, wave, controls), the map in the middle, and a deep band below
+   with Wren and the call button on one row and the four skills under them. The map slides sideways under a drag. */
+.battle[data-layout='tall'] .hud .over { left: 0; top: 0; width: 100%; height: var(--wy); background: var(--paper); border-bottom: 1px solid var(--rule); }
+.battle[data-layout='tall'] .hud .over .hud-stats { left: calc(8px + var(--safe-l)); right: 150px; top: auto; bottom: 8px; flex-wrap: nowrap; overflow: hidden; }
+.battle[data-layout='tall'] .hud .over .hud-ctrl { top: auto; bottom: 7px; }
+.battle[data-layout='tall'] .stat { padding: 3px 8px 3px 5px; font-size: 0.9rem; }
+.battle[data-layout='tall'] .hud .band { flex-wrap: wrap; align-content: center; justify-content: space-between; gap: 10px 10px; padding-top: 10px; }
+.battle[data-layout='tall'] .band .hero-card { order: 1; flex: 1 1 150px; min-width: 0; grid-template-columns: minmax(0, 1fr); padding: 0; }
+.battle[data-layout='tall'] .band .hero-card > .hero-bottom { grid-column: 1; grid-row: auto; }
+.battle[data-layout='tall'] .band .hud-call { order: 2; flex: 0 1 auto; margin-left: 0; flex-direction: column; align-items: stretch; gap: 6px; max-width: 54%; }
+.battle[data-layout='tall'] .band .skills { order: 3; flex: 1 1 100%; }
+.battle[data-layout='tall'] .band .skill { height: 60px; }
+.battle[data-layout='tall'] .call { text-align: center; padding: 8px 12px; }
+.battle[data-layout='tall'] .banner { max-width: calc(100vw - 24px); top: calc(var(--wy) + 8px); }
+.battle[data-layout='tall'] .banner.low { top: auto; }
+.battle[data-layout='tall'] .shop { right: 8px; width: calc(100vw - 16px); }
+
+/* Campaign on an upright phone: the stops scroll, and the chosen stage sits fixed at the foot with its Start button. */
+@media (max-width: 760px) and (min-height: 481px) {
+  .screen.campaign { display: flex; flex-direction: column; overflow: hidden; }
+  .campaign .bar-top { flex: none; }
+  .campaign-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  .campaign-body .regions { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; grid-auto-rows: max-content; }
+  .stage-card { flex: none; position: static; padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center; box-shadow: 0 -6px 18px var(--shadow); }
+  .stage-card > * { grid-column: 1; margin: 0; }
+  .stage-card h2 { font-size: 1.25rem; }
+  .stage-card .where { font-size: 0.82rem; }
+  .stage-card p { font-size: 0.86rem; margin: 2px 0 0; }
+  .stage-card dl { display: none; }
+  .stage-card .stars.small { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+  .stage-card .btn.big, .stage-card > .fine { grid-column: 1 / -1; margin-top: 10px; }
+}
+/* Upright phones: the top bar's three parts would crowd one line, so the title takes its own. */
+@media (max-width: 520px) {
+  .bar-top { grid-template-columns: auto minmax(0, 1fr); row-gap: 8px; }
+  .bar-top h2 { grid-row: 2; grid-column: 1 / -1; }
+  .bar-top .bar-end { justify-self: end; }
+  .tree { grid-template-columns: minmax(0, 1fr); }
+}

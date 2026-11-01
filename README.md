@@ -126,7 +126,7 @@ Stars earn Embers. Spend them across four trees between stages. Refunds are free
 
 - **Web and mobile web.** A service worker caches the whole game on first load, so it keeps working with no signal. Add it to your home screen and it opens full screen, like an app.
 - **iOS and Android.** iOS is a native Swift app with every picture and sound inside it. Android wraps the web game with Capacitor, every file bundled inside. No server, no account, no ads, no network calls.
-- **Phones, tablets and desktops.** The controls sit beside the map on wide screens and below it on short ones, and they keep clear of notches and rounded corners.
+- **Phones, tablets and desktops.** Play sideways or upright. The controls sit beside the map on wide screens and below it on short ones. Held upright, a phone shows the map at full height under a strip of stats, with Wren and the skills below; drag the map left and right to see the rest, and red notches at the edges point to foes out of view. Everything keeps clear of notches and rounded corners.
 - **Saves stay on your device.**
 
 ### Controls
@@ -193,7 +193,7 @@ With a free Apple ID the app stops opening after 7 days. Press Run again to rene
 npm run cap:android   # build, sync and open Android Studio
 ```
 
-The app locks to landscape. Run `npm run icons` to repaint the app icon (Wren and the Keep) for the web, iOS and Android.
+The app turns with the phone: sideways or upright. Run `npm run icons` to repaint the app icon (Wren and the Keep) for the web, iOS and Android.
 
 ---
 
@@ -215,7 +215,7 @@ src/
   ui/          title, campaign, trees, settings and the battle screen
   audio/       sound
 tests/         stage checks and the balance bot
-scripts/       offline cache, app icons, landscape lock, iOS art bake
+scripts/       offline cache, app icons, iOS art bake
 tools/bake/    the page that paints the iOS art
 ios/           the native iOS app (Swift) and its engine package
 android/       Android app shell

@@ -102,6 +102,9 @@ export class BattleScreen {
       this.view.hintPlot = best;
       this.showBanner('Build your first tower', 'Tap the marked plot. Towers do most of the work.', 5);
     }
+    // On an upright phone only part of the map shows: open on the marked plot, or on Wren.
+    const b0 = this.battle;
+    this.scene.panTo(this.hintPlot !== null ? b0.plots[this.hintPlot].x : b0.hero.x);
     if (this.host.autoSkills) this.battle.autoLearn();
     this.last = performance.now();
     this.raf = requestAnimationFrame(t => this.frame(t));
@@ -116,26 +119,34 @@ export class BattleScreen {
   /**
    * Lay out the screen. Wide phones get side columns beside the map, so nothing covers it.
    * Narrower screens get a band under the map. The map always keeps its 16:9 shape.
+   * A phone held upright gets a strip on top, the map in the middle and a deep band below; the map fills
+   * its height at about the size it has sideways, and you drag it left and right to see the rest.
    */
   private fit() {
     const r = this.el.getBoundingClientRect();
     const w = Math.max(320, r.width || window.innerWidth), hgt = Math.max(200, r.height || window.innerHeight);
-    const { l: safeL, r: safeR, b: safeB } = safeInsets();
+    const { l: safeL, r: safeR, b: safeB, t: safeT } = safeInsets();
+    const tall = hgt > w * 1.15 && w < 760;
     const sideRoom = (w - safeL - safeR - hgt * 16 / 9) / 2;
-    const side = sideRoom >= 64;
+    const side = !tall && sideRoom >= 64;
     this.el.classList.toggle('narrow', side && sideRoom < 130);
     let area;
-    if (side) {
+    if (tall) {
+      const top = safeT + 56, bandNeed = 196 + safeB;
+      // At least about two fifths of the map in view, so towers and foes stay big enough to tap.
+      const mapH = Math.max(180, Math.min(hgt - top - bandNeed, (w / (MAP_W * 0.42)) * (MAP_W * 9 / 16)));
+      area = { x: 0, y: top, w, h: mapH };
+    } else if (side) {
       area = { x: 0, y: 0, w, h: hgt };
     } else {
       const band = hgt < 480 ? 74 : 92;
       area = { x: 0, y: 0, w, h: hgt - band - safeB };
     }
-    this.scene.resize(w, hgt, area);
-    const wr = this.scene.worldRect();
+    this.scene.resize(w, hgt, area, tall);
+    const wr = this.scene.viewRect();
     const st = this.el.style;
     st.setProperty('--wx', `${wr.x}px`); st.setProperty('--wy', `${wr.y}px`); st.setProperty('--ww', `${wr.w}px`); st.setProperty('--wh', `${wr.h}px`);
-    this.el.dataset.layout = side ? 'side' : 'band';
+    this.el.dataset.layout = tall ? 'tall' : side ? 'side' : 'band';
     const H = this.hud;
     if (side) {
       H.colL.append(H.stats, H.hero);
@@ -410,21 +421,28 @@ export class BattleScreen {
   /* ------------------------------------------------------------------ input */
 
   private bindInput() {
-    let down: { x: number; y: number; id: number } | null = null;
-    this.canvas.addEventListener('pointerdown', e => { this.host.audio.unlock(); down = { x: e.clientX, y: e.clientY, id: e.pointerId }; });
+    let down: { x: number; y: number; id: number; lastX: number; panning: boolean } | null = null;
+    this.canvas.addEventListener('pointerdown', e => { this.host.audio.unlock(); down = { x: e.clientX, y: e.clientY, id: e.pointerId, lastX: e.clientX, panning: false }; });
     this.canvas.addEventListener('pointermove', e => {
+      // A drag slides the map when it is wider than the screen (a phone held upright).
+      if (down && down.id === e.pointerId && !this.aimingW && this.scene.slides) {
+        if (!down.panning && Math.abs(e.clientX - down.x) > 10) { down.panning = true; this.closeMenu(); }
+        if (down.panning) { this.scene.pan(e.clientX - down.lastX); down.lastX = e.clientX; }
+        return;
+      }
       if (!this.aimingW) return;
       const r = this.canvas.getBoundingClientRect();
       this.view.aimW = this.scene.toWorld(e.clientX - r.left, e.clientY - r.top);
     });
     this.canvas.addEventListener('pointerup', e => {
       if (!down || down.id !== e.pointerId) return;
-      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), panned = down.panning;
       down = null;
-      if (moved > 18) return;
+      if (moved > 18 || panned) return;
       const r = this.canvas.getBoundingClientRect();
       this.tap(...this.scene.toWorld(e.clientX - r.left, e.clientY - r.top));
     });
+    this.canvas.addEventListener('pointercancel', () => { down = null; });
     this.canvas.addEventListener('contextmenu', e => {
       e.preventDefault();
       const r = this.canvas.getBoundingClientRect();
@@ -528,7 +546,7 @@ export class BattleScreen {
     m.classList.remove('hidden');
     const w = m.offsetWidth, hgt = m.offsetHeight;
     // Keep to the map when it fits, and below the lives and gold pills, so the purse stays in view while you choose.
-    const wr = this.scene.worldRect();
+    const wr = this.scene.viewRect();
     const stats = this.el.dataset.layout === 'band' ? this.hud.stats.getBoundingClientRect() : null;
     const minTop = Math.max(wr.y, stats ? stats.bottom - r.top : 0) + 8;
     const minL = w <= wr.w - 16 ? wr.x + 8 : 8, maxL = w <= wr.w - 16 ? wr.x + wr.w - w - 8 : r.width - w - 8;
@@ -744,7 +762,7 @@ function safeInsets() {
   p.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
   document.body.append(p);
   const cs = getComputedStyle(p);
-  const out = { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0 };
+  const out = { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0, t: parseFloat(cs.paddingTop) || 0 };
   p.remove();
   return out;
 }
