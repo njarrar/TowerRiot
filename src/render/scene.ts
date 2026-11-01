@@ -30,9 +30,9 @@ const EL_COLOR: Record<string, string> = { pierce: '#f0d6a8', fire: '#ffb27a', f
 
 /** Region looks laid over the same painted ground: [screen lift, water tint, sun warmth]. */
 const REGION_LOOK = [
-  { lift: 'rgb(40,50,30)', water: 'rgb(120,165,200)', sunA: 'rgba(255,214,150,.6)', sunB: 'rgba(150,180,120,.35)', sunC: 'rgba(90,130,120,.45)' },
-  { lift: 'rgb(62,58,44)', water: 'rgb(100,170,205)', sunA: 'rgba(255,224,170,.6)', sunB: 'rgba(190,190,150,.35)', sunC: 'rgba(90,140,160,.45)' },
-  { lift: 'rgb(52,46,38)', water: 'rgb(110,115,120)', sunA: 'rgba(255,190,120,.6)', sunB: 'rgba(170,140,110,.35)', sunC: 'rgba(90,90,100,.45)' },
+  { lift: 'rgb(40,50,30)', water: 'rgb(120,165,200)', sunA: 'rgba(255,214,150,.6)', sunB: 'rgba(210,225,170,.4)', sunC: 'rgba(190,215,230,.5)' },
+  { lift: 'rgb(62,58,44)', water: 'rgb(100,170,205)', sunA: 'rgba(255,224,170,.6)', sunB: 'rgba(225,220,180,.4)', sunC: 'rgba(190,215,235,.5)' },
+  { lift: 'rgb(52,46,38)', water: 'rgb(110,115,120)', sunA: 'rgba(255,190,120,.6)', sunB: 'rgba(215,190,160,.4)', sunC: 'rgba(185,195,215,.45)' },
   { lift: 'rgb(48,36,32)', water: 'rgb(255,120,50)', sunA: 'rgba(255,170,110,.6)', sunB: 'rgba(170,110,90,.35)', sunC: 'rgba(80,60,70,.45)' },
 ];
 
@@ -116,6 +116,11 @@ export class Scene {
     const sg = c.createLinearGradient(W, 0, 0, H);
     sg.addColorStop(0, look.sunA); sg.addColorStop(0.55, look.sunB); sg.addColorStop(1, look.sunC);
     c.fillStyle = sg; c.fillRect(0, 0, W, H);
+    if (!st.lava) {
+      // Morning grade, baked once: open the mid tones and pull the brown haze toward cool daylight.
+      c.globalCompositeOperation = 'soft-light'; c.fillStyle = 'rgba(255,255,255,.45)'; c.fillRect(0, 0, W, H);
+      c.globalCompositeOperation = 'saturation'; c.fillStyle = 'rgba(90,150,60,.25)'; c.fillRect(0, 0, W, H);
+    }
     c.restore();
   }
 
@@ -223,7 +228,7 @@ export class Scene {
     const g = this.g, st = this.stage, R = this.r;
     this.step(dt);
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    g.fillStyle = '#1d2417'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    g.fillStyle = '#e4dccb'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
     g.translate(this.ox, this.oy); g.scale(this.scale, this.scale);
     g.save();
     g.beginPath(); g.rect(0, 0, W, H); g.clip();
@@ -274,7 +279,7 @@ export class Scene {
     for (const [gx, gy] of b.gate) lights.push([gx, gy - 120, 230 * fk, 1, '#ffb050']);
     if (st.lighthouse) lights.push([st.lighthouse[0], st.lighthouse[1] - 120, 380, 1, '#ffe2a0']);
     for (const f of this.fx) if (f.k === 'boom') lights.push([f.x, f.y, 140 * f.life / 0.45 + 40, 0.9, '#ff8a3a']);
-    const dark = b.hero.sunriseT > 0 ? 0 : b.night ? 0.62 : st.lava ? 0.18 : 0.1;
+    const dark = b.hero.sunriseT > 0 ? 0 : b.night ? 0.62 : st.lava ? 0.14 : 0.03;
     L.darkness(g, W, H, lights, dark);
 
     // Sun wash and slow light shafts (not at night).
@@ -313,7 +318,7 @@ export class Scene {
 
     // Overlays that ignore shake.
     g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
-    L.vignette(g, W, H, b.night ? 0.7 : 0.45);
+    L.vignette(g, W, H, b.night ? 0.7 : 0.16);
     if (this.flash > 0) { g.fillStyle = `rgba(255,${b.status === 'lost' ? 80 : 230},${b.status === 'lost' ? 60 : 180},${this.flash * 0.35})`; g.fillRect(0, 0, W, H); }
     for (const c of this.coins) { g.fillStyle = '#d9962a'; g.beginPath(); g.ellipse(c.x, c.y, 4.5 * Math.abs(Math.cos(c.u * 12)) + 1, 4.5, 0, 0, TAU); g.fill(); g.strokeStyle = '#5a2e08'; g.lineWidth = 1; g.stroke(); }
     g.textAlign = 'center';

@@ -280,7 +280,7 @@ export class BattleScreen {
     }
     const near = b.nearGate();
     this.hud.shopBtn.classList.toggle('near', near);
-    setText(this.hud.shopBtn, near ? 'Shop' : 'Shop (at gate)');
+    this.hud.shopBtn.title = near ? 'Open the shop (B)' : 'Walk Wren to the gate to buy';
     if (this.shopOpen) this.renderShop();
     // Banner.
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) this.banner.classList.add('off'); }
