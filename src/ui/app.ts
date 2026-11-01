@@ -146,6 +146,20 @@ export class App {
     const toggle = (label: string, key: keyof typeof st, note: string) => h('label', { class: 'toggle' },
       h('input', { type: 'checkbox', checked: st[key], onchange: (e: Event) => { st[key] = (e.target as HTMLInputElement).checked; this.applySettings(); } }),
       h('span', {}, h('b', { text: label }), h('small', { text: note })));
+    // Two steps on the page itself: browser dialogs look foreign here and do nothing in some app views.
+    const erase = h('div', { class: 'erase' });
+    const askErase = () => {
+      clear(erase);
+      erase.append(h('button', { class: 'btn danger', onclick: () => {
+        clear(erase);
+        erase.append(
+          h('p', { class: 'erase-q', text: 'Erase all stars and tree picks? This cannot be undone.' }),
+          h('div', { class: 'act-row' },
+            h('button', { class: 'btn danger solid', onclick: () => { this.save = freshSave(); this.persist(); this.title(); } }, 'Erase'),
+            h('button', { class: 'btn', onclick: askErase }, 'Cancel')));
+      } }, 'Erase progress'));
+    };
+    askErase();
     this.mount(h('section', { class: 'screen settings' },
       h('header', { class: 'bar-top' }, h('button', { class: 'btn', onclick: () => this.title() }, 'Back'), h('h2', { text: 'Settings' }), h('span')),
       h('div', { class: 'panel' },
@@ -159,7 +173,7 @@ export class App {
           h('li', { text: 'Wren gains levels inside each stage. Spend points on Q, W, E and R. Landing the killing blow pays 50% more gold.' }),
           h('li', { text: 'Walk her to the gate to shop. Grab runes when they glow on the map.' }),
           h('li', { text: 'Keys: Q W E R skills, 1 to 6 build, Space next wave, F speed, P pause, B shop. Right click moves Wren.' })),
-        h('button', { class: 'btn danger', onclick: () => { if (window.confirm('Erase all stars and tree picks?')) { this.save = freshSave(); this.persist(); this.title(); } } }, 'Erase progress'))));
+        erase)));
   }
 
   private applySettings() {

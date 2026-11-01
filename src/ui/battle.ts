@@ -331,6 +331,7 @@ export class BattleScreen {
   private key(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return;
     const k = e.key.toLowerCase();
+    if (this.exitVeil) { if (k === 'escape') this.closeExit(); return; }
     if (k === 'q' || k === 'w' || k === 'e' || k === 'r') { this.skillPress(k); e.preventDefault(); }
     else if (k === ' ') { this.battle.callWave(); e.preventDefault(); }
     else if (k === 'f') this.cycleSpeed();
@@ -505,8 +506,31 @@ export class BattleScreen {
   /** Leave, asking first if a fight is under way. */
   requestExit() { this.confirmExit(); }
 
+  private exitVeil: HTMLElement | null = null;
+
+  /** An in-game card rather than a browser dialog, so it matches the game and works inside the native shells. */
   private confirmExit() {
-    if (this.ended || this.battle.status === 'prep' || window.confirm('Leave this battle? Progress in it is lost.')) this.host.onExit();
+    if (this.ended || this.battle.status === 'prep') { this.host.onExit(); return; }
+    if (this.exitVeil) { this.closeExit(); return; }
+    const wasPaused = this.battle.paused;
+    if (!wasPaused) this.togglePause();
+    const stay = h('button', { class: 'btn primary', onclick: () => this.closeExit() }, 'Keep fighting');
+    const card = h('div', { class: 'result', role: 'dialog', 'aria-label': 'Leave this battle?' },
+      h('h2', { text: 'Leave this battle?' }),
+      h('p', { text: 'You lose your progress in this stage. Stars you already hold stay.' }),
+      h('div', { class: 'act-row' }, stay, h('button', { class: 'btn', onclick: () => this.host.onExit() }, 'Leave')));
+    this.exitVeil = h('div', { class: 'veil', onclick: (e: Event) => { if (e.target === this.exitVeil) this.closeExit(); } }, card);
+    this.exitVeil.dataset.resume = wasPaused ? '' : '1';
+    this.el.append(this.exitVeil);
+    stay.focus();
+  }
+
+  private closeExit() {
+    if (!this.exitVeil) return;
+    const resume = this.exitVeil.dataset.resume === '1';
+    this.exitVeil.remove();
+    this.exitVeil = null;
+    if (resume && this.battle.paused) this.togglePause();
   }
 
   private end(won: boolean, stars: number) {
