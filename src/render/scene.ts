@@ -91,6 +91,8 @@ export class Scene {
   private stage!: StageDef;
   /** Screen transform: world px to css px. */
   scale = 1; ox = 0; oy = 0;
+  /** The part of the canvas the map may use. On a tall phone the map is wider than this and slides sideways. */
+  private area = { x: 0, y: 0, w: 0, h: 0 };
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.g = canvas.getContext('2d')!;
@@ -179,18 +181,44 @@ export class Scene {
     return sp;
   }
 
-  /** Fit the 1280x720 world into `area` of the canvas (the whole canvas by default), centred. */
-  resize(cssW: number, cssH: number, area = { x: 0, y: 0, w: cssW, h: cssH }) {
+  /**
+   * Fit the 1280x720 world into `area` of the canvas (the whole canvas by default), centred.
+   * With `fillHeight` the world fills the area's height and may run past its sides; pan() slides it.
+   */
+  resize(cssW: number, cssH: number, area = { x: 0, y: 0, w: cssW, h: cssH }, fillHeight = false) {
     this.canvas.width = Math.round(cssW * this.dpr);
     this.canvas.height = Math.round(cssH * this.dpr);
     this.canvas.style.width = cssW + 'px'; this.canvas.style.height = cssH + 'px';
-    this.scale = Math.min(area.w / W, area.h / H);
-    this.ox = area.x + (area.w - W * this.scale) / 2;
+    const centre = this.area.w ? (this.area.x + this.area.w / 2 - this.ox) / this.scale : W / 2;
+    this.area = area;
+    this.scale = fillHeight ? area.h / H : Math.min(area.w / W, area.h / H);
     this.oy = area.y + (area.h - H * this.scale) / 2;
+    this.panTo(centre);
+  }
+
+  /** True when the map is wider than its area, so part of it is off screen. */
+  get slides() { return W * this.scale > this.area.w + 1; }
+
+  /** Slide the map sideways by dx css px, never past its edges. */
+  pan(dx: number) {
+    if (!this.slides) { this.ox = this.area.x + (this.area.w - W * this.scale) / 2; return; }
+    this.ox = Math.min(this.area.x, Math.max(this.area.x + this.area.w - W * this.scale, this.ox + dx));
+  }
+
+  /** Put world x in the middle of the area, as far as the edges allow. */
+  panTo(x: number) {
+    this.ox = this.area.x + this.area.w / 2 - x * this.scale;
+    this.pan(0);
   }
 
   /** Where the world sits on screen, in css px. */
   worldRect() { return { x: this.ox, y: this.oy, w: W * this.scale, h: H * this.scale }; }
+
+  /** The part of the world in view, in css px. */
+  viewRect() {
+    const x = Math.max(this.ox, this.area.x), r = Math.min(this.ox + W * this.scale, this.area.x + this.area.w);
+    return { x, y: this.oy, w: r - x, h: H * this.scale };
+  }
 
   toWorld(cx: number, cy: number): Vec { return [(cx - this.ox) / this.scale, (cy - this.oy) / this.scale]; }
   toScreen(x: number, y: number): Vec { return [x * this.scale + this.ox, y * this.scale + this.oy]; }
@@ -405,6 +433,27 @@ export class Scene {
     }
     g.globalAlpha = 1;
     g.restore();
+    if (this.slides && !view.still) this.drawEdgeMarks(b);
+  }
+
+  /** When the map runs off the screen's sides: a dark notch at the edge for each foe out of view, and a hint that there is more road. */
+  private drawEdgeMarks(b: Battle) {
+    const g = this.g, v = this.viewRect(), x0 = (v.x - this.ox) / this.scale, x1 = (v.x + v.w - this.ox) / this.scale;
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    for (const side of [-1, 1]) {
+      const more = side < 0 ? v.x > this.ox + 1 : v.x + v.w < this.ox + W * this.scale - 1;
+      if (!more) continue;
+      const ex = side < 0 ? v.x : v.x + v.w;
+      const fade = g.createLinearGradient(ex, 0, ex - side * 18, 0);
+      fade.addColorStop(0, 'rgba(36,30,24,0.28)'); fade.addColorStop(1, 'rgba(36,30,24,0)');
+      g.fillStyle = fade; g.fillRect(side < 0 ? ex : ex - 18, v.y, 18, v.h);
+      for (const f of b.foes) {
+        if (f.dead || (side < 0 ? f.x >= x0 : f.x <= x1)) continue;
+        const y = v.y + Math.max(8, Math.min(v.h - 8, f.y * this.scale));
+        g.fillStyle = '#7a1f12'; g.beginPath();
+        g.moveTo(ex - side * 11, y - 7); g.lineTo(ex - side * 2, y); g.lineTo(ex - side * 11, y + 7); g.closePath(); g.fill();
+      }
+    }
   }
 
   private step(dt: number) {

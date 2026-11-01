@@ -248,6 +248,7 @@ export class App {
         h('h3', { text: 'How to play' }),
         h('ul', { class: 'howto' },
           h('li', { text: 'Tap a stone plot to build. Tap a tower to upgrade, split, aim or sell it.' }),
+          h('li', { text: 'Holding the phone upright? Drag the map left and right. Red notches at its edges point to foes out of view.' }),
           h('li', { text: 'Tap the ground to move Wren. She holds that spot and blocks up to two foes. Tap a foe to send her after it.' }),
           h('li', { text: 'Wren gains levels inside each stage. Spend points on Q, W, E and R. Landing the killing blow pays 50% more gold.' }),
           h('li', { text: 'Walk her to the gate to shop. Grab runes when they glow on the map.' }),

@@ -20,6 +20,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach([
                             "Tap a stone plot to build. Tap a tower to upgrade, split, aim or sell it.",
+                            "Holding the phone upright? Drag the map left and right. Red notches at its edges point to foes out of view.",
                             "Tap the ground to move Wren. She holds that spot and blocks up to two foes. Tap a foe to send her after it.",
                             "Wren gains levels inside each stage. Spend points on Q, W, E and R. Landing the killing blow pays 50% more gold.",
                             "Walk her to the gate to shop. Grab runes when they glow on the map.",

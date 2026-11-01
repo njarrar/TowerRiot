@@ -27,6 +27,9 @@ final class BattleScene: SKScene {
     var onFrame: ((Double) -> [BattleEvent])?
     var onTap: ((Double, Double) -> Void)?
     var onAim: ((Double, Double) -> Void)?
+    /// A drag across the map, in points, when the map is wider than the screen.
+    var onPan: ((CGFloat) -> Void)?
+    var canPan = false
 
     private let art = Art.shared
     private let world = SKNode()
@@ -957,28 +960,39 @@ final class BattleScene: SKScene {
     /* ------------------------------------------------------------------ input */
 
     private var touchStart: CGPoint?
+    private var lastX: CGFloat = 0
+    private var panning = false
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
-        touchStart = t.location(in: view)
+        // Window points: the view itself moves while the map slides, so its own points would drift.
+        touchStart = t.location(in: nil)
+        lastX = touchStart?.x ?? 0
+        panning = false
         aim(t)
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
+        let now = t.location(in: nil)
+        if canPan && look.aimW == nil, let s = touchStart {
+            if !panning && abs(now.x - s.x) > 10 { panning = true }
+            if panning { onPan?(now.x - lastX); lastX = now.x }
+            return
+        }
         aim(t)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first, let s = touchStart else { return }
         touchStart = nil
-        let now = t.location(in: view)
-        if hypot(now.x - s.x, now.y - s.y) > 18 { return }
+        let now = t.location(in: nil)
+        if panning || hypot(now.x - s.x, now.y - s.y) > 18 { panning = false; return }
         let p = t.location(in: self)
         onTap?(Double(p.x), World.height - Double(p.y))
     }
 
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { touchStart = nil }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { touchStart = nil; panning = false }
 
     private func aim(_ t: UITouch) {
         guard look.aimW != nil else { return }

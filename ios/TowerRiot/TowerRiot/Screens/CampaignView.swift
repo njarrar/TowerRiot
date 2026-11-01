@@ -4,6 +4,7 @@ import TowerRiotKit
 /// The campaign: each region is a strip of its own ground with a road through it; the stages are stops on the road.
 struct CampaignView: View {
     @EnvironmentObject var app: AppModel
+    @Environment(\.upright) private var upright
     let focus: Int?
     @State private var sel = 1
 
@@ -16,26 +17,38 @@ struct CampaignView: View {
                     SoundCorner()
                 }
             }
-            HStack(alignment: .top, spacing: 16) {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(spacing: 14) {
-                            ForEach(Array(app.data.regions.enumerated()), id: \.offset) { ri, r in
-                                RegionStrip(region: r, index: ri, sel: $sel).id(ri)
-                            }
-                        }
-                    }
-                    .onAppear {
-                        // Open on the stage you came for: on a phone the cleared regions above would push it off screen.
-                        proxy.scrollTo(app.data.stage(focus ?? app.nextStage).region, anchor: .center)
-                    }
+            // Upright, the chosen stage sits under the stops; sideways, beside them. Either way its Start is always in view.
+            if upright {
+                VStack(spacing: 10) {
+                    regions
+                    StageCard(id: sel, compact: true)
                 }
-                StageCard(id: sel)
-                    .frame(width: 300)
+            } else {
+                HStack(alignment: .top, spacing: 16) {
+                    regions
+                    StageCard(id: sel, compact: false)
+                        .frame(width: 300)
+                }
             }
         }
         .padding(16)
         .onAppear { sel = focus ?? app.nextStage }
+    }
+
+    private var regions: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 14) {
+                    ForEach(Array(app.data.regions.enumerated()), id: \.offset) { ri, r in
+                        RegionStrip(region: r, index: ri, sel: $sel).id(ri)
+                    }
+                }
+            }
+            .onAppear {
+                // Open on the stage you came for: on a phone the cleared regions above would push it off screen.
+                proxy.scrollTo(app.data.stage(focus ?? app.nextStage).region, anchor: .center)
+            }
+        }
     }
 }
 
@@ -140,36 +153,55 @@ private struct StageNode: View {
 private struct StageCard: View {
     @EnvironmentObject var app: AppModel
     let id: Int
+    /// Upright phones: name, stars and the twist only, so the map of stops keeps most of the screen.
+    let compact: Bool
 
     var body: some View {
         let st = app.data.stage(id), open = app.save.isUnlocked(id), best = app.save.stars[id] ?? 0
         let newFoe = app.data.enemies.values.first { $0.name.lowercased() == st.newFoe.lowercased() }
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(st.name).font(Face.title(26)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
-                Text("Stage \(st.id), \(app.data.regions[st.region].name)").font(Face.body(14, .semibold)).foregroundStyle(Ink.inkDim)
-                Stars(n: best, size: 20)
-                Text(st.twist).font(Face.body(14)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
-                Divider().overlay(Ink.rule)
-                Fact("New foe", newFoe.map { "\($0.name): \($0.blurb)" } ?? st.newFoe)
-                Fact("Unlocks", st.unlocks)
-                HStack(alignment: .top) {
-                    Text("Towers").font(Face.body(13)).foregroundStyle(Ink.inkFaint).frame(width: 64, alignment: .leading)
-                    HStack(spacing: 2) { ForEach(st.towers, id: \.self) { k in ArtPicture(name: "icon-tower-\(k.rawValue)", size: 32).accessibilityLabel(app.data.tower(k).name) } }
+        VStack(alignment: .leading, spacing: 0) {
+            if compact {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(st.name).font(Face.title(20)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.7)
+                        Spacer(minLength: 8)
+                        Stars(n: best, size: 16)
+                    }
+                    Text("Stage \(st.id), \(app.data.regions[st.region].name)").font(Face.body(13, .semibold)).foregroundStyle(Ink.inkDim)
+                    Text(st.twist).font(Face.body(13)).foregroundStyle(Ink.inkDim).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 }
-                Fact("Waves", "\(st.waves.count), starting gold \(st.startGold)")
-                Fact("Stars", starRule(st.lives + app.save.mods.lives))
-                if open {
-                    Button(best > 0 ? "Play again" : "Start") { app.play(id) }
-                        .buttonStyle(PaperButton(kind: .primary, big: true))
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 6)
-                } else {
-                    Text("Clear the stage before it to open this one.").font(Face.body(13)).foregroundStyle(Ink.inkFaint)
+            } else {
+                // The facts scroll if they must; Start stays pinned below them, never under the fold.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(st.name).font(Face.title(26)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
+                        Text("Stage \(st.id), \(app.data.regions[st.region].name)").font(Face.body(14, .semibold)).foregroundStyle(Ink.inkDim)
+                        Stars(n: best, size: 20)
+                        Text(st.twist).font(Face.body(14)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
+                        Divider().overlay(Ink.rule)
+                        Fact("New foe", newFoe.map { "\($0.name): \($0.blurb)" } ?? st.newFoe)
+                        Fact("Unlocks", st.unlocks)
+                        HStack(alignment: .top) {
+                            Text("Towers").font(Face.body(13)).foregroundStyle(Ink.inkFaint).frame(width: 64, alignment: .leading)
+                            HStack(spacing: 2) { ForEach(st.towers, id: \.self) { k in ArtPicture(name: "icon-tower-\(k.rawValue)", size: 32).accessibilityLabel(app.data.tower(k).name) } }
+                        }
+                        Fact("Waves", "\(st.waves.count), starting gold \(st.startGold)")
+                        Fact("Stars", starRule(st.lives + app.save.mods.lives))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(16)
+            if open {
+                Button(best > 0 ? "Play again" : "Start") { app.play(id) }
+                    .buttonStyle(PaperButton(kind: .primary, big: true))
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 10)
+            } else {
+                Text("Clear the stage before it to open this one.").font(Face.body(13)).foregroundStyle(Ink.inkFaint).padding(.top, 10)
+            }
         }
+        .padding(compact ? 14 : 16)
+        .fixedSize(horizontal: false, vertical: compact)
         .background(RoundedRectangle(cornerRadius: 9).fill(Ink.paper2))
         .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Ink.rule, lineWidth: 1))
     }
