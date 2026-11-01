@@ -84,6 +84,8 @@ public struct HeroDef: Codable, Sendable {
     public let blocks: Int
     public let sight: Double
     public let xpRadius: Double
+    /// Share of XP she still gets from kills outside that radius.
+    public let xpFar: Double
     public let lastHit: Double
     public let respawnBase: Double
 
@@ -178,6 +180,8 @@ public struct StageDef: Codable, Sendable {
     public let weather: String?
     public let night: Bool?
     public let lighthouse: Vec?
+    /// Extra foe health for this stage, on top of the usual climb.
+    public let hpMul: Double?
     public let adaptEvery: Int?
     public let waves: [WaveDef]
 

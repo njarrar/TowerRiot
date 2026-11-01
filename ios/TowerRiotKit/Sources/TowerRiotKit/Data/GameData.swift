@@ -84,8 +84,8 @@ public struct GameData: Sendable {
     public func tree(of node: TreeNode) -> TreeDef? { trees.first { $0.nodes.contains { $0.id == node.id } } }
 }
 
-/// Health scale per stage so later stages hit harder.
-public func hpScale(_ stage: Int) -> Double { 1 + Double(stage - 1) * 0.06 }
+/// Health scale per stage so later stages hit harder. The Ashen Rift (16 to 20) climbs twice as fast.
+public func hpScale(_ stage: Int) -> Double { 1 + Double(stage - 1) * 0.06 + Double(max(0, stage - 15)) * 0.1 }
 /// Gold per kill grows a little so later stages can afford their towers.
 public func goldScale(_ stage: Int) -> Double { 1.4 + Double(stage - 1) * 0.05 }
 /// Armor scales slower than health.

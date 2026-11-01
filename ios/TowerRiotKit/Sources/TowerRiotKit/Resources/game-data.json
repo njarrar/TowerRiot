@@ -550,6 +550,7 @@
   "blocks": 2,
   "sight": 140,
   "xpRadius": 420,
+  "xpFar": 0.3,
   "lastHit": 0.5,
   "respawnBase": 4
  },
@@ -5570,15 +5571,15 @@
      "groups": [
       {
        "kind": "burrower",
-       "n": 10,
-       "gap": 1.2,
+       "n": 8,
+       "gap": 1.4,
        "delay": 0,
        "spawn": "w"
       },
       {
        "kind": "burrower",
-       "n": 6,
-       "gap": 1.6,
+       "n": 5,
+       "gap": 1.8,
        "delay": 0,
        "spawn": "n"
       }
@@ -5660,8 +5661,8 @@
       },
       {
        "kind": "burrower",
-       "n": 10,
-       "gap": 1,
+       "n": 7,
+       "gap": 1.2,
        "delay": 0,
        "spawn": "n"
       },
@@ -5686,22 +5687,22 @@
       },
       {
        "kind": "burrower",
-       "n": 14,
-       "gap": 0.9,
+       "n": 6,
+       "gap": 1.4,
        "delay": 0,
        "spawn": "n"
       },
       {
        "kind": "splitter",
-       "n": 14,
-       "gap": 0.9,
+       "n": 11,
+       "gap": 1,
        "delay": 6,
        "spawn": "w"
       },
       {
        "kind": "moth",
-       "n": 20,
-       "gap": 0.5,
+       "n": 14,
+       "gap": 0.6,
        "delay": 10,
        "spawn": "n"
       }
@@ -6907,6 +6908,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.8,
    "roads": [
     {
      "id": "top",
@@ -7342,6 +7344,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.7,
    "roads": [
     {
      "id": "main",
@@ -7697,6 +7700,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.2,
    "roads": [
     {
      "id": "north",
@@ -8042,6 +8046,7 @@
     "beacon"
    ],
    "adaptEvery": 1,
+   "hpMul": 1.5,
    "roads": [
     {
      "id": "nw",

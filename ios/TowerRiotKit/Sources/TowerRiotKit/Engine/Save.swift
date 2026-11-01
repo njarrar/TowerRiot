@@ -5,13 +5,17 @@ public struct Save: Codable, Equatable, Sendable {
     public struct Settings: Codable, Equatable, Sendable {
         public var sound = true
         public var reduceMotion = false
-        public var autoSkills = false
+        /// Spend Wren's skill points for her. Nil means the default: on in the first region, off after.
+        public var autoSkills: Bool?
+        /// Show damage numbers over foes.
+        public var dmgNumbers = false
         public init() {}
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             sound = (try? c.decode(Bool.self, forKey: .sound)) ?? true
             reduceMotion = (try? c.decode(Bool.self, forKey: .reduceMotion)) ?? false
-            autoSkills = (try? c.decode(Bool.self, forKey: .autoSkills)) ?? false
+            autoSkills = try? c.decode(Bool.self, forKey: .autoSkills)
+            dmgNumbers = (try? c.decode(Bool.self, forKey: .dmgNumbers)) ?? false
         }
     }
 

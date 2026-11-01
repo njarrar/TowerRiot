@@ -71,7 +71,7 @@ public final class Battle {
         self.stage = stage
         self.mods = mods
         rng = Rng(seed: seed)
-        scale = hpScale(stage.id)
+        scale = hpScale(stage.id) * (stage.hpMul ?? 1)
         let scale = self.scale
         roads = stage.roads.map { def in
             let path = Path(id: def.id, pts: smooth(def.ctrl))
@@ -107,14 +107,57 @@ public final class Battle {
         nextRune = data.runeFirst
         shiftOn = (stage.shifts ?? []).map { _ in false }
         let lvl = 1 + mods.heroLevel
-        let s = stage.heroStart
+        let s = Battle.heroStartPoint(stage: stage, roads: roads, gate: gate)
         hero = HeroState(x: s.x, y: s.y, tx: s.x, ty: s.y, anchorX: s.x, anchorY: s.y, level: lvl, points: lvl + mods.heroSkillPoints)
         for e in Element.allCases { resist[e] = 0; dmgWindow[e] = 0 }
         hero.hp = heroMaxHp()
         applyGears(1)
     }
 
+    /// Where Wren starts. A start placed by the gate moves out to the main road, past its middle,
+    /// so she meets the first foes and earns XP from the start.
+    private static func heroStartPoint(stage: StageDef, roads: [RoadRt], gate: [Vec]) -> Vec {
+        let st = stage.heroStart
+        if !gate.contains(where: { hypot2($0.x - st.x, $0.y - st.y) < 300 }) { return st }
+        let r = roads.stableSorted { $0.path.tot > $1.path.tot }[0]
+        let p = r.path.point(at: r.path.tot * 0.62)
+        return Vec(p.x, p.y)
+    }
+
     // MARK: - commands
+
+    public struct WavePreview { public let n: Int; public let hint: String; public let foes: [(kind: EnemyKind, count: Int)] }
+
+    /// What the next wave will send, after the early-wave ramp. Nil once every wave has started.
+    public func nextWave() -> WavePreview? {
+        let n = wave + 1
+        guard n <= totalWaves else { return nil }
+        let w = stage.waves[n - 1], ramp = Battle.waveRamp(n, totalWaves)
+        var foes: [(kind: EnemyKind, count: Int)] = []
+        for g in w.groups {
+            let count = max(1, Int(jsRound(Double(g.n) * ramp)))
+            if let i = foes.firstIndex(where: { $0.kind == g.kind }) { foes[i].count += count } else { foes.append((g.kind, count)) }
+        }
+        return WavePreview(n: n, hint: w.hint, foes: foes)
+    }
+
+    /// True if the Hollow adapts when wave `n` starts.
+    public func adaptsAt(_ n: Int) -> Bool {
+        let every = stage.adaptEvery ?? 3
+        return n > 1 && n <= totalWaves && (n - 1) % every == 0
+    }
+
+    /// The element the Hollow would harden against if it adapted now, if any.
+    public func adaptLean() -> Element? {
+        var total = 0.0
+        var top: Element?
+        for e in Battle.elements {
+            total += dmgWindow[e]!
+            if top == nil || dmgWindow[e]! > dmgWindow[top!]! { top = e }
+        }
+        if let top, total > 0 && dmgWindow[top]! / total > 0.3 { return top }
+        return nil
+    }
 
     public var totalWaves: Int { stage.waves.count }
     public var over: Bool { status == .won || status == .lost }
@@ -818,7 +861,8 @@ public final class Battle {
         let g = Int(jsRound(f.def.gold * goldScale(stage.id) * bonus))
         gold += g
         events.append(.kill(x: f.x, y: f.y, kind: f.kind, gold: g, hero: byHero))
-        if !hero.dead && hypot2(hero.x - f.x, hero.y - f.y) < data.hero.xpRadius { giveXp(f.def.hp * 0.45 * scale) }
+        // Full XP for kills near Wren, a share for kills anywhere else, so she grows wherever the fight is.
+        if !hero.dead { giveXp(f.def.hp * 0.45 * scale * (hypot2(hero.x - f.x, hero.y - f.y) < data.hero.xpRadius ? 1 : data.hero.xpFar)) }
         if let sp = f.def.traits?.splitInto {
             for k in 0..<sp.n {
                 let c = spawn(sp.kind, at: (f.road, max(0, f.d - Double(k) * 14)))
@@ -1108,4 +1152,12 @@ public final class Battle {
         defer { events = [] }
         return events
     }
+}
+
+/// The fewest lives that still earn 3 and 2 stars: 90% and 50% of the lives you start with.
+public func starLives(_ start: Int) -> (three: Int, two: Int) {
+    var three = start, two = start
+    while three > 0 && Double(three - 1) / Double(start) >= 0.9 { three -= 1 }
+    while two > 0 && Double(two - 1) / Double(start) >= 0.5 { two -= 1 }
+    return (three, two)
 }
