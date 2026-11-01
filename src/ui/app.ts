@@ -11,7 +11,7 @@ import { Audio } from '../audio/sfx';
 import { h, clear, icon } from './dom';
 import { towerIcon, LOCK_ICON } from './icons';
 import { BattleScreen } from './battle';
-import { Battle } from '../game/sim';
+import { Battle, starLives } from '../game/sim';
 import { Scene, W as MAP_W, H as MAP_H } from '../render/scene';
 
 export class App {
@@ -87,7 +87,7 @@ export class App {
     const scene = new Scene(cv);
     scene.resize(cw, ch, { x: cw - MAP_W * k, y: (ch - MAP_H * k) / 2, w: MAP_W * k, h: MAP_H * k });
     scene.load(b);
-    scene.draw(b, { selPlot: null, selTower: null, preview: null, aimW: null, reduceMotion: true, dmgNumbers: false }, 0, 0);
+    scene.draw(b, { selPlot: null, selTower: null, preview: null, aimW: null, reduceMotion: true, dmgNumbers: false, still: true }, 0, 0);
     cv.classList.add('ready');
   }
 
@@ -110,7 +110,8 @@ export class App {
           h('dt', { text: 'New foe' }), h('dd', { text: newFoe ? `${newFoe.name}: ${newFoe.blurb}` : st.newFoe }),
           h('dt', { text: 'Unlocks' }), h('dd', { text: st.unlocks }),
           h('dt', { text: 'Towers' }), h('dd', {}, ...st.towers.map(k => h('img', { class: 'mini', src: towerIcon(k, 40), alt: TOWERS[k].name, title: TOWERS[k].name }))),
-          h('dt', { text: 'Waves' }), h('dd', { text: `${st.waves.length}, starting gold ${st.startGold}` })),
+          h('dt', { text: 'Waves' }), h('dd', { text: `${st.waves.length}, starting gold ${st.startGold}` }),
+          h('dt', { text: 'Stars' }), h('dd', { text: starRule(st.lives + modsFor(s).lives) })),
         open ? h('button', { class: 'btn primary big', onclick: () => this.play(id) }, best ? 'Play again' : 'Start') : h('p', { class: 'fine', text: 'Clear the stage before it to open this one.' }));
       this.root.querySelectorAll('.node').forEach(n => n.classList.toggle('sel', n.getAttribute('data-id') === String(id)));
     };
@@ -256,4 +257,10 @@ export class App {
       screen.start();
     }, 30));
   }
+}
+
+/** How stars are won, in words: lives kept out of the lives you start with. */
+function starRule(start: number) {
+  const n = starLives(start), lose = start - n.three;
+  return `3 if you lose ${lose} ${lose === 1 ? 'life' : 'lives'} or fewer, 2 if you keep ${n.two} of ${start}.`;
 }

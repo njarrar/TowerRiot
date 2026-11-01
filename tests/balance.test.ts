@@ -11,3 +11,17 @@ describe('balance: a plain greedy player', () => {
     }, 30000);
   }
 });
+
+describe('star rule', () => {
+  it('matches the stars a finished battle gives', async () => {
+    const { starLives } = await import('../src/game/sim');
+    for (const start of [15, 20, 23, 25]) {
+      const n = starLives(start);
+      expect(n.three / start).toBeGreaterThanOrEqual(0.9);
+      expect((n.three - 1) / start).toBeLessThan(0.9);
+      expect(n.two / start).toBeGreaterThanOrEqual(0.5);
+      expect((n.two - 1) / start).toBeLessThan(0.5);
+    }
+    expect(starLives(20)).toEqual({ three: 18, two: 10 });
+  });
+});

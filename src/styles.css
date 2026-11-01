@@ -337,7 +337,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .result { background: var(--paper); color: var(--ink); border: 1px solid var(--rule-strong); border-top: 3px solid var(--ink); border-radius: 0 0 var(--radius-l) var(--radius-l); padding: 24px 28px; text-align: center; width: min(440px, calc(100vw - 32px)); display: grid; gap: 10px; box-shadow: 0 20px 50px oklch(24% 0.02 60 / 0.3); }
 .result h2 { font-size: 2rem; color: var(--ink); }
 .result.lost h2 { color: var(--life); }
-.result p { margin: 0; color: var(--ink-dim); text-wrap: pretty; }
+.result p { margin: 0; color: var(--ink-dim); text-wrap: balance; }
 .result .embers { color: var(--ink); font-weight: 800; }
 .result .act-row { justify-content: center; }
 
@@ -449,3 +449,35 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
   .title-btns .btn.big { padding: 9px 14px; font-size: 0.95rem; }
   .title-btns .btn.primary { min-width: 0; }
 }
+
+/* Stage 1: a tag over the plot to build on first. Ink on paper, still; it goes once a tower stands. */
+.plot-hint { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; background: var(--ink); color: var(--paper); font-weight: 800; font-size: 0.86rem; padding: 5px 10px; border-radius: var(--radius-s); white-space: nowrap; box-shadow: 0 4px 12px var(--shadow); }
+.plot-hint::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
+
+/* Lives carry the star count: the stars you would win if the fight ended now. */
+.stat.lives { flex-wrap: wrap; }
+.stars-now { display: inline-flex; gap: 1px; margin-left: 2px; font-size: 0.78rem; line-height: 1; color: var(--rule-strong); }
+.stars-now i { font-style: normal; }
+.stars-now i.on { color: var(--gold); text-shadow: 0 1px 0 var(--gold-deep); }
+.narrow .stars-now { font-size: 0.62rem; margin-left: 0; }
+
+/* Bottom band: Wren's card reads in one line (face, bars, items), so nothing drops below the screen edge. */
+.band .hero-card { flex: 0 1 430px; grid-template-columns: minmax(140px, 1fr) auto; column-gap: 14px; row-gap: 4px; align-items: center; }
+.band .hero-card > .hero-top { grid-column: 1; grid-row: 1; }
+.band .hero-card > .bar { grid-column: 1; }
+.band .hero-card > .hero-bottom { grid-column: 2; grid-row: 1 / span 3; }
+@media (max-height: 480px) { .band .hero-card { flex-basis: 330px; } .band .face { width: 30px; height: 30px; } }
+
+/* Build menu: every tower in one row, so the choice reads left to right. */
+.build-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.popup { max-width: min(700px, 94vw); }
+
+/* Result: what the next star takes, and the foe that broke the gate. */
+.result .next-star { color: var(--ink); font-weight: 600; }
+.result .cause { display: flex; gap: 12px; align-items: center; text-align: left; background: var(--paper-2); border-radius: var(--radius-m); padding: 10px 12px; }
+.result .cause img { width: 48px; height: 48px; flex: none; }
+.result .cause div { display: grid; gap: 2px; }
+.result .cause b { color: var(--ink); }
+.result .cause span { color: var(--ink-dim); font-size: 0.92rem; text-wrap: balance; }
+
+.title-panel { max-width: min(580px, 100%); }
