@@ -4,6 +4,8 @@
 
 TowerRiot is a classic tower defence game with a hero you control. It runs in any browser, on phones and tablets, and as a native app on iOS and Android. Once loaded, it never needs the internet again.
 
+**Play it now: [njarrar.github.io/TowerRiot](https://njarrar.github.io/TowerRiot/)**
+
 ![The title screen](docs/images/title.jpg)
 
 ---
@@ -152,6 +154,10 @@ npm test           # unit tests, plus a bot that plays all 20 stages
 npm run build      # typecheck, build to dist/, write the offline cache
 npm run preview    # serve the built game
 ```
+
+### Web release
+
+Every push to `main` runs the tests, builds the game and publishes it to [GitHub Pages](https://njarrar.github.io/TowerRiot/) (`.github/workflows/pages.yml`).
 
 ### Native apps
 
