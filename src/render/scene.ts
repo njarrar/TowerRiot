@@ -612,6 +612,11 @@ export class Scene {
   private drawHero(b: Battle, pass: 'base' | 'emit', T: number) {
     const g = this.g, h = b.hero;
     if (pass === 'base') {
+      // A pale ring of lantern light at her feet: the one unit you command never reads as a foe.
+      g.save();
+      g.fillStyle = 'rgba(255,244,214,.38)'; g.beginPath(); g.ellipse(h.x, h.y + 2, 30, 11, 0, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(255,236,190,.95)'; g.lineWidth = 2.5; g.beginPath(); g.ellipse(h.x, h.y + 2, 30, 11, 0, 0, TAU); g.stroke();
+      g.restore();
       L.wren(g, h.x, h.y, 1.4, 'base');
       if (h.swing > 0) { g.strokeStyle = `rgba(220,235,250,${h.swing * 3})`; g.lineWidth = 3; g.beginPath(); g.arc(h.x + h.face * 12, h.y - 30, 30, h.face > 0 ? -1.4 : Math.PI + 1.4, h.face > 0 ? 0.3 : Math.PI - 0.3, h.face < 0); g.stroke(); }
       return;

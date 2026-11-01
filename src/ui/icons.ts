@@ -43,6 +43,23 @@ export function foeIcon(kind: EnemyKind, size = 72): string {
   return url;
 }
 
+/** Wren's head and shoulders, painted once, for the hero card. */
+export function heroIcon(size = 40): string {
+  const key = `h:${size}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  c.width = size * 2; c.height = size * 2;
+  const g = c.getContext('2d')!;
+  g.scale(2 * size / 128, 2 * size / 128);
+  // Frame the upper body: she is drawn feet at (x, y), about 110 px tall at scale 1.4.
+  LFX.wren(g, 66, 186, 3.6, 'base');
+  LFX.wren(g, 66, 186, 3.6, 'emit');
+  const url = c.toDataURL();
+  cache.set(key, url);
+  return url;
+}
+
 /* Small line icons for the HUD, drawn on a 24 grid with the current text colour. */
 const svg = (body: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 
@@ -66,3 +83,10 @@ export const ELEMENT_ICON: Record<string, string> = {
   storm: svg('<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>'),
   nature: svg('<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/>'),
 };
+
+export const PAUSE_ICON = svg('<path d="M9 5v14M15 5v14"/>');
+export const PLAY_ICON = svg('<path d="M8 5v14l11-7z"/>');
+/** A door left ajar: leave the battle. */
+export const LEAVE_ICON = svg('<path d="M14 4H6v16h8"/><path d="M11 12h10M17 8l4 4-4 4"/>');
+/** Wings, for foes that fly. */
+export const WING_ICON = svg('<path d="M12 14c-2-4-5-6-9-6 1 4 4 7 9 8 5-1 8-4 9-8-4 0-7 2-9 6z"/>');

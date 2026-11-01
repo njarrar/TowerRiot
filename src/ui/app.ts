@@ -62,7 +62,7 @@ export class App {
             h('button', { class: 'btn primary big', onclick: () => this.campaign() }, c > 0 ? `Continue: stage ${next}` : 'Play'),
             h('button', { class: 'btn big', onclick: () => this.trees() }, 'Skill trees'),
             h('button', { class: 'btn big', onclick: () => this.settings() }, 'Settings')),
-          h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars. Plays fully offline.` }))));
+          h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars won` }))));
     this.mount(el);
     // Paint the next stage behind the menu once the buttons are up. The paint is slow on phones, so it waits a frame.
     requestAnimationFrame(() => setTimeout(() => { if (map.isConnected) this.paintTitleMap(map, next); }, 30));
@@ -102,8 +102,8 @@ export class App {
       const newFoe = Object.values(ENEMIES).find(e => e.name.toLowerCase() === st.newFoe.toLowerCase());
       clear(card);
       card.append(
-        h('p', { class: 'kicker', text: `${REGIONS[st.region].name}, stage ${st.id}` }),
         h('h2', { text: st.name }),
+        h('p', { class: 'where', text: `Stage ${st.id}, ${REGIONS[st.region].name}` }),
         h('div', { class: 'stars small' }, ...[1, 2, 3].map(i => h('span', { class: i <= best ? 'on' : '', text: '★' }))),
         h('p', { text: st.twist }),
         h('dl', {},
@@ -165,7 +165,8 @@ export class App {
     const tabs = h('div', { class: 'seg tabs', role: 'tablist' }, ...TREES.map((t, i) => h('button', {
       class: i === this.treeTab ? 'on' : '', role: 'tab', 'aria-selected': String(i === this.treeTab),
       onclick: () => { this.treeTab = i; this.trees(); },
-    }, t.after > c ? `${t.name} (after stage ${t.after})` : t.name)));
+      title: t.after > c ? `Opens after stage ${t.after}` : t.name,
+    }, t.after > c ? icon(LOCK_ICON, 'svg-ico tab-lock') : null, t.name)));
     const t = TREES[this.treeTab];
     const nodes = h('div', { class: 'tree' }, ...t.nodes.map((n, i) => {
       const owned = s.nodes.includes(n.id), can = canBuyNode(s, n.id);
@@ -235,7 +236,7 @@ export class App {
 
   play(id: number) {
     this.screen = 'battle';
-    const loading = h('section', { class: 'screen loading' }, h('p', { class: 'kicker', text: `Stage ${id}` }), h('h2', { text: stageById(id).name }), h('p', { class: 'fine', text: 'Painting the map...' }));
+    const loading = h('section', { class: 'screen loading' }, h('h2', { text: stageById(id).name }), h('p', { class: 'fine', text: `Stage ${id}. Painting the map...` }));
     this.mount(loading);
     // Give the browser a frame to show the loading card before the slow ground paint.
     requestAnimationFrame(() => setTimeout(() => {
