@@ -125,7 +125,7 @@ Stars earn Embers. Spend them across four trees between stages. Refunds are free
 ![Steam Vents on a phone](docs/images/phone-steam-vents.jpg)
 
 - **Web and mobile web.** A service worker caches the whole game on first load, so it keeps working with no signal. Add it to your home screen and it opens full screen, like an app.
-- **iOS and Android.** Capacitor wraps the same game in native shells with every file bundled inside. No server, no account, no ads, no network calls.
+- **iOS and Android.** iOS is a native Swift app with every picture and sound inside it. Android wraps the web game with Capacitor, every file bundled inside. No server, no account, no ads, no network calls.
 - **Phones, tablets and desktops.** The controls sit beside the map on wide screens and below it on short ones, and they keep clear of notches and rounded corners.
 - **Saves stay on your device.**
 
@@ -159,14 +159,28 @@ npm run preview    # serve the built game
 
 Every push to `main` runs the tests, builds the game and publishes it to [GitHub Pages](https://njarrar.github.io/TowerRiot/) (`.github/workflows/pages.yml`).
 
-### Native apps
+### iOS app (native)
+
+The iOS game is a native Swift app in `ios/`, with no web view. It plays the same 20 stages with the same rules and the same art, fully offline.
+
+- `ios/TowerRiotKit` is a Swift package with the battle engine, the game data and saves. It builds and tests on any machine with Swift: `cd ios/TowerRiotKit && swift test`. A test plays every stage with the same bot as the web tests and checks that both engines get the very same results.
+- `ios/TowerRiot` is the app: SpriteKit draws the battle, SwiftUI draws the menus, and a small synth makes the sounds. Open `ios/TowerRiot/TowerRiot.xcodeproj` in Xcode 16 or newer and run.
+- The web game stays the one source for numbers and art. After changing them, run:
 
 ```bash
-npm run cap:ios       # build, sync and open Xcode
+npm run native:data   # write the towers, foes, stages and trees for Swift
+npm run native:art    # paint the sprites, maps and menu pictures for the iOS app
+```
+
+The art step paints with the same painters the web game uses (`src/art/lfx.js`), in a headless browser, so both games always look alike. Every push that touches `ios/` builds the app and runs the Swift tests on a Mac (`.github/workflows/ios.yml`).
+
+### Android app
+
+```bash
 npm run cap:android   # build, sync and open Android Studio
 ```
 
-Both apps lock to landscape. Run `npm run icons` to repaint the app icons.
+The app locks to landscape. Run `npm run icons` to repaint the app icon (Wren and the Keep) for the web, iOS and Android.
 
 ---
 
@@ -188,8 +202,10 @@ src/
   ui/          title, campaign, trees, settings and the battle screen
   audio/       sound
 tests/         stage checks and the balance bot
-scripts/       offline cache, app icons, landscape lock
-android/ ios/  native app shells
+scripts/       offline cache, app icons, landscape lock, iOS art bake
+tools/bake/    the page that paints the iOS art
+ios/           the native iOS app (Swift) and its engine package
+android/       Android app shell
 ```
 
 ---

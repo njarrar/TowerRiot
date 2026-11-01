@@ -2,7 +2,7 @@
   "name": "towerriot",
   "version": "0.1.0",
   "private": true,
-  "description": "TowerRiot: a tower defence game for web, mobile web, iOS and Android. Plays fully offline.",
+  "description": "TowerRiot: a tower defence game for web, mobile web, iOS (native) and Android. Plays fully offline.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,25 +12,23 @@
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/make-icons.mjs",
     "cap:sync": "npm run build && cap sync",
-    "cap:add:ios": "cap add ios && node scripts/native-orientation.mjs",
     "cap:add:android": "cap add android && node scripts/native-orientation.mjs",
-    "cap:ios": "npm run cap:sync && cap open ios",
     "cap:android": "npm run cap:sync && cap open android",
-    "native:data": "UPDATE_NATIVE_DATA=1 vitest run tests/native-data.test.ts"
+    "native:data": "UPDATE_NATIVE_DATA=1 vitest run tests/native-data.test.ts",
+    "native:art": "node scripts/bake-ios-art.mjs"
   },
   "license": "UNLICENSED",
   "dependencies": {
-    "@capacitor/core": "^8.6.0",
     "@capacitor/app": "^8.1.2",
-    "@fontsource/cinzel": "^5.3.0",
-    "@fontsource/barlow": "^5.3.0"
+    "@capacitor/core": "^8.6.0",
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/cinzel": "^5.3.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5",
-    "@capacitor/cli": "^8.6.0",
-    "@capacitor/ios": "^8.6.0",
-    "@capacitor/android": "^8.6.0"
+    "vitest": "^5.0.5"
   }
 }

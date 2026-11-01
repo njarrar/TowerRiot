@@ -178,6 +178,9 @@ public final class Battle {
     }
 
     /// The early-call bonus right now, for the wave button.
+    /// Set the purse directly. Only for staged scenes, such as the title screen's still frame.
+    public func setGold(_ g: Int) { gold = g }
+
     public var earlyBonus: Int { Int(((nextIn ?? 0) * 2 * (1 + mods.early)).rounded(.up)) }
 
     public func costOf(_ kind: TowerKind, level: Int = 1) -> Int {
@@ -396,8 +399,10 @@ public final class Battle {
     // MARK: - tower numbers
 
     /// Final numbers for a tower right now, after levels, splits, trees, beacons, night and Wren.
-    public func stats(_ t: Tower) -> TowerStats {
-        let def = data.tower(t.kind), i = min(t.lv, 3) - 1
+    /// `lv` asks what the tower would do at another level, for the upgrade button.
+    public func stats(_ t: Tower, lv override: Int? = nil) -> TowerStats {
+        let lv = override ?? t.lv
+        let def = data.tower(t.kind), i = min(lv, 3) - 1
         var dmg = def.dmg[i] * (1 + (mods.towerDmg[t.kind] ?? 0) + mods.dmgAll)
         var range = def.range[i] * (1 + (mods.towerRange[t.kind] ?? 0) + mods.rangeAll) * (t.high ? 1.2 : 1)
         var rate = def.rate[i]
@@ -415,7 +420,7 @@ public final class Battle {
             default: break
             }
             if t.kind == .beacon { range *= 1.1 }
-            if t.lv == 4 && t.kind != .beacon { dmg *= 1.25 }
+            if lv == 4 && t.kind != .beacon { dmg *= 1.25 }
         }
         // Beacons: more damage, and for the splits more speed or more range.
         var rateMul = 1 + mods.rateAll

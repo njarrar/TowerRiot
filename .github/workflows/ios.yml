@@ -1,0 +1,28 @@
+name: iOS
+
+on:
+  push:
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pick Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)" && xcodebuild -version
+      - name: Engine tests (same results as the web game)
+        working-directory: ios/TowerRiotKit
+        run: swift test -c release
+      - name: Build the app for the simulator
+        working-directory: ios/TowerRiot
+        run: |
+          set -o pipefail
+          xcodebuild -project TowerRiot.xcodeproj -scheme TowerRiot -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tee build.log | grep -E "error:|warning: .*TowerRiot/|BUILD" || true
+          grep -q "BUILD SUCCEEDED" build.log
