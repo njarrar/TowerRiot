@@ -60,13 +60,24 @@ enum Bot {
             for _ in 0..<6 {
                 let kind = rota[built % rota.count]
                 if let free = order.first(where: { i in !b.plots[i].sunk && !b.towers.contains { $0.plot == i } }), b.canBuild(plot: free, kind: kind) {
-                    b.build(plot: free, kind: kind); built += 1; continue
+                    if let tw = b.build(plot: free, kind: kind), kind == .cannon { b.setMode(tw.id, .armored) }
+                    built += 1
+                    continue
                 }
-                let ups = b.towers.filter { b.upgradeCost($0) != nil }.stableSorted { b.upgradeCost($0)! < b.upgradeCost($1)! }
+                let ups = b.towers.filter { $0.lv < 3 && b.upgradeCost($0) != nil }.stableSorted { b.upgradeCost($0)! < b.upgradeCost($1)! }
                 if let up = ups.first, b.gold >= b.upgradeCost(up)! + 20 { b.upgrade(up.id); continue }
-                if let sp = b.towers.first(where: { $0.lv == 3 && $0.kind != .beacon }), b.mods.splits, b.gold >= b.splitCost(sp.kind, .a) + 40 {
-                    b.splitTower(sp.id, sp.kind == .watch ? .b : .a); continue
+                let sp = b.mods.splits ? (b.towers.first(where: { $0.lv == 3 && $0.kind != .beacon }) ?? b.towers.first(where: { $0.lv == 3 })) : nil
+                if let sp {
+                    if b.gold >= b.splitCost(sp.kind, .a) + 40 {
+                        b.splitTower(sp.id, sp.kind == .watch ? .b : .a); continue
+                    }
+                    break
                 }
+                if let gear = data.itemOrder.reversed().first(where: { b.canBuy($0) && Double(b.gold) >= data.item($0).cost + 60 }) {
+                    b.buy(gear); continue
+                }
+                let tempers = b.towers.filter { $0.lv >= 4 && b.upgradeCost($0) != nil }.stableSorted { b.upgradeCost($0)! < b.upgradeCost($1)! }
+                if let temper = tempers.first, b.gold >= b.upgradeCost(temper)! + 60 { b.upgrade(temper.id); continue }
                 break
             }
             b.step(0.5)
@@ -81,14 +92,18 @@ enum Bot {
     /// Mods for a player who earned about 3.5 Embers a stage and spent them in tree order.
     static func typicalMods(_ stageId: Int) -> Mods {
         let data = GameData.shared
-        var embers = Int((Double(stageId - 1) * 3.5).rounded(.down))
+        let cl = stageId - 1
+        var embers = Int((Double(cl) * 3.5).rounded(.down))
         var bought: [String] = []
-        for tier in 0..<6 {
-            for t in data.trees where t.after <= stageId - 1 && tier < t.nodes.count {
+        for tier in 0..<8 {
+            for t in data.trees where t.after <= cl && tier < t.nodes.count {
                 let n = t.nodes[tier]
-                if n.cost <= embers && (n.req == nil || bought.contains(n.req!)) { bought.append(n.id); embers -= n.cost }
+                if (n.after ?? 0) <= cl && n.cost <= embers && (n.req == nil || bought.contains(n.req!)) && (n.excl == nil || !bought.contains(n.excl!)) {
+                    bought.append(n.id)
+                    embers -= n.cost
+                }
             }
         }
-        return Mods(nodes: bought, cleared: stageId - 1)
+        return Mods(nodes: bought, cleared: cl)
     }
 }

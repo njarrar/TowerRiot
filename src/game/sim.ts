@@ -22,7 +22,7 @@ export const LIGHTHOUSE_RANGE = 380;
 export const waveRamp = (n: number, total: number) => total <= 1 ? 1 : 0.55 + 0.45 * (n - 1) / (total - 1);
 const ELEMENTS: Element[] = ['pierce', 'fire', 'frost', 'storm', 'nature'];
 type DmgEl = Element | 'env';
-export type TargetMode = 'first' | 'strong' | 'close';
+export type TargetMode = 'first' | 'strong' | 'armored' | 'close';
 
 export interface RoadRt {
   def: Road;
@@ -174,7 +174,7 @@ export class Battle {
   readonly mods: Mods;
   readonly roads: RoadRt[];
   readonly spawns: Map<string, RoadRt[]>;
-  readonly plots: { x: number; y: number; high: boolean; sunk: boolean; gear?: 'a' | 'b' }[];
+  readonly plots: { x: number; y: number; high: boolean; nearWater: boolean; sunk: boolean; gear?: 'a' | 'b' }[];
   readonly gate: Vec[];
   readonly startLives: number;
   readonly scale: number;
@@ -214,6 +214,7 @@ export class Battle {
   private leakedThisWave = false;
   private threatDirty = true;
   private threat = new Map<RoadRt, number>();
+  private airThreat = new Map<RoadRt, number>();
   private shiftOn: boolean[] = [];
 
   constructor(stage: StageDef, opts: BattleOptions = {}) {
@@ -238,7 +239,13 @@ export class Battle {
       this.vents.push({ x: p.x, y: p.y, road, d, every: v.every, t: v.every, dmg: v.dmg });
     }
     this.spawns = new Map([...spawnsOf(stage)].map(([k, rs]) => [k, rs.map(r => this.roads.find(x => x.def === r)!)]));
-    this.plots = stage.plots.map(p => ({ x: p.at[0], y: p.at[1], high: !!stage.high && inPoly(p.at, stage.high), sunk: false, gear: p.gear }));
+    const waters = stage.lava ? [] : stage.waters.map(w => ({ w, path: makePath('w', smooth(w.ctrl)) }));
+    this.plots = stage.plots.map(p => ({
+      x: p.at[0], y: p.at[1],
+      high: !!stage.high && inPoly(p.at, stage.high),
+      nearWater: waters.some(({ w, path }) => distToPath(path, p.at[0], p.at[1]) < w.w / 2 + 160),
+      sunk: false, gear: p.gear,
+    }));
     const ends = new Map<string, Vec>();
     for (const r of this.roads) { const e = r.path.pts[r.path.pts.length - 1]; ends.set(`${Math.round(e[0])},${Math.round(e[1])}`, e); }
     this.gate = [...ends.values()];
@@ -255,7 +262,7 @@ export class Battle {
     };
     this.hero.hp = this.heroMaxHp();
     this.applyGears(1);
-    for (const r of this.roads) this.threat.set(r, 0);
+    for (const r of this.roads) { this.threat.set(r, 0); this.airThreat.set(r, 0); }
   }
 
   /**
@@ -290,16 +297,20 @@ export class Battle {
   }
 
   /** True if the Hollow adapts when wave `n` starts. */
-  adaptsAt(n: number): boolean { const every = this.stage.adaptEvery ?? 3; return n > 1 && n <= this.totalWaves && (n - 1) % every === 0; }
+  adaptsAt(n: number): boolean {
+    if (this.stage.region === 0 && this.stage.adaptEvery === undefined) return false;
+    const every = this.stage.adaptEvery ?? 3;
+    return n > 1 && n <= this.totalWaves && (n - 1) % every === 0;
+  }
 
   /** The element the Hollow would harden against if it adapted now, if any. */
   adaptLean(): Element | null {
     let total = 0, top: Element | null = null;
     for (const e of ELEMENTS) { total += this.dmgWindow[e]; if (!top || this.dmgWindow[e] > this.dmgWindow[top]) top = e; }
-    return top && total > 0 && this.dmgWindow[top] / total > 0.3 ? top : null;
+    return top && total > 0 && this.dmgWindow[top] / total > 0.42 ? top : null;
   }
 
-  /** Start the next wave. Early calls pay gold for the time saved. */
+  /** Start the next wave. Early calls pay gold and shave hero cooldowns for the time saved. */
   callWave(): boolean {
     if (this.status === 'won' || this.status === 'lost') return false;
     if (this.wave >= this.totalWaves) return false;
@@ -307,6 +318,9 @@ export class Battle {
     if (this.status === 'running' && this.nextIn !== null && this.nextIn > 0) {
       const bonus = Math.ceil(this.nextIn * 2 * (1 + this.mods.early));
       this.gold += bonus;
+      const saved = this.nextIn * 0.35;
+      for (const k of ['q', 'w', 'r'] as SkillKey[]) this.hero.cd[k] = Math.max(0, this.hero.cd[k] - saved);
+      if (this.hero.dead) this.hero.respawnT = Math.max(0.1, this.hero.respawnT - saved);
       this.events.push({ t: 'early', gold: bonus });
     }
     this.status = 'running';
@@ -343,6 +357,7 @@ export class Battle {
 
   upgradeCost(t: Tower): number | null {
     if (t.lv < 3) return this.costOf(t.kind, t.lv + 1);
+    if (t.split !== null && t.lv < 6) return Math.round(160 * (t.lv - 3) * (1 + this.mods.costMul));
     return null;
   }
 
@@ -471,15 +486,20 @@ export class Battle {
     return true;
   }
 
-  /** Wren buys at the gate only, like a Dota shop. */
+  /** Wren heals faster at the gate. */
   nearGate(): boolean {
     const h = this.hero;
     return !h.dead && this.gate.some(g => Math.hypot(g[0] - h.x, g[1] - h.y) < HERO.gateRadius);
   }
 
+  /** Wren can trade at the gate any time, or anywhere via gate courier during prep and between waves. */
+  canShop(): boolean {
+    return !this.hero.dead && (this.nearGate() || this.status === 'prep' || this.nextIn !== null);
+  }
+
   canBuy(id: ItemId): boolean {
     const it = ITEMS[id];
-    return this.nearGate() && this.hero.items.length < ITEM_SLOTS && this.gold >= it.cost && this.mods.shopAfter >= it.after && !this.hero.items.includes(id);
+    return this.canShop() && this.hero.items.length < ITEM_SLOTS && this.gold >= it.cost && this.mods.shopAfter >= it.after && !this.hero.items.includes(id);
   }
 
   buy(id: ItemId): boolean {
@@ -493,7 +513,7 @@ export class Battle {
   }
 
   sellItem(id: ItemId): boolean {
-    if (!this.nearGate() || !this.hero.items.includes(id)) return false;
+    if (!this.canShop() || !this.hero.items.includes(id)) return false;
     this.hero.items = this.hero.items.filter(x => x !== id);
     this.gold += Math.floor(ITEMS[id].cost * SELL_ITEM);
     this.hero.hp = Math.min(this.hero.hp, this.heroMaxHp());
@@ -521,22 +541,29 @@ export class Battle {
   /** Final numbers for a tower right now, after levels, splits, trees, beacons, night and Wren. */
   stats(t: Tower) {
     const def = TOWERS[t.kind], i = Math.min(t.lv, 3) - 1;
+    const waterBonus = this.mods.tidePearl && (this.plots[t.plot]?.nearWater ?? false) ? 0.15 : 0;
     let dmg = def.dmg[i] * (1 + this.mods.towerDmg[t.kind] + this.mods.dmgAll);
-    let range = def.range[i] * (1 + this.mods.towerRange[t.kind] + this.mods.rangeAll) * (t.high ? 1.2 : 1);
+    let range = def.range[i] * (1 + this.mods.towerRange[t.kind] + this.mods.rangeAll + waterBonus) * (t.high ? 1.2 : 1);
     let rate = def.rate[i];
     let crit = 0, jumps = 2 + this.mods.jumps, splash = 60 * (1 + this.mods.blast), shells = 1;
     if (t.split) {
       const s = `${t.kind}:${t.split}`;
       if (s === 'watch:a') { range *= 1.3; crit = 0.25; dmg *= 1.2; }
       if (s === 'watch:b') { rate *= 0.42; dmg *= 0.75; }
-      if (s === 'cannon:a') { range *= 1.5; dmg *= 1.4; splash *= 1.2; }
+      if (s === 'cannon:a') { range *= 1.5; dmg *= 1.5; splash *= 1.3; }
       if (s === 'cannon:b') { shells = 3; dmg *= 0.65; }
       if (s === 'bell:a' || s === 'bell:b') { dmg *= 1.3; range *= 1.1; }
       if (s === 'pylon:a') { jumps += 3; dmg *= 1.1; }
-      if (s === 'pylon:b') { jumps = 0; dmg *= 4; rate *= 1.3; }
+      if (s === 'pylon:b') { jumps = 0; dmg *= 5; rate *= 1.3; }
       if (s === 'roots:a' || s === 'roots:b') { dmg *= 1.3; }
       if (t.kind === 'beacon') range *= 1.1;
-      if (t.lv === 4 && t.kind !== 'beacon') dmg *= 1.25;
+      if (t.lv >= 4 && t.kind !== 'beacon') {
+        const temper = t.lv === 5 ? 1.18 : t.lv >= 6 ? 1.3924 : 1;
+        dmg *= 1.25 * temper;
+      }
+      if (t.lv > 4 && (t.kind === 'beacon' || t.kind === 'bell')) {
+        range *= t.lv === 5 ? 1.06 : 1.1236;
+      }
     }
     // Beacons: more damage, and for the splits more speed or more range.
     let rateMul = 1 + this.mods.rateAll;
@@ -544,9 +571,11 @@ export class Battle {
       let buff = 0, drum = 0, fire = 0;
       for (const b of this.towers) {
         if (b.kind !== 'beacon' || b.down) continue;
-        const bs = TOWERS.beacon.range[Math.min(b.lv, 3) - 1] * (b.split ? 1.1 : 1) * (1 + this.mods.rangeAll);
+        const bw = this.mods.tidePearl && (this.plots[b.plot]?.nearWater ?? false) ? 0.15 : 0;
+        const br = b.lv === 5 ? 1.06 : b.lv >= 6 ? 1.1236 : 1;
+        const bs = TOWERS.beacon.range[Math.min(b.lv, 3) - 1] * (b.split ? 1.1 : 1) * br * (1 + this.mods.rangeAll + bw) * (b.high ? 1.2 : 1);
         if (ell(b.x - t.x, b.y - t.y) > bs) continue;
-        buff = Math.max(buff, BEACON_BUFF[Math.min(b.lv, 3) - 1] + (b.lv === 4 ? 0.05 : 0));
+        buff = Math.max(buff, BEACON_BUFF[Math.min(b.lv, 3) - 1] + (b.lv >= 4 ? 0.05 + (b.lv - 4) * 0.04 : 0));
         if (b.split === 'a') drum = 0.2;
         if (b.split === 'b') fire = 0.25;
       }
@@ -554,8 +583,12 @@ export class Battle {
       if (this.night && buff === 0 && !this.inLighthouse(t.x, t.y)) range *= 0.85;
     }
     const h = this.hero;
-    if (!h.dead && h.ranks.e > 0 && ell(h.x - t.x, h.y - t.y) < ATTUNE.radius) rateMul += ATTUNE.rate[h.ranks.e - 1] + this.mods.attune;
-    if (!h.dead && h.double > 0 && ell(h.x - t.x, h.y - t.y) < ATTUNE.radius) dmg *= 2;
+    if (!h.dead && ell(h.x - t.x, h.y - t.y) < ATTUNE.radius) {
+      if (h.ranks.e > 0) rateMul += ATTUNE.rate[h.ranks.e - 1] + this.mods.attune;
+      const aura = sumItems(h.items, 'auraDmg');
+      if (aura > 0) dmg *= 1 + aura;
+      if (h.double > 0) dmg *= 2;
+    }
     if (h.sunriseT > 0) rateMul *= 2;
     if (this.stage.weather === 'rain' && def.element === 'fire') dmg *= 0.8;
     return { dmg, range, rate: rate / rateMul, crit, jumps, splash, shells, hitsFlying: def.hitsFlying };
@@ -634,8 +667,7 @@ export class Battle {
       if (g > 0) { this.gold += g; this.events.push({ t: 'interest', gold: g }); }
     }
     // The Hollow adapts to the element that hurt it most.
-    const every = this.stage.adaptEvery ?? 3;
-    if (n > 1 && (n - 1) % every === 0) this.adapt();
+    if (this.adaptsAt(n)) this.adapt();
     this.applyGears(n);
     this.plots.forEach((p, i) => {
       if (this.stage.plots[i].sinkAt === n && !p.sunk) {
@@ -654,7 +686,7 @@ export class Battle {
   private adapt() {
     let total = 0, top: Element | null = null;
     for (const e of ELEMENTS) { total += this.dmgWindow[e]; if (!top || this.dmgWindow[e] > this.dmgWindow[top]) top = e; }
-    if (top && total > 0 && this.dmgWindow[top] / total > 0.3) {
+    if (top && total > 0 && this.dmgWindow[top] / total > 0.42) {
       for (const e of ELEMENTS) this.resist[e] = e === top ? Math.min(0.6, this.resist[e] + 0.2) : Math.max(0, this.resist[e] - 0.1);
       this.events.push({ t: 'adapt', el: top, resist: this.resist[top] });
     }
@@ -717,7 +749,8 @@ export class Battle {
     if (open.length === 0) open = options;
     if (open.length === 1) return open[0];
     if (this.threatDirty) this.computeThreat();
-    const w = open.map(r => 1 / Math.pow(20 + (this.threat.get(r) ?? 0) / 40, 2));
+    const map = def.flying ? this.airThreat : this.threat;
+    const w = open.map(r => { const k = 20 + (map.get(r) ?? 0) / 40; return 1 / (k * k); });
     let x = this.rng() * w.reduce((a, b) => a + b, 0);
     for (let i = 0; i < open.length; i++) { x -= w[i]; if (x <= 0) return open[i]; }
     return open[open.length - 1];
@@ -727,15 +760,20 @@ export class Battle {
   private computeThreat() {
     this.threatDirty = false;
     for (const r of this.roads) {
-      let threat = 0;
+      let ground = 0, air = 0;
       for (const t of this.towers) {
         if (t.kind === 'beacon' || t.down) continue;
         const s = this.stats(t);
         let cover = 0;
         for (let d = 0; d < r.path.tot; d += 24) { const p = pointAt(r.path, d); if (ell(p.x - t.x, p.y - t.y) < s.range) cover++; }
-        threat += cover * s.dmg / s.rate;
+        if (cover === 0) continue;
+        const dps = t.kind === 'bell' ? 18 : (s.dmg * s.shells / s.rate) * (t.kind === 'pylon' ? 1 + 0.35 * s.jumps : 1);
+        const val = cover * dps;
+        ground += val;
+        if (s.hitsFlying) air += val;
       }
-      this.threat.set(r, threat);
+      this.threat.set(r, ground);
+      this.airThreat.set(r, air);
     }
   }
 
@@ -925,7 +963,7 @@ export class Battle {
     if (f.def.traits?.plated && !chilled) m *= f.def.traits.plated;
     let dmg = amount * m;
     const armor = f.def.traits?.armor;
-    if (armor && !quiet) dmg = Math.max(dmg * 0.15, dmg - armor * armorScale(this.stage.id));
+    if (armor && !quiet) dmg = Math.max(dmg * 0.15, dmg - armor * armorScale(this.stage.id) * (1 - this.mods.armorPierce));
     if (dmg <= 0) return 0;
     f.hp -= dmg;
     f.hitT = 0.12;
@@ -1036,6 +1074,11 @@ export class Battle {
       h.face = Math.sign(target.x - h.x) || h.face;
       const dmg = this.heroDmg();
       this.damage(target, dmg, 'hero', true);
+      if (sumItems(h.items, 'sunder') > 0 && !target.dead) {
+        target.burnT = Math.max(target.burnT, 2.5);
+        target.burnDps = Math.max(target.burnDps, dmg * 0.2);
+        target.vulnT = Math.max(target.vulnT, 2.5);
+      }
       const cleave = sumItems(h.items, 'cleave');
       if (cleave > 0) for (const o of this.foes) if (o !== target && this.reachable(o, true) && ell(o.x - target.x, o.y - target.y) < 70) this.damage(o, dmg * cleave, 'hero', true, true);
       this.events.push({ t: 'heroHit', x: target.x, y: target.y - 18 });
@@ -1055,6 +1098,7 @@ export class Battle {
       if (!this.targetable(t, f, range, flying)) continue;
       const s = t.mode === 'first' ? f.d / f.road.path.tot + (f.def.traits?.boss ? 0.01 : 0)
         : t.mode === 'strong' ? f.hp
+        : t.mode === 'armored' ? (f.def.traits?.armor ?? 0) * 1000 + (f.def.traits?.plated ? 500 : 0) + f.hp * 0.001
         : -ell(f.x - t.x, f.y - t.y);
       if (s > score) { score = s; best = f; }
     }
@@ -1093,10 +1137,12 @@ export class Battle {
         break;
       }
       case 'cannon': {
-        const dur = t.split === 'a' ? 1 : 0.7;
-        const lead = target.rootT > 0 || target.freezeT > 0 || target.blocked ? 0 : target.speed * (1 - target.slow) * dur;
+        const dur = t.split === 'a' ? 0.65 : 0.68;
+        let belt = 1;
+        for (const b of target.road.belts) if (target.d >= b.from && target.d <= b.to) belt *= b.mult;
+        const lead = target.rootT > 0 || target.freezeT > 0 || target.blocked ? 0 : target.speed * (1 - target.slow) * belt * dur;
         for (let i = 0; i < s.shells; i++) {
-          const off = s.shells > 1 ? (i - 1) * 46 : 0;
+          const off = s.shells > 1 ? (i - 1) * 54 : 0;
           const p = pointAt(target.road.path, target.d + lead + off);
           this.shots.push({ id: this.ids++, kind: 'shell', tower: t.id, x0: t.x, y0: t.y - 44, tx: p.x, ty: p.y, foe: target.id, t: -i * 0.08, dur, dmg: s.dmg, el, splash: s.splash, round: t.round, crit: false });
         }
@@ -1119,8 +1165,10 @@ export class Battle {
       case 'pylon': {
         const pts: Vec[] = [[t.x, t.y - 100]];
         const hit = new Set<number>();
-        let cur: Foe | undefined = target, dmg = s.dmg;
-        let jumps = s.jumps + (this.mods.overload && (target.rootT > 0 || target.freezeT > 0) ? 2 : 0);
+        const held = target.rootT > 0 || target.freezeT > 0;
+        let cur: Foe | undefined = target;
+        let dmg = t.split === 'b' && held ? s.dmg * 1.35 : s.dmg;
+        let jumps = t.split === 'b' ? 0 : s.jumps + (this.mods.overload && held ? 2 : 0);
         const reach = this.stage.weather === 'rain' ? 220 : 120;
         while (cur) {
           hit.add(cur.id);
@@ -1171,12 +1219,25 @@ export class Battle {
   private updateShots(dt: number) {
     for (const s of this.shots) {
       s.t += dt;
-      const f = this.foes.find(x => x.id === s.foe);
-      if (s.kind === 'bolt' && f && !f.dead) { s.tx = f.x; s.ty = f.y; }
-      if (s.t < s.dur) continue;
-      s.t = -1;
+      if (s.t < 0) continue;
+      let f = this.foes.find(x => x.id === s.foe);
       if (s.kind === 'bolt') {
-        if (f && !f.dead) { this.damage(f, s.dmg, s.el, false, false, s.crit); this.applyRound(s.round, f, s.dmg); }
+        if (!f || !this.reachable(f)) {
+          let bd = 65;
+          f = undefined;
+          for (const o of this.foes) {
+            if (!this.reachable(o)) continue;
+            const d = Math.hypot(o.x - s.tx, o.y - s.ty);
+            if (d < bd) { bd = d; f = o; }
+          }
+          if (f) s.foe = f.id;
+        }
+        if (f && !f.dead) { s.tx = f.x; s.ty = f.y; }
+      }
+      if (s.t < s.dur) continue;
+      s.t = -99;
+      if (s.kind === 'bolt') {
+        if (f && this.reachable(f)) { this.damage(f, s.dmg, s.el, false, false, s.crit); this.applyRound(s.round, f, s.dmg); }
       } else {
         this.events.push({ t: 'boom', x: s.tx, y: s.ty, r: s.splash });
         for (const o of this.foes) {
@@ -1189,7 +1250,7 @@ export class Battle {
         }
       }
     }
-    this.shots = this.shots.filter(s => s.t >= 0);
+    this.shots = this.shots.filter(s => s.t > -50);
   }
 
   private updateClouds(dt: number) {
@@ -1210,7 +1271,7 @@ export class Battle {
 export function ell(dx: number, dy: number) { return Math.hypot(dx, dy * Y_SQUASH); }
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
-function sumItems(items: ItemId[], key: 'hp' | 'dmg' | 'speed' | 'regen' | 'armor' | 'atkSpeed' | 'cleave' | 'sight'): number {
+function sumItems(items: ItemId[], key: 'hp' | 'dmg' | 'speed' | 'regen' | 'armor' | 'atkSpeed' | 'cleave' | 'sight' | 'sunder' | 'auraDmg'): number {
   let s = 0;
   for (const id of items) s += ITEMS[id][key] ?? 0;
   return s;

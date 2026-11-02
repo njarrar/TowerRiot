@@ -9,7 +9,7 @@ public enum Element: String, Codable, CaseIterable, Sendable { case pierce, fire
 public enum Rounds: String, Codable, CaseIterable, Sendable { case ember, frost, storm }
 public enum SplitId: String, Codable, Sendable { case a, b }
 public enum SkillKey: String, Codable, CaseIterable, Sendable { case q, w, e, r }
-public enum ItemId: String, Codable, CaseIterable, Sendable { case boots, blade, ring, plate, cleave, lantern, dawnspear, seconddawn }
+public enum ItemId: String, Codable, CaseIterable, Sendable { case boots, blade, ring, plate, cleave, lantern, dawnspear, emberspear, dawnmantle, seconddawn }
 public enum RuneKind: String, Codable, CaseIterable, Sendable { case haste, double, regen, bounty }
 
 public enum EnemyKind: String, Codable, CaseIterable, Sendable {
@@ -118,7 +118,7 @@ public struct ItemDef: Codable, Sendable {
     /// Stage you must clear before the shop sells it.
     public let after: Int
     public let speed: Double?, dmg: Double?, regen: Double?, hp: Double?, armor: Double?, atkSpeed: Double?
-    public let cleave: Double?, sight: Double?, revive: Bool?
+    public let cleave: Double?, sight: Double?, sunder: Double?, auraDmg: Double?, revive: Bool?
 }
 
 public struct RuneDef: Codable, Sendable { public let kind: RuneKind; public let name: String; public let desc: String; public let dur: Double; public let color: String }
@@ -130,7 +130,16 @@ public struct Effect: Codable, Sendable {
     public let v: Double?
 }
 
-public struct TreeNode: Codable, Sendable { public let id: String; public let name: String; public let desc: String; public let cost: Int; public let req: String?; public let effect: Effect }
+public struct TreeNode: Codable, Sendable {
+    public let id: String
+    public let name: String
+    public let desc: String
+    public let cost: Int
+    public let req: String?
+    public let after: Int?
+    public let excl: String?
+    public let effect: Effect
+}
 public struct TreeDef: Codable, Sendable { public let id: String; public let name: String; public let blurb: String; public let after: Int; public let nodes: [TreeNode] }
 public struct RegionDef: Codable, Sendable { public let name: String; public let rule: String; public let color: String }
 

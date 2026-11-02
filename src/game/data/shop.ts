@@ -1,4 +1,4 @@
-export type ItemId = 'boots' | 'blade' | 'ring' | 'plate' | 'cleave' | 'lantern' | 'dawnspear' | 'seconddawn';
+export type ItemId = 'boots' | 'blade' | 'ring' | 'plate' | 'cleave' | 'lantern' | 'dawnspear' | 'emberspear' | 'dawnmantle' | 'seconddawn';
 
 export interface ItemDef {
   id: ItemId;
@@ -8,7 +8,7 @@ export interface ItemDef {
   /** Stage you must clear before the shop sells it. 0 = from the start. */
   after: number;
   speed?: number; dmg?: number; regen?: number; hp?: number; armor?: number; atkSpeed?: number;
-  cleave?: number; sight?: number; revive?: boolean;
+  cleave?: number; sight?: number; sunder?: number; auraDmg?: number; revive?: boolean;
 }
 
 export const ITEMS: Record<ItemId, ItemDef> = {
@@ -19,10 +19,12 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   cleave: { id: 'cleave', name: 'Cleaving spear', cost: 260, after: 11, cleave: 0.5, desc: 'Each strike also hits foes beside the target for half damage.' },
   lantern: { id: 'lantern', name: 'Brass lantern', cost: 120, after: 13, sight: 100, desc: 'Wren lights hidden foes 100 px further away.' },
   dawnspear: { id: 'dawnspear', name: 'Spear of dawn', cost: 380, after: 14, dmg: 30, atkSpeed: 0.25, desc: '+30 damage and 25% faster strikes.' },
+  emberspear: { id: 'emberspear', name: 'Ember spear', cost: 310, after: 16, dmg: 22, sunder: 0.25, desc: '+22 damage. Strikes burn foes and sunder armor (+25% damage taken).' },
+  dawnmantle: { id: 'dawnmantle', name: 'Dawn mantle', cost: 340, after: 17, hp: 220, armor: 0.15, regen: 6, auraDmg: 0.12, desc: '+220 health, 15% less damage taken, +6 regen, and nearby towers deal 12% more damage.' },
   seconddawn: { id: 'seconddawn', name: 'Second dawn', cost: 420, after: 18, revive: true, desc: 'The first time Wren falls, she stands right back up. Used up.' },
 };
 
-export const ITEM_ORDER: ItemId[] = ['boots', 'blade', 'ring', 'plate', 'cleave', 'lantern', 'dawnspear', 'seconddawn'];
+export const ITEM_ORDER: ItemId[] = ['boots', 'blade', 'ring', 'plate', 'cleave', 'lantern', 'dawnspear', 'emberspear', 'dawnmantle', 'seconddawn'];
 export const ITEM_SLOTS = 4;
 export const SELL_ITEM = 0.5;
 

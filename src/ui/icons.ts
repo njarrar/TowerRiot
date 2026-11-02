@@ -1,5 +1,5 @@
 import { LFX } from '../art/lfx.js';
-import { paintTower } from '../render/scene';
+import { paintTower, paintFoe } from '../render/scene';
 import type { TowerKind } from '../game/data/towers';
 import type { EnemyKind } from '../game/data/enemies';
 
@@ -21,7 +21,7 @@ export function towerIcon(kind: TowerKind, size = 96): string {
   return url;
 }
 
-/** A foe painted once, for the stage card and codex. */
+/** A foe painted once with its distinct battlefield silhouette, for the stage card and codex. */
 export function foeIcon(kind: EnemyKind, size = 72): string {
   const key = `f:${kind}:${size}`;
   const hit = cache.get(key);
@@ -30,14 +30,32 @@ export function foeIcon(kind: EnemyKind, size = 72): string {
   c.width = size * 2; c.height = size * 2;
   const g = c.getContext('2d')!;
   g.scale(2 * size / 128, 2 * size / 128);
+  const frame: Record<EnemyKind, [number, number, number, number?]> = {
+    grub: [64, 92, 1.85],
+    skitter: [66, 92, 2.05],
+    mender: [64, 96, 1.75],
+    shade: [66, 92, 1.85],
+    splitter: [64, 94, 1.7],
+    burrower: [60, 92, 1.75],
+    shell: [60, 96, 1.45],
+    sapper: [62, 100, 1.55],
+    elite: [58, 98, 1.32],
+    warden: [62, 106, 1.22],
+    moth: [64, 72, 2.05, 18],
+    ashmoth: [64, 72, 1.85, 18],
+    mireking: [58, 96, 0.82],
+    tidewyrm: [60, 94, 0.94],
+    colossus: [58, 100, 0.78],
+    queen: [64, 86, 0.76, 26],
+  };
+  const [ox, oy, sc, alt] = frame[kind];
+  g.save();
+  g.translate(ox, oy);
+  g.scale(sc, sc);
   for (const pass of ['base', 'emit'] as const) {
-    switch (kind) {
-      case 'moth': case 'ashmoth': LFX.moth(g, 64, 70, 0.8, pass, 51, 30); break;
-      case 'queen': LFX.moth(g, 64, 70, 0.9, pass, 51, 30); break;
-      case 'shell': case 'sapper': case 'elite': case 'warden': case 'colossus': LFX.shellback(g, 62, 100, kind === 'colossus' ? 1 : 0.85, pass, 61, 1, kind === 'shell' ? 1 : 0); break;
-      default: LFX.grub(g, 64, 92, kind === 'skitter' ? 0.6 : 0.85, pass, 41, 1);
-    }
+    paintFoe(g, kind, 0, 0, pass, 44, 1, undefined, { alt: alt ?? 24 });
   }
+  g.restore();
   const url = c.toDataURL();
   cache.set(key, url);
   return url;

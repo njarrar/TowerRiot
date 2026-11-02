@@ -239,9 +239,10 @@ final class BattleScene: SKScene {
         let dt = lastTime.map { min(0.05, max(0, currentTime - $0)) } ?? 0
         lastTime = currentTime
         T += dt
+        let simDt = look.aimW != nil ? dt * 0.25 : dt
         let events = onFrame?(dt) ?? []
         consume(events)
-        render(dt: battle.paused ? 0 : dt)
+        render(dt: battle.paused ? 0 : simDt)
     }
 
     /// Draw one still frame without running the loop (the title screen).
@@ -495,7 +496,7 @@ final class BattleScene: SKScene {
             let used = b.towers.contains { $0.plot == i }
             let gearUp = p.gear.map { b.gearUp($0) } ?? true
             plotNodes[i].update(p, used: used, gearUp: gearUp, hint: look.hintPlot == i && look.selPlot != i, selected: look.selPlot == i,
-                                plus: canAfford && !b.over && gearUp, T: T)
+                                plus: canAfford && !b.over && gearUp, tidePearl: b.mods.tidePearl, T: T)
         }
     }
 
@@ -906,7 +907,9 @@ final class BattleScene: SKScene {
         }
         if let pi = look.selPlot, let kind = look.preview, pi < b.plots.count {
             let p = b.plots[pi]
-            want.append((p.x, p.y, b.data.tower(kind).range[0] * (p.high ? 1.2 : 1) * (1 + b.mods.rangeAll), UIColor(255, 214, 140)))
+            let waterBonus = b.mods.tidePearl && p.nearWater ? 0.15 : 0.0
+            let modRange = 1 + (b.mods.towerRange[kind] ?? 0) + b.mods.rangeAll + waterBonus
+            want.append((p.x, p.y, b.data.tower(kind).range[0] * modRange * (p.high ? 1.2 : 1), UIColor(255, 214, 140)))
         }
         if let a = look.aimW { want.append((a.x, a.y, b.data.snare.radius, UIColor(255, 190, 110))) }
         let key = want.map { "\(Int($0.0)),\(Int($0.1)),\(Int($0.2))" }.joined(separator: ";")
@@ -1167,12 +1170,14 @@ final class BattleScene: SKScene {
 
         func update(_ t: Tower, battle b: Battle, T: Double) {
             let lv = min(t.lv, 4), S = 0.6 + 0.06 * Double(lv - 1)
-            let k = "\(lv)|\(t.round?.rawValue ?? "")|\(t.down)"
+            let k = "\(t.lv)|\(t.round?.rawValue ?? "")|\(t.down)"
             if k != key {
                 key = k
                 Art.shared.set(body, "t-\(t.kind.rawValue)-\(lv)-\(t.plot % 2)")
-                let n = min(t.lv, 3)
-                for (i, q) in squares.enumerated() { q.color = i < n ? (t.lv == 4 ? UIColor(hex: 0xd9a23a) : UIColor(hex: 0xa63d26)) : UIColor(70, 56, 40, 0.18) }
+                let n = min(t.lv, 3), temper = max(0, t.lv - 4)
+                for (i, q) in squares.enumerated() {
+                    q.color = i < temper ? UIColor(hex: 0xfff3c4) : i < n ? (t.lv >= 4 ? UIColor(hex: 0xd9a23a) : UIColor(hex: 0xa63d26)) : UIColor(70, 56, 40, 0.18)
+                }
                 roundDot.isHidden = t.round == nil
                 roundDot.fillColor = t.round == .ember ? UIColor(hex: 0xff8a3a) : t.round == .frost ? UIColor(hex: 0x8fd0ff) : UIColor(hex: 0xb9a8ff)
                 body.alpha = t.down ? 0.42 : 1
@@ -1296,6 +1301,7 @@ final class BattleScene: SKScene {
         private let lowered = SKShapeNode(ellipseOf: CGSize(width: 68, height: 28))
         private let hintA = SKShapeNode(ellipseOf: CGSize(width: 92, height: 38))
         private let hintB = SKShapeNode(ellipseOf: CGSize(width: 100, height: 42))
+        private let tide = SKShapeNode(ellipseOf: CGSize(width: 72, height: 29))
         private let sel = SKShapeNode(ellipseOf: CGSize(width: 78, height: 32))
         private let plus = Art.shared.sprite("plus")
         private let gearKind: SplitId?
@@ -1319,21 +1325,24 @@ final class BattleScene: SKScene {
             }
             hintA.strokeColor = UIColor(255, 248, 232, 0.95); hintA.lineWidth = 3; hintA.position = CGPoint(x: 0, y: 1.5)
             hintB.strokeColor = UIColor(40, 30, 22, 0.75); hintB.lineWidth = 2; hintB.position = CGPoint(x: 0, y: 1.5)
+            tide.strokeColor = UIColor(110, 210, 225, 0.55); tide.lineWidth = 1.6; tide.position = CGPoint(x: 0, y: 1.5)
             sel.lineWidth = 2.5; sel.position = CGPoint(x: 0, y: 1.5)
             plus.position = CGPoint(x: 0, y: 2)
-            [hintA, hintB, sel, plus].forEach(root.addChild)
+            [tide, hintA, hintB, sel, plus].forEach(root.addChild)
         }
 
-        func update(_ p: PlotRt, used: Bool, gearUp: Bool, hint: Bool, selected: Bool, plus showPlus: Bool, T: Double) {
+        func update(_ p: PlotRt, used: Bool, gearUp: Bool, hint: Bool, selected: Bool, plus showPlus: Bool, tidePearl: Bool, T: Double) {
             sunk.isHidden = !p.sunk
             gearHolder.isHidden = p.sunk || gearKind == nil
             lowered.isHidden = p.sunk || gearKind == nil || gearUp
             if let g = gearKind { gear.zRotation = -T * (gearUp ? 0.6 : 0.15) * (g == .a ? 1 : -1) }
             let open = !p.sunk && !used
+            tide.isHidden = !(open && tidePearl && p.nearWater)
             hintA.isHidden = !(open && hint); hintB.isHidden = hintA.isHidden
             sel.isHidden = !(open && selected)
             if !sel.isHidden { sel.strokeColor = UIColor(255, 214, 140, 0.6 + 0.3 * sin(T * 6)) }
             plus.isHidden = !(open && showPlus)
+            plus.alpha = (selected || hint) ? 1.0 : 0.62
         }
     }
 }

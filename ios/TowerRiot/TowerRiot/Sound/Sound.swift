@@ -56,8 +56,10 @@ final class Sound {
         if let t = last[s], t > now - gap { return }
         last[s] = now
         if voices.count > 48 { voices.removeFirst(voices.count - 48) }
+        // Subtle ±4% pitch jitter on rapid combat hits prevents machine-gun ear fatigue while keeping musical chimes exact.
+        let j = [.bolt, .boom, .zap, .hero, .root].contains(s) ? 0.96 + (noise() + 1) * 0.04 : 1.0
         let tone = { (w: Wave, f0: Double, f1: Double, dur: Double, vol: Double, delay: Double) in
-            self.voices.append(Voice(start: now + delay, dur: dur, vol: vol, kind: .tone(w, max(20, f0), max(20, f1))))
+            self.voices.append(Voice(start: now + delay, dur: dur, vol: vol, kind: .tone(w, max(20, f0 * j), max(20, f1 * j))))
         }
         let hiss = { (freq: Double, q: Double, dur: Double, vol: Double, type: Filter.Kind) in
             self.voices.append(Voice(start: now, dur: dur, vol: vol, kind: .noise(Filter(kind: type, freq: freq, q: q, rate: self.rate)), env: .decay))

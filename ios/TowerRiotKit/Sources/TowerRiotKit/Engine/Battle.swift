@@ -64,6 +64,7 @@ public final class Battle {
     private var leakedThisWave = false
     private var threatDirty = true
     private var threat: [ObjectIdentifier: Double] = [:]
+    private var airThreat: [ObjectIdentifier: Double] = [:]
     private var shiftOn: [Bool]
 
     public init(stage: StageDef, mods: Mods = Mods(), seed: Int = 1234, data: GameData = .shared) {
@@ -91,8 +92,14 @@ public final class Battle {
             vents.append(VentRt(x: p.x, y: p.y, road: road, d: d, every: v.every, t: v.every, dmg: v.dmg))
         }
         spawns = stage.spawns.map { s in (s.id, s.roads.compactMap { r in roads.first { $0.def.id == r.id } }) }
+        let waters: [(w: Water, path: Path)] = stage.isLava ? [] : stage.waters.map { ($0, Path(id: "w", pts: smooth($0.ctrl))) }
         plots = stage.plots.map { p in
-            PlotRt(x: p.at.x, y: p.at.y, high: stage.high.map { inPolygon(p.at, $0) } ?? false, gear: p.gear)
+            PlotRt(
+                x: p.at.x, y: p.at.y,
+                high: stage.high.map { inPolygon(p.at, $0) } ?? false,
+                nearWater: waters.contains { $0.path.distance(toX: p.at.x, y: p.at.y) < $0.w.w / 2 + 160 },
+                gear: p.gear
+            )
         }
         var ends: [(key: String, at: Vec)] = []
         for r in roads {
@@ -143,6 +150,7 @@ public final class Battle {
 
     /// True if the Hollow adapts when wave `n` starts.
     public func adaptsAt(_ n: Int) -> Bool {
+        if stage.region == 0 && stage.adaptEvery == nil { return false }
         let every = stage.adaptEvery ?? 3
         return n > 1 && n <= totalWaves && (n - 1) % every == 0
     }
@@ -155,14 +163,14 @@ public final class Battle {
             total += dmgWindow[e]!
             if top == nil || dmgWindow[e]! > dmgWindow[top!]! { top = e }
         }
-        if let top, total > 0 && dmgWindow[top]! / total > 0.3 { return top }
+        if let top, total > 0 && dmgWindow[top]! / total > 0.42 { return top }
         return nil
     }
 
     public var totalWaves: Int { stage.waves.count }
     public var over: Bool { status == .won || status == .lost }
 
-    /// Start the next wave. Early calls pay gold for the time saved.
+    /// Start the next wave. Early calls pay gold and shave hero cooldowns for the time saved.
     @discardableResult
     public func callWave() -> Bool {
         if over || wave >= totalWaves { return false }
@@ -170,6 +178,9 @@ public final class Battle {
         if status == .running, let n = nextIn, n > 0 {
             let bonus = Int((n * 2 * (1 + mods.early)).rounded(.up))
             gold += bonus
+            let saved = n * 0.35
+            for k in [SkillKey.q, .w, .r] { hero.cd[k] = max(0, hero.cooldown(k) - saved) }
+            if hero.dead { hero.respawnT = max(0.1, hero.respawnT - saved) }
             events.append(.early(gold: bonus))
         }
         status = .running
@@ -210,7 +221,11 @@ public final class Battle {
         return t
     }
 
-    public func upgradeCost(_ t: Tower) -> Int? { t.lv < 3 ? costOf(t.kind, level: t.lv + 1) : nil }
+    public func upgradeCost(_ t: Tower) -> Int? {
+        if t.lv < 3 { return costOf(t.kind, level: t.lv + 1) }
+        if t.split != nil && t.lv < 6 { return Int(jsRound(160 * Double(t.lv - 3) * (1 + mods.costMul))) }
+        return nil
+    }
 
     @discardableResult
     public func upgrade(_ id: Int) -> Bool {
@@ -344,14 +359,19 @@ public final class Battle {
         return true
     }
 
-    /// Wren buys at the gate only, like a Dota shop.
+    /// Wren heals faster at the gate.
     public func nearGate() -> Bool {
         !hero.dead && gate.contains { hypot2($0.x - hero.x, $0.y - hero.y) < data.hero.gateRadius }
     }
 
+    /// Wren can trade at the gate any time, or anywhere via gate courier during prep and between waves.
+    public func canShop() -> Bool {
+        !hero.dead && (nearGate() || status == .prep || nextIn != nil)
+    }
+
     public func canBuy(_ id: ItemId) -> Bool {
         let it = data.item(id)
-        return nearGate() && hero.items.count < data.itemSlots && Double(gold) >= it.cost && mods.shopAfter >= it.after && !hero.items.contains(id)
+        return canShop() && hero.items.count < data.itemSlots && Double(gold) >= it.cost && mods.shopAfter >= it.after && !hero.items.contains(id)
     }
 
     @discardableResult
@@ -367,7 +387,7 @@ public final class Battle {
 
     @discardableResult
     public func sellItem(_ id: ItemId) -> Bool {
-        guard nearGate(), hero.items.contains(id) else { return false }
+        guard canShop(), hero.items.contains(id) else { return false }
         hero.items.removeAll { $0 == id }
         gold += Int((data.item(id).cost * data.sellItem).rounded(.down))
         hero.hp = min(hero.hp, heroMaxHp())
@@ -403,24 +423,31 @@ public final class Battle {
     public func stats(_ t: Tower, lv override: Int? = nil) -> TowerStats {
         let lv = override ?? t.lv
         let def = data.tower(t.kind), i = min(lv, 3) - 1
+        let waterBonus = mods.tidePearl && t.plot >= 0 && t.plot < plots.count && plots[t.plot].nearWater ? 0.15 : 0.0
         var dmg = def.dmg[i] * (1 + (mods.towerDmg[t.kind] ?? 0) + mods.dmgAll)
-        var range = def.range[i] * (1 + (mods.towerRange[t.kind] ?? 0) + mods.rangeAll) * (t.high ? 1.2 : 1)
+        var range = def.range[i] * (1 + (mods.towerRange[t.kind] ?? 0) + mods.rangeAll + waterBonus) * (t.high ? 1.2 : 1)
         var rate = def.rate[i]
         var crit = 0.0, jumps = 2 + mods.jumps, splash = 60 * (1 + mods.blast), shells = 1
         if let split = t.split {
             switch (t.kind, split) {
             case (.watch, .a): range *= 1.3; crit = 0.25; dmg *= 1.2
             case (.watch, .b): rate *= 0.42; dmg *= 0.75
-            case (.cannon, .a): range *= 1.5; dmg *= 1.4; splash *= 1.2
+            case (.cannon, .a): range *= 1.5; dmg *= 1.5; splash *= 1.3
             case (.cannon, .b): shells = 3; dmg *= 0.65
             case (.bell, _): dmg *= 1.3; range *= 1.1
             case (.pylon, .a): jumps += 3; dmg *= 1.1
-            case (.pylon, .b): jumps = 0; dmg *= 4; rate *= 1.3
+            case (.pylon, .b): jumps = 0; dmg *= 5; rate *= 1.3
             case (.roots, _): dmg *= 1.3
             default: break
             }
             if t.kind == .beacon { range *= 1.1 }
-            if lv == 4 && t.kind != .beacon { dmg *= 1.25 }
+            if lv >= 4 && t.kind != .beacon {
+                let temper = lv == 5 ? 1.18 : lv >= 6 ? 1.3924 : 1.0
+                dmg *= 1.25 * temper
+            }
+            if lv > 4 && (t.kind == .beacon || t.kind == .bell) {
+                range *= lv == 5 ? 1.06 : 1.1236
+            }
         }
         // Beacons: more damage, and for the splits more speed or more range.
         var rateMul = 1 + mods.rateAll
@@ -430,9 +457,11 @@ public final class Battle {
             for b in towers {
                 if b.kind != .beacon || b.down { continue }
                 let bi = min(b.lv, 3) - 1
-                let bs = beacon.range[bi] * (b.split != nil ? 1.1 : 1) * (1 + mods.rangeAll)
+                let bw = mods.tidePearl && b.plot >= 0 && b.plot < plots.count && plots[b.plot].nearWater ? 0.15 : 0.0
+                let br = b.lv == 5 ? 1.06 : b.lv >= 6 ? 1.1236 : 1.0
+                let bs = beacon.range[bi] * (b.split != nil ? 1.1 : 1) * br * (1 + mods.rangeAll + bw) * (b.high ? 1.2 : 1)
                 if ell(b.x - t.x, b.y - t.y) > bs { continue }
-                buff = max(buff, data.beaconBuff[bi] + (b.lv == 4 ? 0.05 : 0))
+                buff = max(buff, data.beaconBuff[bi] + (b.lv >= 4 ? 0.05 + Double(b.lv - 4) * 0.04 : 0))
                 if b.split == .a { drum = 0.2 }
                 if b.split == .b { fire = 0.25 }
             }
@@ -440,8 +469,12 @@ public final class Battle {
             if night && buff == 0 && !inLighthouse(t.x, t.y) { range *= 0.85 }
         }
         let h = hero
-        if !h.dead && h.rank(.e) > 0 && ell(h.x - t.x, h.y - t.y) < data.attune.radius { rateMul += data.attune.rate[h.rank(.e) - 1] + mods.attune }
-        if !h.dead && h.double > 0 && ell(h.x - t.x, h.y - t.y) < data.attune.radius { dmg *= 2 }
+        if !h.dead && ell(h.x - t.x, h.y - t.y) < data.attune.radius {
+            if h.rank(.e) > 0 { rateMul += data.attune.rate[h.rank(.e) - 1] + mods.attune }
+            let aura = sumItems(\.auraDmg)
+            if aura > 0 { dmg *= 1 + aura }
+            if h.double > 0 { dmg *= 2 }
+        }
         if h.sunriseT > 0 { rateMul *= 2 }
         if stage.weather == "rain" && def.element == .fire { dmg *= 0.8 }
         return TowerStats(dmg: dmg, range: range, rate: rate / rateMul, crit: crit, jumps: jumps, splash: splash, shells: shells, hitsFlying: def.hitsFlying)
@@ -519,8 +552,7 @@ public final class Battle {
             if g > 0 { gold += g; events.append(.interest(gold: g)) }
         }
         // The Hollow adapts to the element that hurt it most.
-        let every = stage.adaptEvery ?? 3
-        if n > 1 && (n - 1) % every == 0 { adapt() }
+        if adaptsAt(n) { adapt() }
         applyGears(n)
         for i in plots.indices where stage.plots[i].sinkAt == n && !plots[i].sunk {
             plots[i].sunk = true
@@ -544,7 +576,7 @@ public final class Battle {
             total += dmgWindow[e]!
             if top == nil || dmgWindow[e]! > dmgWindow[top!]! { top = e }
         }
-        if let top, total > 0 && dmgWindow[top]! / total > 0.3 {
+        if let top, total > 0 && dmgWindow[top]! / total > 0.42 {
             for e in Battle.elements { resist[e] = e == top ? min(0.6, resist[e]! + 0.2) : max(0, resist[e]! - 0.1) }
             events.append(.adapt(el: top, resist: resist[top]!))
         }
@@ -608,7 +640,8 @@ public final class Battle {
         if open.isEmpty { open = options }
         if open.count == 1 { return open[0] }
         if threatDirty { computeThreat() }
-        let w = open.map { r -> Double in let k = 20 + (threat[ObjectIdentifier(r)] ?? 0) / 40; return 1 / (k * k) }
+        let map = def.isFlying ? airThreat : threat
+        let w = open.map { r -> Double in let k = 20 + (map[ObjectIdentifier(r)] ?? 0) / 40; return 1 / (k * k) }
         var x = rng.next() * w.reduce(0, +)
         for i in open.indices { x -= w[i]; if x <= 0 { return open[i] } }
         return open[open.count - 1]
@@ -618,7 +651,7 @@ public final class Battle {
     private func computeThreat() {
         threatDirty = false
         for r in roads {
-            var total = 0.0
+            var ground = 0.0, air = 0.0
             for t in towers {
                 if t.kind == .beacon || t.down { continue }
                 let s = stats(t)
@@ -628,9 +661,14 @@ public final class Battle {
                     if ell(p.x - t.x, p.y - t.y) < s.range { cover += 1 }
                     d += 24
                 }
-                total += cover * s.dmg / s.rate
+                if cover == 0 { continue }
+                let dps = t.kind == .bell ? 18.0 : (s.dmg * Double(s.shells) / s.rate) * (t.kind == .pylon ? 1 + 0.35 * Double(s.jumps) : 1)
+                let val = cover * dps
+                ground += val
+                if s.hitsFlying { air += val }
             }
-            threat[ObjectIdentifier(r)] = total
+            threat[ObjectIdentifier(r)] = ground
+            airThreat[ObjectIdentifier(r)] = air
         }
     }
 
@@ -848,7 +886,7 @@ public final class Battle {
         if src == .element(.fire) && chilled && mods.shatter { m *= 1.5 }
         if let plated = f.def.traits?.plated, !chilled { m *= plated }
         var dmg = amount * m
-        if let armor = f.def.traits?.armor, armor != 0, !quiet { dmg = max(dmg * 0.15, dmg - armor * armorScale(stage.id)) }
+        if let armor = f.def.traits?.armor, armor != 0, !quiet { dmg = max(dmg * 0.15, dmg - armor * armorScale(stage.id) * (1 - mods.armorPierce)) }
         if dmg <= 0 { return 0 }
         f.hp -= dmg
         f.hitT = 0.12
@@ -961,6 +999,11 @@ public final class Battle {
             if s != 0 { hero.face = s }
             let dmg = heroDmg()
             damage(target, dmg, .element(.hero), byHero: true)
+            if sumItems(\.sunder) > 0 && !target.dead {
+                target.burnT = max(target.burnT, 2.5)
+                target.burnDps = max(target.burnDps, dmg * 0.2)
+                target.vulnT = max(target.vulnT, 2.5)
+            }
             let cleave = sumItems(\.cleave)
             if cleave > 0 {
                 eachFoe { o in
@@ -987,6 +1030,7 @@ public final class Battle {
             switch t.mode {
             case .first: s = f.d / f.road.path.tot + (f.def.isBoss ? 0.01 : 0)
             case .strong: s = f.hp
+            case .armored: s = (f.def.traits?.armor ?? 0) * 1000 + (f.def.traits?.plated != nil ? 500 : 0) + f.hp * 0.001
             case .close: s = -ell(f.x - t.x, f.y - t.y)
             }
             if s > score { score = s; best = f }
@@ -1029,10 +1073,12 @@ public final class Battle {
                               foe: target.id, t: 0, dur: max(0.12, dist / 950), dmg: s.dmg * (crit ? 3 : 1), el: el, splash: 0, round: t.round, crit: crit))
             events.append(.shot(tower: t.id, kind: .bolt))
         case .cannon:
-            let dur = t.split == .a ? 1.0 : 0.7
-            let lead = target.rootT > 0 || target.freezeT > 0 || target.blocked ? 0 : target.speed * (1 - target.slow) * dur
+            let dur = t.split == .a ? 0.65 : 0.68
+            var belt = 1.0
+            for b in target.road.belts where target.d >= b.from && target.d <= b.to { belt *= b.mult }
+            let lead = target.rootT > 0 || target.freezeT > 0 || target.blocked ? 0 : target.speed * (1 - target.slow) * belt * dur
             for i in 0..<s.shells {
-                let off = s.shells > 1 ? Double(i - 1) * 46 : 0
+                let off = s.shells > 1 ? Double(i - 1) * 54 : 0
                 let p = target.road.path.point(at: target.d + lead + off)
                 shots.append(Shot(id: nextId(), kind: .shell, tower: t.id, x0: t.x, y0: t.y - 44, tx: p.x, ty: p.y,
                                   foe: target.id, t: -Double(i) * 0.08, dur: dur, dmg: s.dmg, el: el, splash: s.splash, round: t.round, crit: false))
@@ -1052,9 +1098,10 @@ public final class Battle {
         case .pylon:
             var pts = [Vec(t.x, t.y - 100)]
             var hit = Set<Int>()
+            let held = target.rootT > 0 || target.freezeT > 0
             var cur: Foe? = target
-            var dmg = s.dmg
-            var jumps = s.jumps + (mods.overload && (target.rootT > 0 || target.freezeT > 0) ? 2 : 0)
+            var dmg = t.split == .b && held ? s.dmg * 1.35 : s.dmg
+            var jumps = t.split == .b ? 0 : s.jumps + (mods.overload && held ? 2 : 0)
             let reach = stage.weather == "rain" ? 220.0 : 120.0
             while let c = cur {
                 hit.insert(c.id)
@@ -1111,15 +1158,26 @@ public final class Battle {
     private func updateShots(_ dt: Double) {
         for i in shots.indices {
             shots[i].t += dt
-            let s = shots[i]
-            let f = foes.first { $0.id == s.foe }
-            if s.kind == .bolt, let f, !f.dead { shots[i].tx = f.x; shots[i].ty = f.y }
-            if shots[i].t < s.dur { continue }
-            shots[i].t = -1
+            if shots[i].t < 0 { continue }
+            var f = foes.first { $0.id == shots[i].foe }
+            if shots[i].kind == .bolt {
+                if f == nil || !reachable(f!) {
+                    var bd = 65.0
+                    f = nil
+                    for o in foes where reachable(o) {
+                        let d = hypot2(o.x - shots[i].tx, o.y - shots[i].ty)
+                        if d < bd { bd = d; f = o }
+                    }
+                    if let nf = f { shots[i].foe = nf.id }
+                }
+                if let f, !f.dead { shots[i].tx = f.x; shots[i].ty = f.y }
+            }
+            if shots[i].t < shots[i].dur { continue }
+            shots[i].t = -99
             let shot = shots[i]
             switch shot.kind {
             case .bolt:
-                if let f, !f.dead {
+                if let f, reachable(f) {
                     damage(f, shot.dmg, .element(shot.el), byHero: false, crit: shot.crit)
                     applyRound(shot.round, f, shot.dmg)
                 }
@@ -1135,8 +1193,7 @@ public final class Battle {
                 }
             }
         }
-        // As on the web, a shell still waiting for its turn (t below zero) is dropped here.
-        shots.removeAll { $0.t < 0 }
+        shots.removeAll { $0.t < -50 }
     }
 
     private func updateClouds(_ dt: Double) {

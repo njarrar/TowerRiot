@@ -6,6 +6,7 @@ public struct Mods: Sendable {
     public var towerRange: [TowerKind: Double] = [:]
     public var dmgAll = 0.0
     public var rangeAll = 0.0
+    public var armorPierce = 0.0
     public var blast = 0.0
     public var slow = 0.0
     public var jumps = 0
@@ -28,6 +29,8 @@ public struct Mods: Sendable {
     public var early = 0.0
     public var ironGate = false
     public var interest = 0.0
+    /// Tidewyrm relic: towers built near water gain +15% range.
+    public var tidePearl = false
     /// Towers, hero skills and shop items open so far.
     public var splits = true
     public var skillW = true
@@ -44,6 +47,9 @@ public struct Mods: Sendable {
             switch e.k {
             case "towerDmg": if let t = e.tower { towerDmg[t, default: 0] += v }
             case "towerRange": if let t = e.tower { towerRange[t, default: 0] += v }
+            case "dmgAll": dmgAll += v
+            case "rangeAll": rangeAll += v
+            case "armorPierce": armorPierce += v
             case "round": if let r = e.round, !rounds.contains(r) { rounds.append(r) }
             case "shatter": shatter = true
             case "overload": overload = true
@@ -70,7 +76,7 @@ public struct Mods: Sendable {
         }
         // Relics from the four bosses.
         if cleared >= 5 { dmgAll += 0.1 }
-        if cleared >= 10 { rangeAll += 0.08 }
+        if cleared >= 10 { tidePearl = true }
         if cleared >= 15 { heroSkillPoints += 1 }
         skillW = cleared >= 1
         skillR = cleared >= 7

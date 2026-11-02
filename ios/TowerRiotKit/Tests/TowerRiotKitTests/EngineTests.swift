@@ -30,6 +30,21 @@ final class EngineTests: XCTestCase {
             for (i, pl) in st.plots.enumerated() {
                 for (r, p) in roads { XCTAssertGreaterThanOrEqual(p.distance(toX: pl.at.x, y: pl.at.y), r.w / 2 + 24, "stage \(st.id) plot \(i) on road \(r.id)") }
                 for (w, p) in waters { XCTAssertGreaterThanOrEqual(p.distance(toX: pl.at.x, y: pl.at.y), w.w / 2 + 22, "stage \(st.id) plot \(i) in water") }
+                var minEll = Double.infinity
+                for (_, p) in roads {
+                    var d = 0.0
+                    while d <= p.tot {
+                        let pt = p.point(at: d)
+                        minEll = min(minEll, ell(pt.x - pl.at.x, pt.y - pl.at.y))
+                        d += 12
+                    }
+                }
+                let maxEll = (st.high.map { inPolygon(pl.at, $0) } ?? false) ? 225.0 : 190.0
+                XCTAssertLessThanOrEqual(minEll, maxEll, "stage \(st.id) plot \(i) cannot reach any road")
+            }
+            for r in st.roads {
+                let g = r.ctrl.last!
+                XCTAssertTrue(g.x >= 40 && g.x <= 1250 && g.y >= 40 && g.y <= 690, "stage \(st.id) gate off screen")
             }
         }
     }

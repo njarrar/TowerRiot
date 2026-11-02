@@ -75,8 +75,10 @@ export function canBuyNode(s: Save, id: string): boolean {
   const n = NODES.get(id);
   if (!n || s.nodes.includes(id)) return false;
   const tree = TREES.find(t => t.nodes.includes(n))!;
-  if (tree.after > cleared(s)) return false;
+  const cl = cleared(s);
+  if (tree.after > cl || (n.after ?? 0) > cl) return false;
   if (n.req && !s.nodes.includes(n.req)) return false;
+  if (n.excl && s.nodes.includes(n.excl)) return false;
   return embers(s).free >= n.cost;
 }
 

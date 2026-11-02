@@ -4,7 +4,7 @@
  * Run it with `npm run native:art`. The iOS game then shows exactly the art the web game paints.
  */
 import { LFX } from '../../src/art/lfx.js';
-import { Scene, paintTower } from '../../src/render/scene';
+import { Scene, paintTower, paintFoe } from '../../src/render/scene';
 import { Battle } from '../../src/game/sim';
 import { STAGES } from '../../src/game/data/stages';
 import { TOWER_ORDER, type TowerKind } from '../../src/game/data/towers';
@@ -60,8 +60,7 @@ function towerPics(out: (Pic | null)[]) {
         const seed = 200 + v * 7;
         out.push(pic(`t-${k}-${lv}-${v}`, 280, 300, 140, 262, 2, g => {
           // The cannon's barrel turns to aim, so the iOS game draws it on top as its own picture.
-          if (k === 'cannon') X.forgeCannon(g, 0, 0, S, 'base', seed);
-          else paintTower(g, k, 0, 0, S, 'base', seed);
+          paintTower(g, k, 0, 0, S, 'base', seed, lv, null, k !== 'cannon');
         }));
       }
       const e = (name: string, fn: (g: G) => void) => out.push(pic(name, 280, 320, 140, 282, 1.5, fn));
@@ -81,31 +80,26 @@ function towerPics(out: (Pic | null)[]) {
 
 type FoeDraw = (g: G, pass: Pass, legs: number | undefined) => void;
 const SEED = 44;
-/** Each kind as the web scene paints it (see drawFoe), facing right, at its art scale. */
+/** Each kind as the web scene paints it (see paintFoe), facing right, at its art scale. */
 const FOES: Partial<Record<EnemyKind | 'colossusf' | 'queen', { fn: FoeDraw; walk: boolean; s: number }>> = {
-  grub: { fn: (g, p, l) => L.grub(g, 0, 0, 0.42, p, SEED, 1, l), walk: true, s: 2 },
-  skitter: { fn: (g, p, l) => L.grub(g, 0, 0, 0.28, p, SEED + 3, 1, l), walk: true, s: 2 },
-  mender: { fn: (g, p, l) => L.grub(g, 0, 0, 0.46, p, SEED + 5, 1, l), walk: true, s: 2 },
-  shade: { fn: (g, p, l) => L.grub(g, 0, 0, 0.4, p, SEED + 7, 1, l), walk: true, s: 2 },
-  splitter: { fn: (g, p, l) => L.grub(g, 0, 0, 0.5, p, SEED + 1, 1, l), walk: true, s: 2 },
-  burrower: { fn: (g, p, l) => L.grub(g, 0, 0, 0.4, p, SEED + 2, 1, l), walk: true, s: 2 },
-  shell: { fn: (g, p, l) => L.shellback(g, 0, 0, 0.5, p, SEED, 1, 1, l), walk: true, s: 2 },
-  sapper: { fn: (g, p, l) => L.shellback(g, 0, 0, 0.42, p, SEED + 4, 1, 0, l), walk: true, s: 2 },
-  elite: {
-    fn: (g, p, l) => {
-      L.shellback(g, 0, 0, 0.58, p, SEED + 6, 1, 0, l);
-      if (p === 'base') { g.fillStyle = 'rgba(150,160,175,.35)'; g.beginPath(); g.ellipse(0, -22, 26, 12, 0, Math.PI, TAU); g.fill(); }
-    }, walk: true, s: 2,
-  },
-  warden: { fn: (g, p, l) => L.shellback(g, 0, 0, 0.66, p, 66, 1, 0, l), walk: true, s: 2 },
-  moth: { fn: (g, p) => L.moth(g, 0, 0, 0.34, p, SEED, 60), walk: false, s: 2 },
-  ashmoth: { fn: (g, p) => L.moth(g, 0, 0, 0.4, p, SEED + 9, 60), walk: false, s: 2 },
-  mireking: { fn: (g, p, l) => L.grub(g, 0, 0, 1.25, p, 41, 1, l), walk: true, s: 1.5 },
-  tidewyrm: { fn: (g, p, l) => L.grub(g, 0, 0, 1.05, p, 47, 1, l), walk: true, s: 1.5 },
-  colossus: { fn: (g, p, l) => L.shellback(g, 0, 0, 1.2, p, 61, 1, 0, l), walk: true, s: 1.5 },
-  colossusf: { fn: (g, p, l) => L.shellback(g, 0, 0, 1.2, p, 61, 1, 1, l), walk: true, s: 1.5 },
+  grub: { fn: (g, p, l) => paintFoe(g, 'grub', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  skitter: { fn: (g, p, l) => paintFoe(g, 'skitter', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  mender: { fn: (g, p, l) => paintFoe(g, 'mender', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  shade: { fn: (g, p, l) => paintFoe(g, 'shade', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  splitter: { fn: (g, p, l) => paintFoe(g, 'splitter', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  burrower: { fn: (g, p, l) => paintFoe(g, 'burrower', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  shell: { fn: (g, p, l) => paintFoe(g, 'shell', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  sapper: { fn: (g, p, l) => paintFoe(g, 'sapper', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  elite: { fn: (g, p, l) => paintFoe(g, 'elite', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  warden: { fn: (g, p, l) => paintFoe(g, 'warden', 0, 0, p, 66, 1, l), walk: true, s: 2 },
+  moth: { fn: (g, p) => paintFoe(g, 'moth', 0, 0, p, SEED, 1), walk: false, s: 2 },
+  ashmoth: { fn: (g, p) => paintFoe(g, 'ashmoth', 0, 0, p, SEED, 1), walk: false, s: 2 },
+  mireking: { fn: (g, p, l) => paintFoe(g, 'mireking', 0, 0, p, 41, 1, l), walk: true, s: 1.5 },
+  tidewyrm: { fn: (g, p, l) => paintFoe(g, 'tidewyrm', 0, 0, p, 47, 1, l), walk: true, s: 1.5 },
+  colossus: { fn: (g, p, l) => paintFoe(g, 'colossus', 0, 0, p, 61, 1, l, { chilled: false }), walk: true, s: 1.5 },
+  colossusf: { fn: (g, p, l) => paintFoe(g, 'colossus', 0, 0, p, 61, 1, l, { chilled: true }), walk: true, s: 1.5 },
   // The Queen's body walks; her wings are their own picture so they can beat.
-  queen: { fn: (g, p, l) => L.shellback(g, 0, 0, 0.7, p, 63, 1, 0, l), walk: true, s: 1.5 },
+  queen: { fn: (g, p, l) => paintFoe(g, 'queen', 0, 0, p, 63, 1, l, { wings: false }), walk: true, s: 1.5 },
 };
 const STEPS = 8;
 

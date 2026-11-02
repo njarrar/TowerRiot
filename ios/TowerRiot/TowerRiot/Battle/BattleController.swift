@@ -102,7 +102,8 @@ final class BattleController: ObservableObject {
     /* ------------------------------------------------------------------ loop */
 
     private func frame(_ dt: Double) -> [BattleEvent] {
-        battle.step(dt)
+        let simDt = aimingW ? dt * 0.25 : dt
+        battle.step(simDt)
         let events = battle.drain()
         react(events)
         if bannerT > 0 {
@@ -228,7 +229,7 @@ final class BattleController: ObservableObject {
         case .w where b.skillReady(.w):
             aimingW.toggle()
             scene.look.aimW = aimingW ? Vec(b.hero.x + data.snare.range * 0.5 * b.hero.face, b.hero.y) : nil
-            if aimingW { showBanner("Lantern Snare", "Tap where to throw it.", 1.6, now: true) }
+            if aimingW { showBanner("Lantern Snare", "Time slows — tap where to throw it.", 1.8, now: true) }
         default: if b.canLearn(k) { _ = b.learn(k) }
         }
         tick &+= 1
@@ -289,7 +290,7 @@ final class BattleController: ObservableObject {
 enum Words {
     static let element: [Element: String] = [.pierce: "bolts", .fire: "fire", .frost: "frost", .storm: "lightning", .nature: "roots"]
     static let elementTitle: [Element: String] = [.pierce: "Bolts", .fire: "Fire", .frost: "Frost", .storm: "Lightning", .nature: "Roots"]
-    static let mode: [(TargetMode, String)] = [(.first, "First"), (.strong, "Strongest"), (.close, "Closest")]
+    static let mode: [(TargetMode, String)] = [(.first, "First"), (.strong, "Strongest"), (.armored, "Armored"), (.close, "Closest")]
     static let round: [Rounds: String] = [.ember: "Ember", .frost: "Frost", .storm: "Storm"]
     /// What each tower is for, in a few words: shown on the build buttons, since a finger cannot hover.
     static let role: [TowerKind: String] = [
