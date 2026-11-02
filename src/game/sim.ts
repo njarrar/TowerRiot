@@ -492,9 +492,9 @@ export class Battle {
     return !h.dead && this.gate.some(g => Math.hypot(g[0] - h.x, g[1] - h.y) < HERO.gateRadius);
   }
 
-  /** Wren can trade at the gate any time, or anywhere via gate courier during prep and between waves. */
+  /** Wren can trade at the gate any time, or anywhere via gate courier before the first wave or once the field is clear. */
   canShop(): boolean {
-    return !this.hero.dead && (this.nearGate() || this.status === 'prep' || this.nextIn !== null);
+    return !this.hero.dead && (this.nearGate() || this.status === 'prep' || (this.nextIn !== null && this.foes.length === 0));
   }
 
   canBuy(id: ItemId): boolean {

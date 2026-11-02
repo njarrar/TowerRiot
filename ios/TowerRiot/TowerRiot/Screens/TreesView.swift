@@ -69,7 +69,7 @@ private struct NodeCard: View {
             Text(node.desc).font(Face.body(14)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
             if let req, !owned { Text("Needs \(req.name)").font(Face.body(12)).foregroundStyle(Ink.inkFaint) }
             if let after = node.after, after > c, !owned { Text("Opens after stage \(after)").font(Face.body(12, .semibold)).foregroundStyle(Ink.inkFaint) }
-            if let exclNode, !owned, !exclLocked { Text("Capstone — locks \(exclNode.name)").font(Face.body(12)).foregroundStyle(Ink.goldDeep) }
+            if let exclNode, !owned, !exclLocked { Text("Capstone: locks \(exclNode.name)").font(Face.body(12)).foregroundStyle(Ink.goldDeep) }
             if owned {
                 Text("Learned").font(Face.body(12, .heavy)).foregroundStyle(Ink.paper)
                     .padding(.horizontal, 10).padding(.vertical, 2).background(Capsule().fill(Ink.ink))

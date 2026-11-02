@@ -494,7 +494,7 @@ export class BattleScreen {
     else if (k === 'w' && b.skillReady('w')) {
       this.aimingW = !this.aimingW;
       this.view.aimW = this.aimingW ? [b.hero.x + SNARE.range * 0.5 * b.hero.face, b.hero.y] : null;
-      if (this.aimingW) this.showBanner('Lantern Snare', 'Time slows — tap where to throw it.', 1.8, true);
+      if (this.aimingW) this.showBanner('Lantern Snare', 'Time slows. Tap where to throw it.', 1.8, true);
     } else if (b.canLearn(k)) b.learn(k);
   }
 

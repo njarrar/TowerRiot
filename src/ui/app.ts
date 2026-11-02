@@ -211,7 +211,7 @@ export class App {
       const notes: string[] = [];
       if (req && !owned && !s.nodes.includes(req.id)) notes.push(`Needs ${req.name}`);
       if (n.after && c < n.after && !owned) notes.push(`Opens after stage ${n.after}`);
-      if (exclNode && !owned && !exclLocked) notes.push(`Capstone — locks ${exclNode.name}`);
+      if (exclNode && !owned && !exclLocked) notes.push(`Capstone: locks ${exclNode.name}`);
       return h('div', { class: `tnode tier${Math.floor(i / 2)} ${n.excl ? 'capstone' : ''} ${owned ? 'owned' : ''} ${can ? 'can' : ''} ${exclLocked ? 'excl-locked' : ''}` },
         h('b', { text: n.name }), h('p', { text: n.desc }),
         notes.length ? h('small', { text: notes.join(' · ') }) : null,

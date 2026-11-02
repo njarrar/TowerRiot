@@ -364,9 +364,9 @@ public final class Battle {
         !hero.dead && gate.contains { hypot2($0.x - hero.x, $0.y - hero.y) < data.hero.gateRadius }
     }
 
-    /// Wren can trade at the gate any time, or anywhere via gate courier during prep and between waves.
+    /// Wren can trade at the gate any time, or anywhere via gate courier before the first wave or once the field is clear.
     public func canShop() -> Bool {
-        !hero.dead && (nearGate() || status == .prep || nextIn != nil)
+        !hero.dead && (nearGate() || status == .prep || (nextIn != nil && foes.isEmpty))
     }
 
     public func canBuy(_ id: ItemId) -> Bool {

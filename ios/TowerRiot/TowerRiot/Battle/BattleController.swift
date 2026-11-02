@@ -229,7 +229,7 @@ final class BattleController: ObservableObject {
         case .w where b.skillReady(.w):
             aimingW.toggle()
             scene.look.aimW = aimingW ? Vec(b.hero.x + data.snare.range * 0.5 * b.hero.face, b.hero.y) : nil
-            if aimingW { showBanner("Lantern Snare", "Time slows — tap where to throw it.", 1.8, now: true) }
+            if aimingW { showBanner("Lantern Snare", "Time slows. Tap where to throw it.", 1.8, now: true) }
         default: if b.canLearn(k) { _ = b.learn(k) }
         }
         tick &+= 1
