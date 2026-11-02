@@ -33,14 +33,14 @@ export const TOWERS: Record<TowerKind, TowerDef> = {
     blurb: 'Lobbed shells that burst on the road. Breaks groups and armor.',
     cost: [100, 90, 130], dmg: [16, 30, 48], range: [200, 210, 220], rate: [1.6, 1.5, 1.4], hitsFlying: false,
     splits: [
-      { id: 'a', name: 'Siege mortar', desc: '+50% range and +30% damage.', cost: 180 },
-      { id: 'b', name: 'Scatter gun', desc: 'Three shells per shot, each with 60% damage.', cost: 180 },
+      { id: 'a', name: 'Siege mortar', desc: '+50% range, +50% damage, faster shells and wider blast.', cost: 180 },
+      { id: 'b', name: 'Scatter gun', desc: 'Three staggered shells spread along the road, 65% damage each.', cost: 180 },
     ],
   },
   bell: {
     kind: 'bell', name: 'Frost bell', element: 'frost',
     blurb: 'A ringing pulse that slows everything around it.',
-    cost: [90, 70, 100], dmg: [2, 4, 6], range: [140, 155, 170], rate: [2, 1.9, 1.8], hitsFlying: true,
+    cost: [90, 70, 100], dmg: [2, 4, 6], range: [155, 170, 185], rate: [2, 1.9, 1.8], hitsFlying: true,
     splits: [
       { id: 'a', name: 'Glacier', desc: 'Every pulse freezes foes solid for 1 second.', cost: 160 },
       { id: 'b', name: 'Chime', desc: 'Slowed foes take 25% more damage from everything.', cost: 160 },
@@ -52,7 +52,7 @@ export const TOWERS: Record<TowerKind, TowerDef> = {
     cost: [120, 100, 140], dmg: [10, 18, 28], range: [190, 200, 210], rate: [1.1, 1.05, 1], hitsFlying: true,
     splits: [
       { id: 'a', name: 'Tesla crown', desc: 'Lightning jumps to 3 more foes.', cost: 200 },
-      { id: 'b', name: 'Rail', desc: 'One huge bolt for four times the damage. No jumps.', cost: 200 },
+      { id: 'b', name: 'Rail', desc: 'One huge bolt for 5x damage (+35% vs held or frozen foes). No jumps.', cost: 200 },
     ],
   },
   roots: {

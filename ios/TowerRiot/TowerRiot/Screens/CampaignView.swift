@@ -66,11 +66,19 @@ private struct RegionStrip: View {
         (Color(hex: 0x4f3a33), Color(hex: 0x67463a), Color(hex: 0x2a2220), Color(hex: 0xc8572a)),
     ]
 
+    /// Distinct per-region route curves matching src/ui/app.ts so the four regions don't look rubber-stamped.
+    static let regionYs: [[CGFloat]] = [
+        [0.68, 0.36, 0.62, 0.30, 0.50],
+        [0.34, 0.66, 0.38, 0.68, 0.44],
+        [0.64, 0.62, 0.30, 0.32, 0.54],
+        [0.70, 0.48, 0.28, 0.58, 0.34],
+    ]
+
     var body: some View {
         let own = app.data.stages.filter { $0.region == index }
         let sealed = !(own.first.map { app.save.isUnlocked($0.id) } ?? false)
         let look = Self.looks[min(index, Self.looks.count - 1)]
-        let ys: [CGFloat] = [0.66, 0.34, 0.62, 0.30, 0.52]
+        let ys = Self.regionYs[min(index, Self.regionYs.count - 1)]
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(region.name).font(Face.title(17)).foregroundStyle(sealed ? Ink.inkDim : Ink.ink)

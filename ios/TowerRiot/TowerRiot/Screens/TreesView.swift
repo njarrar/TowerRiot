@@ -52,15 +52,30 @@ private struct NodeCard: View {
     let node: TreeNode
 
     var body: some View {
-        let s = app.save, owned = s.nodes.contains(node.id), can = s.canBuyNode(node.id)
+        let s = app.save, c = s.cleared, owned = s.nodes.contains(node.id), can = s.canBuyNode(node.id)
         let req = node.req.flatMap { app.data.nodes[$0] }
+        let exclNode = node.excl.flatMap { app.data.nodes[$0] }
+        let exclLocked = node.excl.map { s.nodes.contains($0) } ?? false
+        let isCapstone = node.excl != nil
         VStack(alignment: .leading, spacing: 6) {
-            Text(node.name).font(Face.body(16, .heavy)).foregroundStyle(Ink.ink)
+            HStack(spacing: 6) {
+                Text(node.name).font(Face.body(16, .heavy)).foregroundStyle(Ink.ink)
+                if isCapstone {
+                    Text("Capstone").font(Face.body(11, .heavy)).foregroundStyle(Ink.goldDeep)
+                        .padding(.horizontal, 7).padding(.vertical, 1)
+                        .background(Capsule().fill(Ink.gold.opacity(0.2)))
+                }
+            }
             Text(node.desc).font(Face.body(14)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
             if let req, !owned { Text("Needs \(req.name)").font(Face.body(12)).foregroundStyle(Ink.inkFaint) }
+            if let after = node.after, after > c, !owned { Text("Opens after stage \(after)").font(Face.body(12, .semibold)).foregroundStyle(Ink.inkFaint) }
+            if let exclNode, !owned, !exclLocked { Text("Capstone: locks \(exclNode.name)").font(Face.body(12)).foregroundStyle(Ink.goldDeep) }
             if owned {
                 Text("Learned").font(Face.body(12, .heavy)).foregroundStyle(Ink.paper)
                     .padding(.horizontal, 10).padding(.vertical, 2).background(Capsule().fill(Ink.ink))
+            } else if exclLocked, let exclNode {
+                Text("Locked by \(exclNode.name)").font(Face.body(12, .bold)).foregroundStyle(Ink.inkFaint)
+                    .padding(.horizontal, 10).padding(.vertical, 2).background(Capsule().fill(Ink.paper3))
             } else {
                 Button("\(node.cost) Embers") { app.buyNode(node.id) }
                     .buttonStyle(PaperButton(kind: can ? .primary : .plain))
@@ -70,6 +85,7 @@ private struct NodeCard: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 7).fill(owned || can ? Ink.paper : Ink.paper2))
-        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(owned ? Ink.ink : can ? Ink.inkFaint : Ink.rule, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(owned ? (isCapstone ? Ink.goldDeep : Ink.ink) : can ? (isCapstone ? Ink.gold : Ink.inkFaint) : Ink.rule, lineWidth: isCapstone ? 1.5 : 1))
+        .opacity(exclLocked ? 0.62 : 1)
     }
 }

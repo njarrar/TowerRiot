@@ -73,7 +73,7 @@ const ALL: TowerKind[] = ['watch', 'cannon', 'bell', 'pylon', 'roots', 'beacon']
 
 const s1: StageDef = {
   id: 1, name: 'Lantern Road', region: 0,
-  twist: 'One road, one gate. Learn to build, upgrade and send Wren where she is needed.', newFoe: 'Grub', unlocks: 'Watch tower, Forge cannon',
+  twist: 'One road, one gate. Learn to build, upgrade and send Wren where she is needed.', newFoe: 'Grub', unlocks: 'Frost bell & Wren\'s Lantern Snare (W)',
   startGold: 240, lives: 20, towers: ['watch', 'cannon'],
   roads: [{ id: 'main', spawn: 'w', w: 54, ctrl: [[-40, 300], [140, 300], [300, 470], [470, 470], [570, 260], [700, 250], [800, 260], [900, 420], [1060, 450], [1222, 440]] }],
   waters: [{ w: 70, ctrl: [[702, -40], [692, 120], [706, 250], [684, 420], [716, 580], [700, 770]] }],
@@ -91,7 +91,7 @@ const s1: StageDef = {
 
 const s2: StageDef = {
   id: 2, name: 'Fork in the Moss', region: 0,
-  twist: 'The road splits around a pond. Foes take the side with fewer towers.', newFoe: 'Skitter', unlocks: 'Frost bell, Wren\'s W skill',
+  twist: 'The road splits around a pond. Foes take the side with fewer towers.', newFoe: 'Skitter', unlocks: 'Root garden & Wren talent tree',
   startGold: 280, lives: 20, towers: ['watch', 'cannon', 'bell'],
   roads: [
     { id: 'north', spawn: 'w', w: 50, ctrl: [[-40, 370], [200, 370], [330, 220], [600, 170], [840, 240], [960, 370], [1222, 380]] },
@@ -114,7 +114,7 @@ const s2: StageDef = {
 
 const s3: StageDef = {
   id: 3, name: 'Switchback Hill', region: 0,
-  twist: 'The road winds down the hill three times. A tower in the middle covers two passes.', newFoe: 'Shellback', unlocks: 'Root garden',
+  twist: 'The road winds down the hill three times. A tower in the middle covers two passes.', newFoe: 'Shellback', unlocks: 'Beacon tower',
   startGold: 300, lives: 20, towers: ['watch', 'cannon', 'bell', 'roots'],
   roads: [{ id: 'main', spawn: 'w', w: 50, ctrl: [[-40, 130], [300, 128], [700, 132], [1000, 150], [1110, 230], [1050, 330], [880, 345], [520, 340], [260, 360], [190, 450], [270, 545], [560, 570], [900, 575], [1222, 560]] }],
   waters: [{ w: 34, ctrl: [[1300, 300], [1200, 380], [1190, 470], [1300, 520]] }],
@@ -135,7 +135,7 @@ const s3: StageDef = {
 
 const s4: StageDef = {
   id: 4, name: 'Firefly Night', region: 0,
-  twist: 'Night falls on even waves. Shades slip past anything that cannot see them, so light the road.', newFoe: 'Shade', unlocks: 'Beacon',
+  twist: 'Night falls on even waves. Shades slip past anything that cannot see them, so light the road.', newFoe: 'Shade', unlocks: 'Swamp boss stage',
   startGold: 340, lives: 20, towers: ['watch', 'cannon', 'bell', 'roots', 'beacon'], night: true,
   roads: [
     { id: 'north', spawn: 'n', w: 50, ctrl: [[-40, 160], [220, 170], [420, 260], [560, 360], [700, 360], [820, 280], [980, 260], [1100, 360], [1222, 380]] },
@@ -158,7 +158,7 @@ const s4: StageDef = {
 
 const s5: StageDef = {
   id: 5, name: 'The Mire King', region: 0,
-  twist: 'Boss. The road spirals into the swamp and the swamp swallows a plot every other wave.', newFoe: 'The Mire King', unlocks: 'Relic: Mire crown (+10% tower damage)',
+  twist: 'Boss. The road spirals into the swamp and the swamp swallows a plot every other wave.', newFoe: 'The Mire King', unlocks: 'Storm pylon & Relic: Mire crown (+10% tower damage)',
   startGold: 420, lives: 20, towers: ['watch', 'cannon', 'bell', 'roots', 'beacon'],
   roads: [{ id: 'main', spawn: 'w', w: 50, ctrl: [[-40, 620], [200, 640], [600, 655], [1000, 640], [1170, 520], [1190, 300], [1090, 140], [800, 92], [400, 100], [210, 200], [190, 380], [300, 480], [600, 512], [880, 482], [980, 370], [890, 262], [700, 250], [600, 330], [700, 380]] }],
   waters: [{ w: 40, ctrl: [[420, 380], [480, 370], [520, 410]] }, { w: 36, ctrl: [[1040, 280], [1080, 360], [1060, 420]] }],
@@ -183,7 +183,7 @@ const s5: StageDef = {
 const TAIL6: Vec[] = [[548, 362], [620, 364], [700, 366], [790, 330], [880, 252], [1000, 244], [1075, 322], [1085, 448], [1150, 512], [1222, 520]];
 const s6: StageDef = {
   id: 6, name: 'Low Tide', region: 1,
-  twist: 'Two rifts, one bridge. The tide floods the south ford and the Hollow takes the long way round.', newFoe: 'Moth', unlocks: 'Storm pylon',
+  twist: 'Two rifts, one bridge. The tide floods the south ford and the Hollow takes the long way round.', newFoe: 'Moth', unlocks: 'Sapper & Shipwreck Cove',
   startGold: 420, lives: 20, towers: ALL,
   roads: [
     { id: 'north', spawn: 'n', w: 52, ctrl: [[-40, 150], [130, 158], [260, 214], [390, 206], [478, 292], ...TAIL6] },
@@ -192,7 +192,7 @@ const s6: StageDef = {
   ],
   waters: [{ w: 78, ctrl: [[702, -40], [668, 110], [690, 250], [670, 365], [640, 500], [662, 620], [640, 770]] }, { w: 30, ctrl: [[284, 770], [304, 640], [330, 500], [440, 556], [560, 566], [646, 516]] }],
   high: [[790, 0], [1280, 0], [1280, 150], [1150, 170], [990, 160], [880, 128], [800, 86], [790, 0]],
-  plots: P([380, 330], [575, 470], [800, 480], [955, 352], [965, 110], [1012, 560], [140, 480], [120, 300], [590, 245], [830, 600], [380, 90]),
+  plots: P([380, 330], [575, 470], [800, 480], [955, 352], [965, 110], [1012, 560], [140, 480], [120, 300], [590, 245], [880, 390], [380, 90]),
   bridges: [[668, 365, Math.atan2(2, 80), 64]], rune: [480, 640], heroStart: [1000, 440],
   shifts: [{ kind: 'tide', closes: ['south'], every: 40, start: 18, dur: 16, at: [330, 500], r: 48, label: 'The tide floods the south ford' }],
   waves: waves([
@@ -211,7 +211,7 @@ const s6: StageDef = {
 
 const s7: StageDef = {
   id: 7, name: 'Shipwreck Cove', region: 1,
-  twist: 'A wreck blocks the short beach road. Sappers chew through it, and then the Hollow has a shortcut.', newFoe: 'Sapper', unlocks: 'Armory tree: tower rounds',
+  twist: 'A wreck blocks the short beach road. Sappers chew through it, and then the Hollow has a shortcut.', newFoe: 'Sapper', unlocks: 'Armory tree & Wren\'s Sunrise (R)',
   startGold: 440, lives: 20, towers: ALL,
   roads: [
     { id: 'cliff', spawn: 'w', w: 50, ctrl: [[-40, 420], [160, 405], [300, 260], [520, 160], [800, 150], [1000, 225], [1100, 360], [1222, 420]] },
@@ -236,7 +236,7 @@ const s7: StageDef = {
 
 const s8: StageDef = {
   id: 8, name: 'Lighthouse Rock', region: 1,
-  twist: 'Two roads wrap the rock. Towers on the rock see further, and the lighthouse shows every Shade in its beam.', newFoe: 'Splitter', unlocks: 'Wren\'s ultimate: Sunrise',
+  twist: 'Two roads wrap the rock. Towers on the rock see further, and the lighthouse shows every Shade in its beam.', newFoe: 'Splitter', unlocks: 'Tower splits at level 4',
   startGold: 560, lives: 20, towers: ALL, lighthouse: [640, 360],
   roads: [
     { id: 'north', spawn: 'n', w: 50, ctrl: [[-40, 200], [300, 140], [640, 128], [980, 180], [1100, 330], [1222, 360]] },
@@ -244,7 +244,7 @@ const s8: StageDef = {
   ],
   waters: [{ w: 90, ctrl: [[-40, -10], [400, 10], [900, -5], [1320, 20]] }],
   high: [[470, 300], [520, 240], [640, 225], [770, 245], [820, 320], [810, 440], [740, 505], [610, 515], [500, 470], [460, 380], [470, 300]],
-  plots: P([540, 320], [740, 320], [560, 450], [720, 450], [200, 380], [400, 380], [880, 380], [1010, 370], [900, 260], [900, 480], [300, 260], [300, 500]),
+  plots: P([555, 270], [725, 275], [565, 470], [720, 465], [180, 275], [430, 235], [430, 520], [1010, 370], [900, 260], [900, 480], [300, 260], [300, 500]),
   bridges: [], rune: [1000, 640], heroStart: [960, 370],
   waves: waves([
     ['Both roads wake', '10 grub @n, 10 grub @s +1'],
@@ -262,11 +262,11 @@ const s8: StageDef = {
 
 const s9: StageDef = {
   id: 9, name: 'Storm Shelf', region: 1,
-  twist: 'Rain soaks everything. Lightning jumps twice as far and fire burns weaker. The road crosses itself on a stone viaduct.', newFoe: 'Warden', unlocks: 'Tower splits at level 4',
+  twist: 'Rain soaks everything. Lightning jumps twice as far and fire burns weaker. The road crosses itself on a stone viaduct.', newFoe: 'Warden', unlocks: 'Tidewyrm boss stage',
   startGold: 480, lives: 20, towers: ALL, weather: 'rain',
   roads: [{ id: 'main', spawn: 'w', w: 48, ctrl: [[-40, 180], [260, 190], [460, 300], [640, 392], [820, 480], [1000, 545], [1130, 440], [1140, 280], [1010, 200], [820, 300], [640, 392], [460, 486], [280, 560], [140, 600]] }],
   waters: [],
-  plots: P([640, 260], [640, 530], [470, 395], [810, 395], [1010, 370], [300, 320], [300, 420], [960, 640], [180, 420], [820, 160], [460, 160], [1220, 370]),
+  plots: P([640, 260], [640, 530], [470, 395], [810, 395], [1010, 370], [300, 320], [300, 420], [960, 640], [190, 470], [820, 160], [460, 160], [1220, 370]),
   bridges: [[640, 392, 0.48, 46]], rune: [980, 380], heroStart: [600, 390],
   waves: waves([
     ['Rain on the shelf', '14 grub /0.8'],
@@ -291,7 +291,7 @@ const s10: StageDef = {
     { id: 'south', spawn: 'w', w: 50, ctrl: [[-40, 360], [140, 360], [300, 500], [560, 540], [740, 532], [1000, 470], [1222, 360]] },
   ],
   waters: [{ w: 92, ctrl: [[652, -40], [632, 190], [650, 360], [632, 540], [652, 770]] }],
-  plots: P([280, 360], [440, 360], [440, 90], [440, 640], [860, 360], [860, 100], [860, 620], [1060, 360], [540, 360], [770, 360], [160, 120], [160, 600]),
+  plots: P([280, 360], [440, 310], [440, 90], [440, 640], [860, 360], [860, 100], [860, 620], [1060, 360], [545, 310], [765, 310], [160, 235], [160, 600]),
   bridges: [[636, 188, 0.03, 64], [636, 538, -0.03, 64]], rune: [1100, 640], heroStart: [940, 360],
   shifts: [
     { kind: 'tide', closes: ['north'], every: 50, start: 10, dur: 18, at: [636, 188], r: 60, label: 'High tide on the north bridge' },
@@ -344,8 +344,8 @@ const s12: StageDef = {
   waters: [],
   plots: [
     { at: [160, 450], gear: 'a' }, { at: [470, 290], gear: 'a' }, { at: [720, 300], gear: 'a' }, { at: [960, 470], gear: 'a' },
-    { at: [460, 470], gear: 'b' }, { at: [600, 400], gear: 'b' }, { at: [740, 460], gear: 'b' }, { at: [1180, 420], gear: 'b' },
-    { at: [180, 250] }, { at: [600, 250] }, { at: [960, 280] }, { at: [1140, 120] }, { at: [600, 640] },
+    { at: [460, 470], gear: 'b' }, { at: [760, 370], gear: 'b' }, { at: [740, 460], gear: 'b' }, { at: [1180, 420], gear: 'b' },
+    { at: [180, 250] }, { at: [600, 250] }, { at: [960, 280] }, { at: [1140, 120] }, { at: [370, 570] },
   ],
   bridges: [], rune: [600, 520], heroStart: [960, 560],
   waves: waves([
@@ -371,7 +371,7 @@ const s13: StageDef = {
     { id: 'lower', spawn: 'b', w: 48, ctrl: [[-40, 560], [300, 560], [520, 420], [760, 420], [960, 540], [1100, 460], [1222, 360]] },
   ],
   waters: [],
-  plots: P([732, 360], [400, 360], [880, 360], [300, 270], [300, 460], [560, 190], [560, 530], [780, 190], [780, 530], [1000, 360], [160, 360], [1100, 120], [1100, 600]),
+  plots: P([732, 360], [400, 360], [880, 360], [300, 270], [300, 460], [560, 190], [560, 530], [780, 190], [780, 530], [1000, 360], [160, 270], [1100, 120], [1100, 600]),
   bridges: [], rune: [160, 640], heroStart: [960, 360],
   vents: [{ road: 'upper', at: 0.45, every: 7, dmg: 60 }, { road: 'lower', at: 0.45, every: 7, dmg: 60 }, { road: 'upper', at: 0.78, every: 9, dmg: 80 }, { road: 'lower', at: 0.78, every: 9, dmg: 80 }],
   waves: waves([
@@ -397,7 +397,7 @@ const s14: StageDef = {
     { id: 'bot', spawn: 'b', w: 46, ctrl: [[380, 760], [400, 580], [560, 440], [800, 360], [960, 360], [1060, 240], [1180, 300], [1222, 360]] },
   ],
   waters: [],
-  plots: P([240, 250], [240, 470], [440, 270], [440, 450], [680, 250], [680, 470], [880, 270], [880, 450], [1060, 380], [1160, 160], [600, 100], [600, 620], [1100, 540]),
+  plots: P([240, 250], [240, 470], [440, 270], [440, 450], [680, 250], [680, 470], [880, 270], [880, 450], [1060, 380], [1160, 160], [520, 140], [520, 580], [1060, 470]),
   bridges: [], rune: [140, 140], heroStart: [960, 420],
   waves: waves([
     ['Three lines start', '8 grub @t, 8 grub @m +1, 8 grub @b +2'],
@@ -416,11 +416,11 @@ const s15: StageDef = {
   id: 15, name: 'The Brass Colossus', region: 2,
   twist: 'Boss. Brass plates turn most damage away. Chill the Colossus with frost and the plates crack.', newFoe: 'The Brass Colossus', unlocks: 'Relic: Brass heart (+1 Wren skill point)',
   startGold: 680, lives: 20, towers: ALL,
-  roads: [{ id: 'main', spawn: 'w', w: 54, ctrl: [[-40, 120], [500, 120], [900, 125], [1120, 250], [1130, 470], [900, 600], [500, 605], [200, 580], [130, 460], [-40, 440]] }],
+  roads: [{ id: 'main', spawn: 'w', w: 54, ctrl: [[-40, 120], [500, 120], [900, 125], [1120, 250], [1130, 470], [900, 600], [500, 605], [200, 580], [130, 460], [86, 440]] }],
   waters: [],
   high: [[320, 260], [900, 250], [960, 360], [900, 470], [320, 470], [260, 360], [320, 260]],
-  plots: P([400, 300], [620, 300], [840, 300], [400, 430], [620, 430], [840, 430], [1000, 360], [300, 360], [700, 220], [700, 510], [1240, 360], [200, 220], [1000, 660]),
-  bridges: [], rune: [1240, 120], heroStart: [200, 440],
+  plots: P([400, 278], [620, 278], [840, 278], [400, 448], [620, 448], [840, 448], [1000, 360], [300, 360], [700, 220], [700, 510], [1240, 360], [200, 220], [1000, 660]),
+  bridges: [], rune: [1240, 120], heroStart: [220, 440],
   waves: waves([
     ['The foundry floor', '20 grub /0.5'],
     ['Iron Shellbacks', '6 elite /2'],
@@ -436,8 +436,8 @@ const s15: StageDef = {
 
 const s16: StageDef = {
   id: 16, name: 'Ember Pass', region: 3, lava: true,
-  twist: 'Three roads through the pass. Lava closes one of them at a time, so the fight moves.', newFoe: 'Burrower swarm', unlocks: 'Wren gear: Ember spear',
-  startGold: 680, lives: 20, towers: ALL, hpMul: 1.8,
+  twist: 'Three roads through the pass. Lava closes one of them at a time, so the fight moves.', newFoe: 'Burrower swarm', unlocks: 'Shop item: Ember spear',
+  startGold: 680, lives: 20, towers: ALL, hpMul: 1.25,
   roads: [
     { id: 'top', spawn: 'w', w: 46, ctrl: [[-40, 360], [160, 360], [300, 180], [640, 130], [980, 180], [1100, 330], [1222, 360]] },
     { id: 'mid', spawn: 'w', w: 46, ctrl: [[-40, 360], [160, 360], [400, 380], [640, 345], [880, 380], [1100, 355], [1222, 360]] },
@@ -466,13 +466,13 @@ const s16: StageDef = {
 
 const s17: StageDef = {
   id: 17, name: 'Avalanche Ridge', region: 3, lava: true,
-  twist: 'The ridge gives range to towers on it, but avalanches bury ridge plots as the waves go on.', newFoe: 'Iron swarm', unlocks: 'Wren gear: Dawn mantle',
-  startGold: 720, lives: 20, towers: ALL, hpMul: 1.7,
+  twist: 'The ridge gives range to towers on it, but avalanches bury ridge plots as the waves go on.', newFoe: 'Iron swarm', unlocks: 'Shop item: Dawn mantle',
+  startGold: 720, lives: 20, towers: ALL, hpMul: 1.3,
   roads: [{ id: 'main', spawn: 'w', w: 50, ctrl: [[-40, 640], [200, 620], [400, 520], [520, 400], [700, 420], [860, 560], [1060, 600], [1160, 450], [1110, 300], [1222, 250]] }],
   waters: [{ w: 34, ctrl: [[300, 770], [340, 690], [430, 660]] }],
-  high: [[0, 0], [1000, 0], [1010, 160], [900, 280], [700, 300], [400, 310], [0, 330], [0, 0]],
+  high: [[0, 0], [1080, 0], [1070, 250], [920, 320], [700, 330], [420, 355], [0, 370], [0, 0]],
   plots: [
-    { at: [200, 200] }, { at: [400, 210], sinkAt: 7 }, { at: [600, 220], sinkAt: 4 }, { at: [800, 210], sinkAt: 10 }, { at: [940, 120] },
+    { at: [380, 330] }, { at: [490, 275], sinkAt: 7 }, { at: [615, 280], sinkAt: 4 }, { at: [745, 290], sinkAt: 10 }, { at: [995, 225] },
     { at: [300, 430] }, { at: [640, 540] }, { at: [820, 420] }, { at: [1000, 470] }, { at: [1240, 400] }, { at: [1040, 680] }, { at: [120, 520] },
   ],
   bridges: [], rune: [500, 640], heroStart: [1000, 520],
@@ -493,13 +493,13 @@ const s17: StageDef = {
 const s18: StageDef = {
   id: 18, name: 'Mirror Lake', region: 3, lava: true,
   twist: 'Two gates across a lake of fire. Foes copy your weak side, so defend both and keep Wren moving.', newFoe: 'Everything doubled', unlocks: 'Shop item: Second dawn',
-  startGold: 760, lives: 20, towers: ALL, hpMul: 1.2,
+  startGold: 760, lives: 20, towers: ALL, hpMul: 1.32,
   roads: [
     { id: 'north', spawn: 'w', w: 48, ctrl: [[-40, 380], [160, 380], [300, 240], [600, 180], [900, 200], [1222, 200]] },
     { id: 'south', spawn: 'w', w: 48, ctrl: [[-40, 380], [160, 380], [300, 520], [600, 580], [900, 560], [1222, 560]] },
   ],
   waters: [{ w: 92, ctrl: [[360, 382], [600, 372], [880, 380], [1000, 385]] }],
-  plots: P([440, 90], [760, 90], [440, 660], [760, 660], [1100, 380], [1100, 90], [1100, 660], [600, 270], [600, 480], [880, 290], [880, 470], [180, 250], [180, 510]),
+  plots: P([440, 90], [760, 90], [440, 660], [760, 660], [1100, 310], [1100, 90], [1100, 660], [600, 270], [600, 480], [880, 290], [880, 470], [180, 250], [180, 510]),
   bridges: [], rune: [1240, 380], heroStart: [1100, 300],
   waves: waves([
     ['Reflections', '24 grub /0.4'],
@@ -517,7 +517,7 @@ const s18: StageDef = {
 const s19: StageDef = {
   id: 19, name: 'The Hollow Gate', region: 3, lava: true,
   twist: 'Four rifts, every foe. The Hollow adapts after every wave, not every third one.', newFoe: 'All of them', unlocks: 'Capstones in every tree',
-  startGold: 820, lives: 20, towers: ALL, adaptEvery: 1, hpMul: 1.5,
+  startGold: 820, lives: 20, towers: ALL, adaptEvery: 1, hpMul: 1.36,
   roads: [
     { id: 'nw', spawn: 'nw', w: 44, ctrl: [[-40, 160], [240, 200], [480, 330], [640, 360], [800, 360], [960, 250], [1100, 300], [1222, 360]] },
     { id: 'sw', spawn: 'sw', w: 44, ctrl: [[-40, 560], [240, 520], [480, 390], [640, 360], [800, 360], [960, 250], [1100, 300], [1222, 360]] },
@@ -525,7 +525,7 @@ const s19: StageDef = {
     { id: 's', spawn: 's', w: 44, ctrl: [[620, 760], [600, 600], [640, 360], [800, 360], [960, 250], [1100, 300], [1222, 360]] },
   ],
   waters: [],
-  plots: P([395, 222], [408, 490], [760, 240], [760, 480], [500, 140], [500, 580], [960, 380], [1100, 180], [1100, 470], [220, 360], [880, 640], [880, 80], [1240, 560]),
+  plots: P([395, 222], [408, 490], [760, 240], [760, 480], [500, 140], [500, 580], [960, 380], [1100, 180], [1100, 470], [220, 360], [720, 590], [720, 130], [1200, 450]),
   bridges: [], rune: [200, 640], heroStart: [960, 420],
   waves: waves([
     ['Four rifts tear open', '8 grub @nw, 8 grub @sw +1, 8 grub @n +2, 8 grub @s +3'],
@@ -544,18 +544,20 @@ const s19: StageDef = {
 const s20: StageDef = {
   id: 20, name: 'The Hollow Queen', region: 3, lava: true,
   twist: 'Final boss. The Queen walks from the far rifts. Each time she breaks a phase, the lava moves and new roads open.', newFoe: 'The Hollow Queen', unlocks: 'The ending',
-  startGold: 1000, lives: 20, towers: ALL,
+  startGold: 1000, lives: 20, towers: ALL, hpMul: 1.38,
   roads: [
     { id: 'high', spawn: 'ne', w: 46, ctrl: [[1320, 120], [1000, 130], [700, 200], [400, 160], [200, 260], [150, 440], [160, 620]] },
     { id: 'mid', spawn: 'ne', w: 46, ctrl: [[1320, 120], [1000, 130], [900, 360], [600, 420], [300, 560], [160, 620]] },
     { id: 'low', spawn: 'se', w: 46, ctrl: [[1320, 600], [1000, 620], [700, 600], [400, 650], [160, 620]] },
+    { id: 'causeway', spawn: 'se', w: 38, ctrl: [[1320, 600], [1030, 580], [900, 430], [600, 420], [300, 560], [160, 620]] },
   ],
   waters: [{ w: 40, ctrl: [[1300, 380], [1150, 360], [1060, 400]] }],
   plots: P([700, 300], [500, 290], [300, 380], [800, 500], [520, 520], [1100, 250], [1100, 480], [850, 60], [560, 60], [80, 300], [253, 688], [993, 688], [970, 360]),
   bridges: [], rune: [700, 420], heroStart: [300, 520],
   shifts: [
-    { kind: 'lava', closes: ['mid'], every: 60, start: 20, dur: 20, at: [900, 360], r: 60, label: 'Lava cuts the middle road' },
-    { kind: 'lava', closes: ['high'], every: 60, start: 45, dur: 15, at: [400, 160], r: 56, label: 'Lava cuts the high road' },
+    { kind: 'lava', closes: ['low'], every: 60, start: 0, dur: 15, at: [700, 600], r: 56, label: 'Lava cuts the low road' },
+    { kind: 'lava', closes: ['mid'], every: 60, start: 20, dur: 15, at: [900, 360], r: 60, label: 'Lava cuts the middle road' },
+    { kind: 'lava', closes: ['high'], every: 60, start: 40, dur: 15, at: [400, 160], r: 56, label: 'Lava cuts the high road' },
   ],
   waves: waves([
     ['Her heralds', '24 grub @ne /0.4, 12 grub @se /0.5'],

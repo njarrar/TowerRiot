@@ -322,7 +322,7 @@ private struct HeroCard: View {
                         .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(id == nil ? Ink.rule : Ink.inkDim, lineWidth: 1))
                 }
                 Button("Shop") { ctl.shopOpen.toggle() }
-                    .buttonStyle(PaperButton(kind: b.nearGate() ? .primary : .plain))
+                    .buttonStyle(PaperButton(kind: b.canShop() ? .primary : .plain))
                     .controlSize(.small)
             }
         }
@@ -447,7 +447,7 @@ private struct CallView: View {
                     VStack(spacing: 0) {
                         Text(b.status == .prep ? "Start" : "Wave \(b.wave + 1) in \(Int((b.nextIn ?? 0).rounded(.up)))s")
                             .font(Face.body(16, .heavy))
-                        Text(b.status == .prep ? "Call the first wave" : "Call now: +\(b.earlyBonus) gold")
+                        Text(b.status == .prep ? "Call the first wave" : "Call now: +\(b.earlyBonus) gold & skill haste")
                             .font(Face.body(11, .semibold)).opacity(0.9)
                     }
                     .frame(minWidth: 130)
@@ -524,7 +524,11 @@ private struct MenuCard: View {
 
     @ViewBuilder func plotMenu(_ pi: Int) -> some View {
         let b = ctl.battle, p = b.plots[pi]
-        Text(p.high ? "Build on high ground (+20% range)" : p.gear != nil ? "Build on a \(p.gear == .a ? "gold" : "iron") gear plot" : "Build a tower")
+        let perks = [p.high ? "+20% high ground" : nil, (b.mods.tidePearl && p.nearWater) ? "+15% Tide-pearl" : nil].compactMap { $0 }.joined(separator: ", ")
+        let plotTitle = p.gear != nil
+            ? "Build on a \(p.gear == .a ? "gold" : "iron") gear plot\(perks.isEmpty ? "" : " (\(perks))")"
+            : (perks.isEmpty ? "Build a tower" : "Build a tower (\(perks) range)")
+        Text(plotTitle)
             .font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
         HStack(spacing: 6) {
             ForEach(b.stage.towers, id: \.self) { k in
@@ -555,11 +559,13 @@ private struct MenuCard: View {
 
     @ViewBuilder func towerMenu(_ t: Tower) -> some View {
         let b = ctl.battle, def = ctl.data.tower(t.kind), s = b.stats(t)
-        let title = t.split.flatMap { sp in def.splits.first { $0.id == sp }?.name } ?? "\(def.name), level \(t.lv)"
+        let spName = t.split.flatMap { sp in def.splits.first { $0.id == sp }?.name }
+        let title = spName.map { t.lv > 4 ? "\($0) (Temper \(t.lv == 5 ? "I" : "II"))" : $0 } ?? "\(def.name), level \(t.lv)"
         Text(title).font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
-        let facts = t.kind == .beacon ? "Range \(Int(s.range.rounded())). Lights hidden foes and boosts towers in its light."
+        let waterNote = (b.mods.tidePearl && t.plot < b.plots.count && b.plots[t.plot].nearWater) ? " Tide-pearl +15% range." : ""
+        let facts = (t.kind == .beacon ? "Range \(Int(s.range.rounded())). Lights hidden foes and boosts towers in its light."
             : t.kind == .bell ? "Slows all foes in range. Range \(Int(s.range.rounded()))."
-            : "Damage \(Int(s.dmg.rounded())), \(String(format: "%.1f", 1 / s.rate)) hits a second, range \(Int(s.range.rounded()))."
+            : "Damage \(Int(s.dmg.rounded())), \(String(format: "%.1f", 1 / s.rate)) hits a second, range \(Int(s.range.rounded())).") + waterNote
         Text(t.down ? "This gear plot is lowered: the tower sleeps this wave." : facts).font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
             .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 360, alignment: .leading)
         if let rs = b.resist[def.element], rs > 0 {
@@ -573,11 +579,12 @@ private struct MenuCard: View {
         HStack(spacing: 6) {
             if let up = b.upgradeCost(t) {
                 let n = b.stats(t, lv: t.lv + 1)
+                let upLabel = t.split != nil ? "Temper \(t.lv == 4 ? "I" : "II")" : "Level \(t.lv + 1)"
                 let gain = t.kind == .beacon || t.kind == .bell ? "Range \(Int(s.range.rounded())) to \(Int(n.range.rounded()))"
                     : "Damage \(Int(s.dmg.rounded())) to \(Int(n.dmg.rounded())), range \(Int(s.range.rounded())) to \(Int(n.range.rounded()))"
                 Button { ctl.act { _ = b.upgrade(t.id) } } label: {
                     VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: 6) { Text("Level \(t.lv + 1)"); Price(n: up, size: 14) }
+                        HStack(spacing: 6) { Text(upLabel); Price(n: up, size: 14) }
                         Text(gain).font(Face.body(10, .semibold)).opacity(0.9)
                     }
                 }
@@ -624,7 +631,7 @@ private struct SizeKey: PreferenceKey {
 private struct ShopView: View {
     @ObservedObject var ctl: BattleController
     var body: some View {
-        let b = ctl.battle, near = b.nearGate()
+        let b = ctl.battle, near = b.nearGate(), canShop = b.canShop()
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("The gate shop").font(Face.body(16, .heavy)).foregroundStyle(Ink.ink)
@@ -632,12 +639,13 @@ private struct ShopView: View {
                 Button { ctl.shopOpen = false } label: { Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundStyle(Ink.ink).frame(width: 32, height: 32) }
                     .buttonStyle(.plain).accessibilityLabel("Close")
             }
-            if near {
-                Text("Wren is at the gate. \(b.hero.items.count) of \(ctl.data.itemSlots) slots used. Gold spent here is gold not spent on towers.")
+            if canShop {
+                let whereText = near ? "Wren is at the gate." : "Gate courier ready between waves."
+                Text("\(whereText) \(b.hero.items.count) of \(ctl.data.itemSlots) slots used. Gold spent here is gold not spent on towers.")
                     .font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
             } else {
                 HStack {
-                    Text("Wren buys at the gate.").font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
+                    Text("During combat, Wren buys at the gate.").font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
                     Spacer()
                     Button(b.hero.dead ? "Wren is down" : "Send Wren to the gate") { ctl.sendToGate() }
                         .buttonStyle(PaperButton(kind: .primary)).disabled(b.hero.dead)
@@ -655,11 +663,12 @@ private struct ShopView: View {
                             Spacer(minLength: 6)
                             if owned {
                                 Button { ctl.act { _ = b.sellItem(id) } } label: { HStack(spacing: 3) { Text("Sell"); Price(n: Int(it.cost) / 2, size: 12) } }
-                                    .buttonStyle(PaperButton(poor: !near))
+                                    .buttonStyle(PaperButton(poor: !canShop))
+                                    .disabled(!canShop)
                             } else {
                                 Button { ctl.act { _ = b.buy(id) } } label: { Price(n: Int(it.cost), size: 13) }
                                     .buttonStyle(PaperButton(kind: b.canBuy(id) ? .primary : .plain, poor: !b.canBuy(id)))
-                                    .disabled(!near)
+                                    .disabled(!canShop)
                             }
                         }
                         .padding(8)

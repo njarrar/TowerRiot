@@ -173,9 +173,9 @@ struct Segments<T: Hashable>: View {
         HStack(spacing: 2) {
             ForEach(items, id: \.0) { item in
                 Button { pick(item.0) } label: {
-                    Text(item.1).font(Face.body(14, item.0 == selected ? .heavy : .semibold)).lineLimit(1)
+                    Text(item.1).font(Face.body(14, item.0 == selected ? .heavy : .semibold)).lineLimit(1).minimumScaleFactor(0.8)
                         .foregroundStyle(item.0 == selected ? Ink.ink : Ink.inkDim)
-                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .padding(.horizontal, items.count >= 4 ? 8 : 10).padding(.vertical, 6)
                         .background(RoundedRectangle(cornerRadius: 4).fill(item.0 == selected ? Ink.paper : .clear))
                 }.buttonStyle(.plain)
             }

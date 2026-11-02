@@ -71,13 +71,13 @@
     {
      "id": "a",
      "name": "Siege mortar",
-     "desc": "+50% range and +30% damage.",
+     "desc": "+50% range, +50% damage, faster shells and wider blast.",
      "cost": 180
     },
     {
      "id": "b",
      "name": "Scatter gun",
-     "desc": "Three shells per shot, each with 60% damage.",
+     "desc": "Three staggered shells spread along the road, 65% damage each.",
      "cost": 180
     }
    ]
@@ -98,9 +98,9 @@
     6
    ],
    "range": [
-    140,
     155,
-    170
+    170,
+    185
    ],
    "rate": [
     2,
@@ -159,7 +159,7 @@
     {
      "id": "b",
      "name": "Rail",
-     "desc": "One huge bolt for four times the damage. No jumps.",
+     "desc": "One huge bolt for 5x damage (+35% vs held or frozen foes). No jumps.",
      "cost": 200
     }
    ]
@@ -727,6 +727,26 @@
    "desc": "+30 damage and 25% faster strikes."
   },
   {
+   "id": "emberspear",
+   "name": "Ember spear",
+   "cost": 310,
+   "after": 16,
+   "dmg": 22,
+   "sunder": 0.25,
+   "desc": "+22 damage. Strikes burn foes and sunder armor (+25% damage taken)."
+  },
+  {
+   "id": "dawnmantle",
+   "name": "Dawn mantle",
+   "cost": 340,
+   "after": 17,
+   "hp": 220,
+   "armor": 0.15,
+   "regen": 6,
+   "auraDmg": 0.12,
+   "desc": "+220 health, 15% less damage taken, +6 regen, and nearby towers deal 12% more damage."
+  },
+  {
    "id": "seconddawn",
    "name": "Second dawn",
    "cost": 420,
@@ -801,8 +821,7 @@
      "id": "tw-chill",
      "name": "Deep chill",
      "desc": "Frost bells slow 15% more.",
-     "cost": 2,
-     "req": "tw-bolts",
+     "cost": 3,
      "effect": {
       "k": "slow",
       "v": 0.15
@@ -823,7 +842,7 @@
      "id": "tw-roots",
      "name": "Old roots",
      "desc": "Roots hold foes 0.4 s longer.",
-     "cost": 2,
+     "cost": 3,
      "req": "tw-chill",
      "effect": {
       "k": "hold",
@@ -835,10 +854,36 @@
      "name": "Masonry",
      "desc": "Every tower costs 10% less.",
      "cost": 4,
-     "req": "tw-arcs",
+     "req": "tw-bolts",
      "effect": {
       "k": "costMul",
       "v": -0.1
+     }
+    },
+    {
+     "id": "tw-arch",
+     "name": "Grand architect",
+     "desc": "Capstone: every tower deals 18% more damage.",
+     "cost": 8,
+     "req": "tw-mason",
+     "after": 19,
+     "excl": "tw-reach",
+     "effect": {
+      "k": "dmgAll",
+      "v": 0.18
+     }
+    },
+    {
+     "id": "tw-reach",
+     "name": "High sightlines",
+     "desc": "Capstone: every tower gains 14% range.",
+     "cost": 8,
+     "req": "tw-roots",
+     "after": 19,
+     "excl": "tw-arch",
+     "effect": {
+      "k": "rangeAll",
+      "v": 0.14
      }
     }
    ]
@@ -892,7 +937,7 @@
     {
      "id": "ar-overload",
      "name": "Overload",
-     "desc": "Lightning on a held or frozen foe jumps two more times.",
+     "desc": "Lightning on a held or frozen foe jumps two more times (Rail deals +35% damage).",
      "cost": 3,
      "req": "ar-storm",
      "effect": {
@@ -903,11 +948,37 @@
      "id": "ar-quick",
      "name": "Quick load",
      "desc": "Every tower attacks 8% faster.",
-     "cost": 4,
+     "cost": 5,
      "req": "ar-ember",
      "effect": {
       "k": "rateAll",
       "v": 0.08
+     }
+    },
+    {
+     "id": "ar-pierce",
+     "name": "Breach cores",
+     "desc": "Capstone: every tower ignores 50% of foe armor.",
+     "cost": 8,
+     "req": "ar-quick",
+     "after": 19,
+     "excl": "ar-tempest",
+     "effect": {
+      "k": "armorPierce",
+      "v": 0.5
+     }
+    },
+    {
+     "id": "ar-tempest",
+     "name": "Chain conductor",
+     "desc": "Capstone: Storm lightning jumps to two more foes.",
+     "cost": 8,
+     "req": "ar-overload",
+     "after": 19,
+     "excl": "ar-pierce",
+     "effect": {
+      "k": "jumps",
+      "v": 2
      }
     }
    ]
@@ -942,7 +1013,7 @@
      "id": "wr-snare",
      "name": "Long snare",
      "desc": "Lantern Snare holds 0.5 s longer.",
-     "cost": 2,
+     "cost": 3,
      "req": "wr-spear",
      "effect": {
       "k": "snare",
@@ -964,7 +1035,7 @@
      "id": "wr-veteran",
      "name": "Veteran",
      "desc": "Wren starts every stage at level 3.",
-     "cost": 3,
+     "cost": 4,
      "req": "wr-snare",
      "effect": {
       "k": "heroLevel",
@@ -981,6 +1052,32 @@
       "k": "sunrise",
       "v": 2
      }
+    },
+    {
+     "id": "wr-champion",
+     "name": "Dawn champion",
+     "desc": "Capstone: Wren starts two levels higher.",
+     "cost": 8,
+     "req": "wr-veteran",
+     "after": 19,
+     "excl": "wr-beacon",
+     "effect": {
+      "k": "heroLevel",
+      "v": 2
+     }
+    },
+    {
+     "id": "wr-beacon",
+     "name": "Keeper's vow",
+     "desc": "Capstone: Attune gives nearby towers 18% more attack speed.",
+     "cost": 8,
+     "req": "wr-dawn",
+     "after": 19,
+     "excl": "wr-champion",
+     "effect": {
+      "k": "attune",
+      "v": 0.18
+     }
     }
    ]
   },
@@ -993,11 +1090,11 @@
     {
      "id": "bw-walls",
      "name": "Thick walls",
-     "desc": "+3 lives every stage.",
-     "cost": 2,
+     "desc": "+10 lives every stage.",
+     "cost": 3,
      "effect": {
       "k": "lives",
-      "v": 3
+      "v": 10
      }
     },
     {
@@ -1052,6 +1149,32 @@
       "k": "interest",
       "v": 0.05
      }
+    },
+    {
+     "id": "bw-citadel",
+     "name": "Living bastion",
+     "desc": "Capstone: +10 more lives every stage.",
+     "cost": 8,
+     "req": "bw-gate",
+     "after": 19,
+     "excl": "bw-mint",
+     "effect": {
+      "k": "lives",
+      "v": 10
+     }
+    },
+    {
+     "id": "bw-mint",
+     "name": "Royal mint",
+     "desc": "Capstone: +180 starting gold every stage.",
+     "cost": 8,
+     "req": "bw-interest",
+     "after": 19,
+     "excl": "bw-citadel",
+     "effect": {
+      "k": "gold",
+      "v": 180
+     }
     }
    ]
   }
@@ -1085,7 +1208,7 @@
    "region": 0,
    "twist": "One road, one gate. Learn to build, upgrade and send Wren where she is needed.",
    "newFoe": "Grub",
-   "unlocks": "Watch tower, Forge cannon",
+   "unlocks": "Frost bell & Wren's Lantern Snare (W)",
    "startGold": 240,
    "lives": 20,
    "towers": [
@@ -1343,7 +1466,7 @@
    "region": 0,
    "twist": "The road splits around a pond. Foes take the side with fewer towers.",
    "newFoe": "Skitter",
-   "unlocks": "Frost bell, Wren's W skill",
+   "unlocks": "Root garden & Wren talent tree",
    "startGold": 280,
    "lives": 20,
    "towers": [
@@ -1650,7 +1773,7 @@
    "region": 0,
    "twist": "The road winds down the hill three times. A tower in the middle covers two passes.",
    "newFoe": "Shellback",
-   "unlocks": "Root garden",
+   "unlocks": "Beacon tower",
    "startGold": 300,
    "lives": 20,
    "towers": [
@@ -1989,7 +2112,7 @@
    "region": 0,
    "twist": "Night falls on even waves. Shades slip past anything that cannot see them, so light the road.",
    "newFoe": "Shade",
-   "unlocks": "Beacon",
+   "unlocks": "Swamp boss stage",
    "startGold": 340,
    "lives": 20,
    "towers": [
@@ -2389,7 +2512,7 @@
    "region": 0,
    "twist": "Boss. The road spirals into the swamp and the swamp swallows a plot every other wave.",
    "newFoe": "The Mire King",
-   "unlocks": "Relic: Mire crown (+10% tower damage)",
+   "unlocks": "Storm pylon & Relic: Mire crown (+10% tower damage)",
    "startGold": 420,
    "lives": 20,
    "towers": [
@@ -2734,7 +2857,7 @@
    "region": 1,
    "twist": "Two rifts, one bridge. The tide floods the south ford and the Hollow takes the long way round.",
    "newFoe": "Moth",
-   "unlocks": "Storm pylon",
+   "unlocks": "Sapper & Shipwreck Cove",
    "startGold": 420,
    "lives": 20,
    "towers": [
@@ -3115,8 +3238,8 @@
     },
     {
      "at": [
-      830,
-      600
+      880,
+      390
      ]
     },
     {
@@ -3400,7 +3523,7 @@
    "region": 1,
    "twist": "A wreck blocks the short beach road. Sappers chew through it, and then the Hollow has a shortcut.",
    "newFoe": "Sapper",
-   "unlocks": "Armory tree: tower rounds",
+   "unlocks": "Armory tree & Wren's Sunrise (R)",
    "startGold": 440,
    "lives": 20,
    "towers": [
@@ -3780,7 +3903,7 @@
    "region": 1,
    "twist": "Two roads wrap the rock. Towers on the rock see further, and the lighthouse shows every Shade in its beam.",
    "newFoe": "Splitter",
-   "unlocks": "Wren's ultimate: Sunrise",
+   "unlocks": "Tower splits at level 4",
    "startGold": 560,
    "lives": 20,
    "towers": [
@@ -3931,44 +4054,44 @@
    "plots": [
     {
      "at": [
-      540,
-      320
+      555,
+      270
      ]
     },
     {
      "at": [
-      740,
-      320
+      725,
+      275
      ]
     },
     {
      "at": [
-      560,
-      450
+      565,
+      470
      ]
     },
     {
      "at": [
       720,
-      450
+      465
      ]
     },
     {
      "at": [
-      200,
-      380
+      180,
+      275
      ]
     },
     {
      "at": [
-      400,
-      380
+      430,
+      235
      ]
     },
     {
      "at": [
-      880,
-      380
+      430,
+      520
      ]
     },
     {
@@ -4273,7 +4396,7 @@
    "region": 1,
    "twist": "Rain soaks everything. Lightning jumps twice as far and fire burns weaker. The road crosses itself on a stone viaduct.",
    "newFoe": "Warden",
-   "unlocks": "Tower splits at level 4",
+   "unlocks": "Tidewyrm boss stage",
    "startGold": 480,
    "lives": 20,
    "towers": [
@@ -4402,8 +4525,8 @@
     },
     {
      "at": [
-      180,
-      420
+      190,
+      470
      ]
     },
     {
@@ -4734,7 +4857,7 @@
     {
      "at": [
       440,
-      360
+      310
      ]
     },
     {
@@ -4775,20 +4898,20 @@
     },
     {
      "at": [
-      540,
-      360
+      545,
+      310
      ]
     },
     {
      "at": [
-      770,
-      360
+      765,
+      310
      ]
     },
     {
      "at": [
       160,
-      120
+      235
      ]
     },
     {
@@ -5437,8 +5560,8 @@
     },
     {
      "at": [
-      600,
-      400
+      760,
+      370
      ],
      "gear": "b"
     },
@@ -5482,8 +5605,8 @@
     },
     {
      "at": [
-      600,
-      640
+      370,
+      570
      ]
     }
    ],
@@ -5864,7 +5987,7 @@
     {
      "at": [
       160,
-      360
+      270
      ]
     },
     {
@@ -6345,20 +6468,20 @@
     },
     {
      "at": [
-      600,
-      100
+      520,
+      140
      ]
     },
     {
      "at": [
-      600,
-      620
+      520,
+      580
      ]
     },
     {
      "at": [
-      1100,
-      540
+      1060,
+      470
      ]
     }
    ],
@@ -6654,7 +6777,7 @@
        460
       ],
       [
-       -40,
+       86,
        440
       ]
      ]
@@ -6695,37 +6818,37 @@
     {
      "at": [
       400,
-      300
+      278
      ]
     },
     {
      "at": [
       620,
-      300
+      278
      ]
     },
     {
      "at": [
       840,
-      300
+      278
      ]
     },
     {
      "at": [
       400,
-      430
+      448
      ]
     },
     {
      "at": [
       620,
-      430
+      448
      ]
     },
     {
      "at": [
       840,
-      430
+      448
      ]
     },
     {
@@ -6777,7 +6900,7 @@
     120
    ],
    "heroStart": [
-    200,
+    220,
     440
    ],
    "waves": [
@@ -6897,7 +7020,7 @@
    "lava": true,
    "twist": "Three roads through the pass. Lava closes one of them at a time, so the fight moves.",
    "newFoe": "Burrower swarm",
-   "unlocks": "Wren gear: Ember spear",
+   "unlocks": "Shop item: Ember spear",
    "startGold": 680,
    "lives": 20,
    "towers": [
@@ -6908,7 +7031,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.8,
+   "hpMul": 1.25,
    "roads": [
     {
      "id": "top",
@@ -7333,7 +7456,7 @@
    "lava": true,
    "twist": "The ridge gives range to towers on it, but avalanches bury ridge plots as the waves go on.",
    "newFoe": "Iron swarm",
-   "unlocks": "Wren gear: Dawn mantle",
+   "unlocks": "Shop item: Dawn mantle",
    "startGold": 720,
    "lives": 20,
    "towers": [
@@ -7344,7 +7467,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.7,
+   "hpMul": 1.3,
    "roads": [
     {
      "id": "main",
@@ -7419,28 +7542,28 @@
      0
     ],
     [
-     1000,
+     1080,
      0
     ],
     [
-     1010,
-     160
+     1070,
+     250
     ],
     [
-     900,
-     280
+     920,
+     320
     ],
     [
      700,
-     300
+     330
     ],
     [
-     400,
-     310
+     420,
+     355
     ],
     [
      0,
-     330
+     370
     ],
     [
      0,
@@ -7450,35 +7573,35 @@
    "plots": [
     {
      "at": [
-      200,
-      200
+      380,
+      330
      ]
     },
     {
      "at": [
-      400,
-      210
+      490,
+      275
      ],
      "sinkAt": 7
     },
     {
      "at": [
-      600,
-      220
+      615,
+      280
      ],
      "sinkAt": 4
     },
     {
      "at": [
-      800,
-      210
+      745,
+      290
      ],
      "sinkAt": 10
     },
     {
      "at": [
-      940,
-      120
+      995,
+      225
      ]
     },
     {
@@ -7700,7 +7823,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.2,
+   "hpMul": 1.32,
    "roads": [
     {
      "id": "north",
@@ -7816,7 +7939,7 @@
     {
      "at": [
       1100,
-      380
+      310
      ]
     },
     {
@@ -8046,7 +8169,7 @@
     "beacon"
    ],
    "adaptEvery": 1,
-   "hpMul": 1.5,
+   "hpMul": 1.36,
    "roads": [
     {
      "id": "nw",
@@ -8261,20 +8384,20 @@
     },
     {
      "at": [
-      880,
-      640
+      720,
+      590
      ]
     },
     {
      "at": [
-      880,
-      80
+      720,
+      130
      ]
     },
     {
      "at": [
-      1240,
-      560
+      1200,
+      450
      ]
     }
    ],
@@ -8575,6 +8698,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.38,
    "roads": [
     {
      "id": "high",
@@ -8662,6 +8786,37 @@
       [
        400,
        650
+      ],
+      [
+       160,
+       620
+      ]
+     ]
+    },
+    {
+     "id": "causeway",
+     "spawn": "se",
+     "w": 38,
+     "ctrl": [
+      [
+       1320,
+       600
+      ],
+      [
+       1030,
+       580
+      ],
+      [
+       900,
+       430
+      ],
+      [
+       600,
+       420
+      ],
+      [
+       300,
+       560
       ],
       [
        160,
@@ -8782,11 +8937,26 @@
     {
      "kind": "lava",
      "closes": [
+      "low"
+     ],
+     "every": 60,
+     "start": 0,
+     "dur": 15,
+     "at": [
+      700,
+      600
+     ],
+     "r": 56,
+     "label": "Lava cuts the low road"
+    },
+    {
+     "kind": "lava",
+     "closes": [
       "mid"
      ],
      "every": 60,
      "start": 20,
-     "dur": 20,
+     "dur": 15,
      "at": [
       900,
       360
@@ -8800,7 +8970,7 @@
       "high"
      ],
      "every": 60,
-     "start": 45,
+     "start": 40,
      "dur": 15,
      "at": [
       400,

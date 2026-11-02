@@ -9,6 +9,7 @@ import { Y_SQUASH, TOWER_SIGHT } from '../game/sim';
 import { pointAt, smooth, type Vec } from '../game/path';
 import { makeRng } from '../game/rng';
 import { TOWERS, type TowerKind } from '../game/data/towers';
+import type { EnemyKind } from '../game/data/enemies';
 import { RUNES } from '../game/data/shop';
 import { SNARE } from '../game/data/hero';
 import type { StageDef } from '../game/data/stages';
@@ -171,11 +172,11 @@ export class Scene {
   static towerScale(t: { lv: number }) { return 0.6 + 0.06 * (Math.min(t.lv, 4) - 1); }
 
   private towerSprite(t: Tower): Sprite {
-    const key = `${t.kind}:${t.lv}:${t.split ?? ''}:${t.plot}`;
+    const key = `${t.kind}:${Math.min(t.lv, 4)}:${t.split ?? ''}:${t.plot}`;
     let sp = this.sprites.get(key);
     if (!sp) {
       const S = Scene.towerScale(t), seed = 200 + t.plot * 7;
-      sp = this.sprite((x, ox, oy) => paintTower(x, t.kind, ox, oy, S, 'base', seed), 280, 300, 140, 262);
+      sp = this.sprite((x, ox, oy) => paintTower(x, t.kind, ox, oy, S, 'base', seed, t.lv, t.split), 280, 300, 140, 262);
       this.sprites.set(key, sp);
     }
     return sp;
@@ -554,18 +555,23 @@ export class Scene {
         g.lineWidth = 2; g.strokeStyle = 'rgba(40,30,22,.75)';
         g.beginPath(); g.ellipse(p.x, p.y - 1.5, 50, 21, 0, 0, TAU); g.stroke();
       }
+      if (b.mods.tidePearl && p.nearWater && (view.selPlot === i || view.selPlot !== null)) {
+        g.strokeStyle = 'rgba(110,198,228,.55)'; g.lineWidth = 2; g.setLineDash([5, 5]);
+        g.beginPath(); g.ellipse(p.x, p.y - 1.5, 43, 17.5, 0, 0, TAU); g.stroke(); g.setLineDash([]);
+      }
       if (view.selPlot === i) {
         g.strokeStyle = `rgba(255,214,140,${0.6 + 0.3 * Math.sin(T * 6)})`; g.lineWidth = 2.5;
         g.beginPath(); g.ellipse(p.x, p.y - 1.5, 39, 16, 0, 0, TAU); g.stroke();
       }
-      // A small rust mark on every plot you can afford to build on right now.
+      // Subtle stone-and-brass build mark on open plots; vivid rust-red only when focused or hinted.
       if (canAfford && !b.over && (!p.gear || isGearUp(b, p.gear))) {
+        const hot = view.selPlot === i || view.hintPlot === i;
         const x = p.x, y = p.y - 2;
-        g.fillStyle = 'rgba(40,24,16,.25)'; g.beginPath(); g.ellipse(x + 1, y + 2, 10, 5, 0, 0, TAU); g.fill();
-        g.fillStyle = '#a63d26'; g.beginPath(); g.arc(x, y - 4, 9, 0, TAU); g.fill();
-        g.strokeStyle = 'rgba(255,240,225,.9)'; g.lineWidth = 1.2; g.stroke();
-        g.strokeStyle = '#fff6ea'; g.lineWidth = 2.4; g.lineCap = 'round';
-        g.beginPath(); g.moveTo(x - 4, y - 4); g.lineTo(x + 4, y - 4); g.moveTo(x, y - 8); g.lineTo(x, y); g.stroke(); g.lineCap = 'butt';
+        g.fillStyle = hot ? 'rgba(40,24,16,.28)' : 'rgba(40,30,20,.18)'; g.beginPath(); g.ellipse(x + 1, y + 2, 9.5, 4.5, 0, 0, TAU); g.fill();
+        g.fillStyle = hot ? '#a63d26' : 'rgba(104,88,66,.84)'; g.beginPath(); g.arc(x, y - 4, hot ? 9 : 8, 0, TAU); g.fill();
+        g.strokeStyle = hot ? 'rgba(255,240,225,.92)' : 'rgba(245,236,218,.68)'; g.lineWidth = 1.2; g.stroke();
+        g.strokeStyle = hot ? '#fff6ea' : 'rgba(255,248,234,.88)'; g.lineWidth = hot ? 2.4 : 2; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x - 3.6, y - 4); g.lineTo(x + 3.6, y - 4); g.moveTo(x, y - 7.6); g.lineTo(x, y - 0.4); g.stroke(); g.lineCap = 'butt';
       }
     });
   }
@@ -617,16 +623,17 @@ export class Scene {
     this.put(this.towerSprite(t), t.x, t.y);
     if (t.kind === 'cannon') X.cannonBarrel(g, t.x + 4 * S, t.y, S, t.aim, Math.max(0, 1 - t.fired * 4), 0);
     if (t.down) g.restore();
-    // Level plaque at the foot of the tower: one mark per level, all gold once it has split.
-    const n = Math.min(t.lv, 3), px = t.x, py = t.y + 20;
+    // Level plaque at the foot of the tower: rust pips (Lv 1-3), gold once split (Lv 4), glowing amber-white pips when Tempered (Lv 5-6).
+    const n = Math.min(t.lv, 3), temper = Math.max(0, t.lv - 4), px = t.x, py = t.y + 20;
     g.fillStyle = 'rgba(40,30,20,.3)'; g.fillRect(px - 18, py - 4, 38, 13);
-    g.fillStyle = 'rgba(246,240,228,.95)'; g.strokeStyle = 'rgba(70,56,40,.7)'; g.lineWidth = 1;
+    g.fillStyle = 'rgba(246,240,228,.95)'; g.strokeStyle = temper > 0 ? '#c8923a' : 'rgba(70,56,40,.7)'; g.lineWidth = temper > 0 ? 1.4 : 1;
     g.beginPath(); g.roundRect(px - 19, py - 6, 38, 13, 3); g.fill(); g.stroke();
     for (let i = 0; i < 3; i++) {
       const qx = px - 14 + i * 10, qy = py - 3;
-      g.fillStyle = i < n ? (t.lv === 4 ? '#d9a23a' : '#a63d26') : 'rgba(70,56,40,.12)';
+      g.fillStyle = i < temper ? '#fff3c4' : i < n ? (t.lv >= 4 ? '#d9a23a' : '#a63d26') : 'rgba(70,56,40,.12)';
       g.fillRect(qx, qy, 8, 7);
-      if (i >= n) { g.strokeStyle = 'rgba(70,56,40,.45)'; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
+      if (i < temper) { g.strokeStyle = '#d96b27'; g.lineWidth = 1; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
+      else if (i >= n) { g.strokeStyle = 'rgba(70,56,40,.45)'; g.lineWidth = 1; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
     }
     if (t.round) { const c = t.round === 'ember' ? '#ff8a3a' : t.round === 'frost' ? '#8fd0ff' : '#b9a8ff'; g.fillStyle = c; g.beginPath(); g.arc(t.x + 30, t.y + 8, 4, 0, TAU); g.fill(); }
     if (t.down) {
@@ -699,24 +706,7 @@ export class Scene {
     // Wings beat: seen from the front, a flap reads as the wings folding in and opening out.
     const flap = (k: number) => { g.save(); g.translate(bx, by); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -by); };
     const mothY = by + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
-    switch (f.kind) {
-      case 'grub': L.grub(g, bx, by, 0.42, pass, seed, face, legs); break;
-      case 'skitter': L.grub(g, bx, by, 0.28, pass, seed + 3, face, legs); break;
-      case 'mender': L.grub(g, bx, by, 0.46, pass, seed + 5, face, legs); if (pass === 'emit') ringGlow(g, bx, by - 12, 26, '120,230,140', 0.2 + 0.1 * Math.sin(T * 4)); break;
-      case 'shade': L.grub(g, bx, by, 0.4, pass, seed + 7, face, legs); break;
-      case 'splitter': L.grub(g, bx, by, 0.5, pass, seed + 1, face, legs); if (pass === 'emit') ringGlow(g, bx, by - 14, 20, '180,240,200', 0.15); break;
-      case 'burrower': L.grub(g, bx, by, 0.4, pass, seed + 2, face, legs); break;
-      case 'shell': L.shellback(g, bx, by, 0.5, pass, seed, face, 1, legs); break;
-      case 'sapper': L.shellback(g, bx, by, 0.42, pass, seed + 4, face, 0, legs); break;
-      case 'elite': L.shellback(g, bx, by, 0.58, pass, seed + 6, face, 0, legs); if (pass === 'base') { g.fillStyle = 'rgba(150,160,175,.35)'; g.beginPath(); g.ellipse(bx, by - 22, 26, 12, 0, Math.PI, TAU); g.fill(); } break;
-      case 'warden': L.shellback(g, bx, by, 0.66, pass, 66, face, 0, legs); if (pass === 'emit') ringGlow(g, bx, by - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3)); break;
-      case 'moth': flap(0.35); L.moth(g, bx, mothY, 0.34, pass, seed, 60); g.restore(); break;
-      case 'ashmoth': flap(0.35); L.moth(g, bx, mothY, 0.4, pass, seed + 9, 60); g.restore(); if (pass === 'emit') { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 60, 22, '#ff7a3a', 0.35); g.restore(); } break;
-      case 'mireking': L.grub(g, bx, by, 1.25, pass, 41, face, legs); break;
-      case 'tidewyrm': L.grub(g, bx, by, 1.05, pass, 47, face, legs); if (pass === 'emit') ringGlow(g, bx, by, 60, '120,190,230', 0.2); break;
-      case 'colossus': L.shellback(g, bx, by, 1.2, pass, 61, face, (f.slowT > 0 || f.freezeT > 0) ? 1 : 0, legs); break;
-      case 'queen': flap(0.15); L.moth(g, bx, by, 0.95, pass, 51, 40); g.restore(); L.shellback(g, bx, by, 0.7, pass, 63, face, 0, legs); if (pass === 'emit') ringGlow(g, bx, by - 40, 80, '90,230,190', 0.25 + 0.1 * Math.sin(T * 2)); break;
-    }
+    paintFoe(g, f.kind, bx, by, pass, seed, face, legs, { chilled: f.slowT > 0 || f.freezeT > 0, T, flap, mothY });
     // The green glow in their seams: the one strong colour the Hollow owns.
     if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
     g.restore();
@@ -813,7 +803,8 @@ export class Scene {
     if (view.selPlot !== null && view.preview) {
       const p = b.plots[view.selPlot];
       const def = TOWERS[view.preview];
-      ring(p.x, p.y, def.range[0] * (p.high ? 1.2 : 1) * (1 + b.mods.rangeAll), 'rgba(255,214,140,A)');
+      const waterBonus = b.mods.tidePearl && p.nearWater ? 0.15 : 0;
+      ring(p.x, p.y, def.range[0] * (1 + b.mods.towerRange[view.preview] + b.mods.rangeAll + waterBonus) * (p.high ? 1.2 : 1), 'rgba(255,214,140,A)');
     }
     if (view.aimW) { const [x, y] = view.aimW; ring(x, y, SNARE.radius, 'rgba(255,190,110,A)'); }
   }
@@ -836,14 +827,297 @@ export class Scene {
 
 /* ------------------------------------------------------------------ helpers */
 
-export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: number, y: number, s: number, pass: 'base' | 'emit', seed: number) {
+export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: number, y: number, s: number, pass: 'base' | 'emit', seed: number, lv = 1, split: 'a' | 'b' | null = null, drawBarrel = true) {
+  if (pass === 'base' && lv >= 2) {
+    // Reinforced iron/masonry plinth ring so upgraded towers carry clear visual weight from Lv 2+.
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = '#2d2924'; c.beginPath(); c.ellipse(0, -3, 38, 13.5, 0, 0, TAU); c.fill();
+    c.strokeStyle = lv >= 3 ? 'rgba(218,168,78,.85)' : 'rgba(185,175,155,.5)'; c.lineWidth = 2.2;
+    c.beginPath(); c.ellipse(0, -4, 37, 13, 0, 0, Math.PI); c.stroke();
+    for (let k = -2; k <= 2; k++) { c.fillStyle = lv >= 3 ? '#d8a648' : '#78726a'; c.beginPath(); c.arc(k * 13, 6 - Math.abs(k) * 1.4, 2, 0, TAU); c.fill(); }
+    c.restore();
+  }
   switch (kind) {
     case 'watch': L.watchTower(c, x, y, s, pass, seed); break;
     case 'bell': L.frostBell(c, x, y, s, pass, seed); break;
     case 'pylon': L.stormPylon(c, x, y, s, pass, seed, null); break;
-    case 'cannon': X.forgeCannon(c, x, y, s, pass, seed); if (pass === 'base') X.cannonBarrel(c, x + 4 * s, y, s, -0.3, 0, 0); break;
+    case 'cannon': X.forgeCannon(c, x, y, s, pass, seed); if (pass === 'base' && drawBarrel) X.cannonBarrel(c, x + 4 * s, y, s, -0.3, 0, 0); break;
     case 'beacon': X.beaconTower(c, x, y, s, pass, seed); if (pass === 'emit') X.beaconFire(c, x, y, s, 1.3); break;
     case 'roots': X.rootGarden(c, x, y, s, pass, seed); if (pass === 'emit') X.rootPods(c, x, y, s, 1, 0.4); break;
+  }
+  if (pass === 'base' && split) {
+    // Distinct Lv 4 specialization trim: Split A wears heavy bastion/crimson banners; Split B wears sleek arcane/copper finials.
+    c.save(); c.translate(x, y); c.scale(s, s);
+    if (split === 'a') {
+      for (const sd of [-1, 1]) {
+        c.fillStyle = '#9e3420'; c.beginPath(); c.moveTo(sd * 22, -46); c.lineTo(sd * 29, -44); c.lineTo(sd * 28, -26); c.lineTo(sd * 25, -30); c.lineTo(sd * 22, -26); c.closePath(); c.fill();
+        c.strokeStyle = '#e0ac4c'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(sd * 21, -46); c.lineTo(sd * 30, -44); c.stroke();
+      }
+    } else {
+      for (const sd of [-1, 1]) {
+        c.fillStyle = '#485666'; c.beginPath(); c.moveTo(sd * 19, -40); c.lineTo(sd * 28, -58); c.lineTo(sd * 23, -36); c.closePath(); c.fill();
+        c.strokeStyle = '#9ed8f5'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(sd * 20, -40); c.lineTo(sd * 27.5, -57); c.stroke();
+      }
+    }
+    c.restore();
+  }
+}
+
+export interface FoePaintOpts {
+  chilled?: boolean;
+  T?: number;
+  flap?: (k: number) => void;
+  mothY?: number;
+  wings?: boolean;
+  alt?: number;
+}
+
+/** Paints any of the 16 Hollow enemy kinds with distinct silhouettes, crests, and readable role accents. */
+export function paintFoe(
+  g: CanvasRenderingContext2D,
+  kind: EnemyKind,
+  bx: number,
+  by: number,
+  pass: 'base' | 'emit',
+  seed: number,
+  face = 1,
+  legs?: number,
+  opts: FoePaintOpts = {},
+) {
+  const T = opts.T ?? 0;
+  const mothY = opts.mothY ?? by;
+  const alt = opts.alt ?? 60;
+  const dir = Math.sign(face || 1);
+  switch (kind) {
+    case 'grub':
+      L.grub(g, bx, by, 0.42, pass, seed, face, legs);
+      break;
+    case 'skitter':
+      // Swept arachnid outrigger legs + bright amber dorsal racing chevron.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.strokeStyle = '#18120e'; g.lineWidth = 1.6; g.lineCap = 'round';
+        for (let k = 0; k < 4; k++) {
+          const lx = -10 + k * 6, lift = legs !== undefined ? Math.sin(legs * 2 + k * 1.5) * 2.5 : 0;
+          g.beginPath(); g.moveTo(lx, -4); g.lineTo(lx - 4, -13 - lift); g.lineTo(lx - 9, 1 - lift * 0.5); g.stroke();
+          g.fillStyle = '#e08e36'; g.beginPath(); g.arc(lx - 4, -13 - lift, 1.4, 0, TAU); g.fill();
+        }
+        g.restore();
+      }
+      L.grub(g, bx, by, 0.3, pass, seed + 3, face, legs);
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.fillStyle = '#e59438'; g.beginPath(); g.moveTo(-8, -9); g.lineTo(5, -8); g.lineTo(-2, -5); g.closePath(); g.fill();
+        g.restore();
+      } else {
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 10, by - 6, 8, '#ff9d3b', 0.35); g.restore();
+      }
+      break;
+    case 'mender':
+      L.grub(g, bx, by, 0.46, pass, seed + 5, face, legs);
+      // Bioluminescent emerald healing spore-fronds along its spine.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        for (const [ox, h] of [[-10, 15], [-1, 19], [8, 14]]) {
+          g.strokeStyle = '#284a2c'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(ox, -10); g.quadraticCurveTo(ox - 3, -10 - h * 0.6, ox - 1, -10 - h); g.stroke();
+          g.fillStyle = '#72ea8e'; g.beginPath(); g.arc(ox - 1, -10 - h, 3.1, 0, TAU); g.fill();
+        }
+        g.restore();
+      } else {
+        ringGlow(g, bx, by - 12, 26, '120,230,140', 0.24 + 0.1 * Math.sin(T * 4));
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 24, 16, '#6ef08e', 0.42); g.restore();
+      }
+      break;
+    case 'shade':
+      // Tattered twilight wraith shroud + eerie violet seam luminescence.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        const sg = g.createLinearGradient(-32, -16, 16, 0);
+        sg.addColorStop(0, 'rgba(72,52,122,0)'); sg.addColorStop(0.5, 'rgba(64,48,112,.58)'); sg.addColorStop(1, 'rgba(28,22,48,.78)');
+        g.fillStyle = sg;
+        g.beginPath(); g.moveTo(14, -14); g.quadraticCurveTo(-8, -22, -32, -12); g.lineTo(-24, -5); g.lineTo(-34, -1); g.quadraticCurveTo(-8, 2, 14, -4); g.closePath(); g.fill();
+        g.restore();
+      }
+      L.grub(g, bx, by, 0.4, pass, seed + 7, face, legs);
+      if (pass === 'emit') {
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx - dir * 4, by - 10, 18, '#a688ff', 0.42); g.restore();
+      }
+      break;
+    case 'splitter':
+      L.grub(g, bx, by, 0.5, pass, seed + 1, face, legs);
+      // Twin-lobed brood nodules divided by a bright jade cleavage fissure.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.fillStyle = '#203832';
+        g.beginPath(); g.ellipse(-6, -15, 7, 5, -0.2, 0, TAU); g.ellipse(6, -15, 7, 5, 0.2, 0, TAU); g.fill();
+        g.strokeStyle = '#7cf5cf'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -21); g.lineTo(0, -5); g.stroke();
+        g.restore();
+      } else {
+        ringGlow(g, bx, by - 14, 22, '150,245,210', 0.22);
+      }
+      break;
+    case 'burrower':
+      L.grub(g, bx, by, 0.42, pass, seed + 2, face, legs);
+      // Heavy spiral ivory-and-iron auger horn + digging fore-claws.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.fillStyle = '#d6c8ae'; g.beginPath(); g.moveTo(17, -9); g.lineTo(33, -4); g.lineTo(17, 1); g.closePath(); g.fill();
+        g.strokeStyle = '#4a3f32'; g.lineWidth = 1.3;
+        g.beginPath(); g.moveTo(20, -7.5); g.lineTo(22, -0.5); g.moveTo(25, -6); g.lineTo(27, -2); g.stroke();
+        g.strokeStyle = '#9e9078'; g.lineWidth = 2; g.beginPath(); g.moveTo(12, 0); g.lineTo(19, 4); g.moveTo(8, 1); g.lineTo(14, 5); g.stroke();
+        g.restore();
+      }
+      break;
+    case 'shell':
+      L.shellback(g, bx, by, 0.5, pass, seed, face, 1, legs);
+      break;
+    case 'sapper':
+      L.shellback(g, bx, by, 0.42, pass, seed + 4, face, 0, legs);
+      // Strapped iron-hooped powder keg + burning fuse spark on its shell.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.fillStyle = '#6e3820'; g.beginPath(); g.roundRect(-11, -29, 20, 14, 4); g.fill();
+        g.strokeStyle = '#1c1816'; g.lineWidth = 2; g.beginPath(); g.moveTo(-6, -29); g.lineTo(-6, -15); g.moveTo(4, -29); g.lineTo(4, -15); g.stroke();
+        g.strokeStyle = '#cbb99c'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-1, -29); g.quadraticCurveTo(-4, -36, 3, -38); g.stroke();
+        g.fillStyle = '#ff9a38'; g.beginPath(); g.arc(3, -38, 2.6, 0, TAU); g.fill();
+        g.restore();
+      } else {
+        g.save(); g.globalCompositeOperation = 'lighter';
+        L.glow(g, bx + dir * 3, by - 38, 16, '#ff8a2a', 0.65 + 0.2 * Math.sin(T * 18));
+        g.fillStyle = '#fff4c8'; g.beginPath(); g.arc(bx + dir * 3, by - 38, 2, 0, TAU); g.fill();
+        g.restore();
+      }
+      break;
+    case 'elite':
+      L.shellback(g, bx, by, 0.58, pass, seed + 6, face, 0, legs);
+      // Silvered Riftguard crest plate + swept champion horns.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.fillStyle = 'rgba(175,190,210,.5)'; g.beginPath(); g.ellipse(0, -22, 26, 12, 0, Math.PI, TAU); g.fill();
+        g.strokeStyle = '#dce6f2'; g.lineWidth = 2.2; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(16, -20); g.quadraticCurveTo(30, -30, 38, -25); g.moveTo(12, -24); g.quadraticCurveTo(24, -36, 31, -33); g.stroke();
+        g.restore();
+      }
+      break;
+    case 'warden':
+      L.shellback(g, bx, by, 0.66, pass, 66, face, 0, legs);
+      // Tri-spired obsidian ward-tuning crest cradling a suspended Rift prism.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.strokeStyle = '#1d2628'; g.lineWidth = 2.8; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-10, -28); g.lineTo(-14, -48); g.moveTo(0, -30); g.lineTo(0, -54); g.moveTo(10, -28); g.lineTo(14, -48); g.stroke();
+        g.fillStyle = '#6cf0ce'; g.beginPath(); g.moveTo(0, -61); g.lineTo(5, -54); g.lineTo(0, -47); g.lineTo(-5, -54); g.closePath(); g.fill();
+        g.restore();
+      } else {
+        ringGlow(g, bx, by - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3));
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 54, 22, '#5ce6c0', 0.55); g.restore();
+      }
+      break;
+    case 'moth':
+      if (opts.flap) opts.flap(0.35);
+      L.moth(g, bx, mothY, 0.34, pass, seed, alt);
+      if (opts.flap) g.restore();
+      break;
+    case 'ashmoth':
+      if (opts.flap) opts.flap(0.35);
+      L.moth(g, bx, mothY, 0.4, pass, seed + 9, alt);
+      // Glowing ember-orange cinder spots & scorched wing streaks.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, mothY);
+        for (const sd of [-1, 1]) {
+          g.fillStyle = 'rgba(255,118,42,.75)'; g.beginPath(); g.ellipse(sd * 18, -9, 4.2, 2.6, sd * 0.35, 0, TAU); g.fill();
+          g.strokeStyle = 'rgba(255,168,76,.65)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(sd * 4, -2); g.lineTo(sd * 25, -13); g.stroke();
+        }
+        g.restore();
+      }
+      if (opts.flap) g.restore();
+      if (pass === 'emit') {
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, mothY - 4, 24, '#ff7a3a', 0.45); g.restore();
+      }
+      break;
+    case 'mireking':
+      L.grub(g, bx, by, 1.25, pass, 41, face, legs);
+      // Gnarled bog-antler crown draped with swamp moss & glowing fen orbs.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.strokeStyle = '#2b2218'; g.lineWidth = 4; g.lineCap = 'round';
+        g.beginPath();
+        g.moveTo(42, -24); g.quadraticCurveTo(36, -48, 22, -60); g.moveTo(35, -42); g.lineTo(46, -54);
+        g.moveTo(48, -22); g.quadraticCurveTo(56, -44, 68, -52); g.moveTo(56, -38); g.lineTo(48, -48);
+        g.stroke();
+        g.fillStyle = '#5a8a42';
+        for (const [mx, my] of [[-24, -28], [-4, -31], [16, -28], [26, -54], [62, -48]]) {
+          g.beginPath(); g.ellipse(mx, my, 7, 3.5, 0, 0, TAU); g.fill();
+        }
+        g.restore();
+      } else {
+        g.save(); g.globalCompositeOperation = 'lighter';
+        L.glow(g, bx + dir * 44, by - 48, 28, '#7af07a', 0.38);
+        g.restore();
+      }
+      break;
+    case 'tidewyrm':
+      // Swept-back pelagic dorsal fins + abyssal cyan bioluminescence.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        for (const [fx, fy, fh] of [[-38, -16, 18], [-16, -24, 24], [8, -23, 22], [28, -18, 15]]) {
+          const fg = g.createLinearGradient(fx, fy - fh, fx, fy);
+          fg.addColorStop(0, '#62c4de'); fg.addColorStop(1, '#1d4658');
+          g.fillStyle = fg;
+          g.beginPath(); g.moveTo(fx - 8, fy); g.quadraticCurveTo(fx - 2, fy - fh, fx - 12, fy - fh); g.quadraticCurveTo(fx + 6, fy - fh * 0.5, fx + 9, fy); g.closePath(); g.fill();
+        }
+        g.restore();
+      }
+      L.grub(g, bx, by, 1.05, pass, 47, face, legs);
+      if (pass === 'emit') {
+        ringGlow(g, bx, by, 60, '120,205,245', 0.26);
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 46, by - 12, 22, '#5ad8ff', 0.45); g.restore();
+      }
+      break;
+    case 'colossus':
+      // Foundry Siege Engine: burnished bronze-brass plating, giant dorsal cogwheel & furnace stack (never frosty unless chilled).
+      L.shellback(g, bx, by, 1.2, pass, 61, face, opts.chilled ? 1 : 0, legs);
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        // Warm metallic bronze sheen across the shell dome
+        const bg = g.createLinearGradient(-50, -58, 50, -10);
+        bg.addColorStop(0, 'rgba(225,168,78,.36)'); bg.addColorStop(0.6, 'rgba(168,108,42,.28)'); bg.addColorStop(1, 'rgba(60,36,16,0)');
+        g.fillStyle = bg; g.beginPath(); g.ellipse(0, -18, 60, 40, 0, Math.PI, TAU); g.fill();
+        // Dorsal clockwork cogwheel + iron furnace stack
+        g.save(); g.translate(-8, -56); g.rotate(legs !== undefined ? legs * 0.5 : 0.3);
+        g.strokeStyle = '#c8923a'; g.lineWidth = 4.5; g.beginPath(); g.arc(0, 0, 16, 0, TAU); g.stroke();
+        for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; g.beginPath(); g.moveTo(Math.cos(a) * 15, Math.sin(a) * 15); g.lineTo(Math.cos(a) * 22, Math.sin(a) * 22); g.stroke(); }
+        g.fillStyle = '#3a2c1e'; g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill();
+        g.restore();
+        g.fillStyle = '#2a2624'; g.fillRect(16, -68, 11, 22); g.fillStyle = '#b88234'; g.fillRect(14, -70, 15, 4);
+        g.restore();
+      } else {
+        g.save(); g.globalCompositeOperation = 'lighter';
+        L.glow(g, bx + dir * 21, by - 72, 26, '#ff8a30', 0.55);
+        L.glow(g, bx - dir * 8, by - 56, 18, '#ffb85c', 0.3);
+        g.restore();
+      }
+      break;
+    case 'queen':
+      if (opts.wings !== false) {
+        if (opts.flap) opts.flap(0.15);
+        L.moth(g, bx, by, 0.95, pass, 51, 40);
+        if (opts.flap) g.restore();
+      }
+      L.shellback(g, bx, by, 0.7, pass, 63, face, 0, legs);
+      // Jagged obsidian-and-gold sovereign crown atop her armoured crest.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.fillStyle = '#1c1620';
+        g.beginPath(); g.moveTo(10, -28); g.lineTo(14, -46); g.lineTo(20, -34); g.lineTo(27, -52); g.lineTo(32, -34); g.lineTo(39, -45); g.lineTo(38, -26); g.closePath(); g.fill();
+        g.strokeStyle = '#f0be52'; g.lineWidth = 1.8; g.stroke();
+        g.fillStyle = '#5ef2cb'; g.beginPath(); g.arc(26, -38, 3, 0, TAU); g.fill();
+        g.restore();
+      } else {
+        ringGlow(g, bx, by - 40, 80, '90,230,190', 0.25 + 0.1 * Math.sin(T * 2));
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 26, by - 42, 26, '#ffe082', 0.45); g.restore();
+      }
+      break;
   }
 }
 
@@ -879,7 +1153,7 @@ function makeDecor(b: Battle) {
   const clear = (x: number, y: number, pad: number) => {
     for (const r of roads) for (let d = 0; d < r.path.tot; d += 16) { const p = pointAt(r.path, d); if (Math.hypot(p.x - x, p.y - y) < r.def.w / 2 + pad) return false; }
     for (const w of waters) for (const p of w.pts) if (Math.hypot(p[0] - x, p[1] - y) < w.w / 2 + pad) return false;
-    for (const p of b.plots) if (Math.hypot(p.x - x, p.y - y) < 60 + pad * 0.5) return false;
+    for (const p of b.plots) if (Math.hypot(p.x - x, p.y - y) < 84 + pad * 0.5) return false;
     for (const g of b.gate) if (Math.hypot(g[0] - x, g[1] - y) < 150) return false;
     if (b.stage.lighthouse && Math.hypot(b.stage.lighthouse[0] - x, b.stage.lighthouse[1] - y) < 80) return false;
     if (Math.hypot(b.stage.rune[0] - x, b.stage.rune[1] - y) < 50) return false;

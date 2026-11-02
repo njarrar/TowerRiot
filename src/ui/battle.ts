@@ -29,7 +29,7 @@ const ELEMENT_NAME: Record<string, string> = { pierce: 'bolts', fire: 'fire', fr
 const ELEMENT_TITLE: Record<string, string> = { pierce: 'Bolts', fire: 'Fire', frost: 'Frost', storm: 'Lightning', nature: 'Roots' };
 /** The most the Hollow can harden against one element. */
 const RESIST_CAP = 0.6;
-const MODE_NAME: Record<TargetMode, string> = { first: 'First', strong: 'Strongest', close: 'Closest' };
+const MODE_NAME: Record<TargetMode, string> = { first: 'First', strong: 'Strongest', armored: 'Armored', close: 'Closest' };
 const ROUND_NAME: Record<Rounds, string> = { ember: 'Ember', frost: 'Frost', storm: 'Storm' };
 /** What each tower is for, in a few words: shown on the build buttons, since a finger cannot hover. */
 const TOWER_ROLE: Record<TowerKind, string> = {
@@ -164,11 +164,13 @@ export class BattleScreen {
     this.last = now;
     this.T += dt;
     const b = this.battle;
-    b.step(dt);
+    // Tactical slow-motion (0.25x) while aiming Lantern Snare so fast waves don't outrun a finger tap.
+    const simDt = this.aimingW ? dt * 0.25 : dt;
+    b.step(simDt);
     const events = b.drain();
     this.react(events);
     this.scene.consume(b, events, this.host.dmgNumbers);
-    this.scene.draw(b, this.view, this.T, b.paused ? 0 : dt);
+    this.scene.draw(b, this.view, this.T, b.paused ? 0 : simDt);
     this.updateHud(dt);
     this.raf = requestAnimationFrame(t => this.frame(t));
   }
@@ -369,7 +371,7 @@ export class BattleScreen {
     const canCall = b.status === 'prep' || (b.nextIn !== null && b.wave < b.totalWaves);
     call.classList.toggle('hidden', !canCall || b.over);
     if (b.status === 'prep') { setText(call.firstElementChild!, 'Start'); setText(call.lastElementChild!, 'Call the first wave'); }
-    else if (b.nextIn !== null) { setText(call.firstElementChild!, `Wave ${b.wave + 1} in ${Math.ceil(b.nextIn)}s`); setText(call.lastElementChild!, `Call now: +${Math.ceil(b.nextIn * 2 * (1 + b.mods.early))} gold`); }
+    else if (b.nextIn !== null) { setText(call.firstElementChild!, `Wave ${b.wave + 1} in ${Math.ceil(b.nextIn)}s`); setText(call.lastElementChild!, `Call now: +${Math.ceil(b.nextIn * 2 * (1 + b.mods.early))} gold & skill haste`); }
     // Hero.
     const max = b.heroMaxHp();
     (this.hud.hp.firstElementChild as HTMLElement).style.width = `${(hero.hp / max) * 100}%`;
@@ -404,9 +406,9 @@ export class BattleScreen {
         this.hud.items.append(h('span', { class: `slot ${id ? 'full' : ''}`, title: id ? `${ITEMS[id].name}: ${ITEMS[id].desc}` : 'Empty slot', text: id ? ITEMS[id].name.split(' ').map(w => w[0]).join('') : '' }));
       }
     }
-    const near = b.nearGate();
-    this.hud.shopBtn.classList.toggle('near', near);
-    this.hud.shopBtn.title = near ? 'Open the shop (B)' : 'Walk Wren to the gate to buy';
+    const canShop = b.canShop();
+    this.hud.shopBtn.classList.toggle('near', canShop);
+    this.hud.shopBtn.title = canShop ? 'Open the shop (B)' : 'Walk Wren to the gate (or shop between waves)';
     if (this.shopOpen) this.renderShop();
     // Banner, then the next in line.
     if (this.bannerT > 0) {
@@ -492,7 +494,7 @@ export class BattleScreen {
     else if (k === 'w' && b.skillReady('w')) {
       this.aimingW = !this.aimingW;
       this.view.aimW = this.aimingW ? [b.hero.x + SNARE.range * 0.5 * b.hero.face, b.hero.y] : null;
-      if (this.aimingW) this.showBanner('Lantern Snare', 'Tap where to throw it.', 1.6, true);
+      if (this.aimingW) this.showBanner('Lantern Snare', 'Time slows. Tap where to throw it.', 1.8, true);
     } else if (b.canLearn(k)) b.learn(k);
   }
 
@@ -600,7 +602,14 @@ export class BattleScreen {
     clear(m);
     if (this.view.selPlot !== null) {
       const pi = this.view.selPlot, p = b.plots[pi];
-      m.append(h('div', { class: 'popup-title', text: p.high ? 'Build on high ground (+20% range)' : p.gear ? `Build on a ${p.gear === 'a' ? 'gold' : 'iron'} gear plot` : 'Build a tower' }));
+      const perks = [
+        p.high ? '+20% high ground' : '',
+        b.mods.tidePearl && p.nearWater ? '+15% Tide-pearl' : '',
+      ].filter(Boolean).join(', ');
+      const plotTitle = p.gear
+        ? `Build on a ${p.gear === 'a' ? 'gold' : 'iron'} gear plot${perks ? ` (${perks})` : ''}`
+        : perks ? `Build a tower (${perks} range)` : 'Build a tower';
+      m.append(h('div', { class: 'popup-title', text: plotTitle }));
       const row = h('div', { class: 'build-row' });
       b.stage.towers.forEach((k: TowerKind, idx: number) => {
         const def = TOWERS[k], cost = b.costOf(k), ok = b.canBuild(pi, k);
@@ -624,22 +633,25 @@ export class BattleScreen {
     const t = this.view.selTower !== null ? b.tower(this.view.selTower) : undefined;
     if (!t) { this.closeMenu(); return; }
     const def = TOWERS[t.kind], s = b.stats(t);
-    const title = t.split ? def.splits.find(x => x.id === t.split)!.name : `${def.name}, level ${t.lv}`;
+    const spName = t.split ? def.splits.find(x => x.id === t.split)!.name : '';
+    const title = t.split ? (t.lv > 4 ? `${spName} (Temper ${t.lv === 5 ? 'I' : 'II'})` : spName) : `${def.name}, level ${t.lv}`;
     m.append(h('div', { class: 'popup-title', text: title }));
-    const facts = t.kind === 'beacon' ? `Range ${Math.round(s.range)}. Lights hidden foes and boosts towers in its light.`
+    const waterNote = b.mods.tidePearl && b.plots[t.plot]?.nearWater ? ' Tide-pearl +15% range.' : '';
+    const facts = (t.kind === 'beacon' ? `Range ${Math.round(s.range)}. Lights hidden foes and boosts towers in its light.`
       : t.kind === 'bell' ? `Slows all foes in range. Range ${Math.round(s.range)}.`
-      : `Damage ${Math.round(s.dmg)}, ${(1 / s.rate).toFixed(1)} hits a second, range ${Math.round(s.range)}.`;
+      : `Damage ${Math.round(s.dmg)}, ${(1 / s.rate).toFixed(1)} hits a second, range ${Math.round(s.range)}.`) + waterNote;
     m.append(h('div', { class: 'popup-note', text: t.down ? 'This gear plot is lowered: the tower sleeps this wave.' : facts }));
     const el = def.element, rs = b.resist[el] ?? 0;
     if (rs > 0) m.append(h('div', { class: 'popup-warn' }, icon(ELEMENT_ICON[el] ?? ''), h('span', { text: `The Hollow takes ${Math.round(rs * 100)}% less ${ELEMENT_NAME[el]} damage right now. Mix in other towers.` })));
     const acts = h('div', { class: 'act-row' });
     const up = b.upgradeCost(t);
     if (up !== null) {
-      // Say what the gold buys: the next level's numbers beside today's.
+      // Say what the gold buys: the next level's numbers (or post-split Temper I/II) beside today's.
       const n = b.stats({ ...t, lv: t.lv + 1 });
+      const upLabel = t.split ? `Temper ${t.lv === 4 ? 'I' : 'II'}` : `Level ${t.lv + 1}`;
       const gain = t.kind === 'beacon' || t.kind === 'bell' ? `Range ${Math.round(s.range)} to ${Math.round(n.range)}` : `Damage ${Math.round(s.dmg)} to ${Math.round(n.dmg)}, range ${Math.round(s.range)} to ${Math.round(n.range)}`;
       acts.append(h('button', { class: `btn act primary upgrade ${b.gold >= up ? '' : 'poor'}`, 'data-cost': up, onclick: () => b.upgrade(t.id) },
-        h('span', { class: 'up-t' }, `Level ${t.lv + 1}`, coin(up)), h('small', { text: gain })));
+        h('span', { class: 'up-t' }, upLabel, coin(up)), h('small', { text: gain })));
     }
     if (t.lv === 3 && b.mods.splits && t.kind !== 'beacon' || (t.lv === 3 && t.kind === 'beacon' && b.mods.splits)) {
       for (const sp of def.splits) {
@@ -650,7 +662,7 @@ export class BattleScreen {
     m.append(acts);
     if (t.kind !== 'beacon' && t.kind !== 'bell') {
       const modes = h('div', { class: 'seg', role: 'group', 'aria-label': 'Target' });
-      for (const md of ['first', 'strong', 'close'] as TargetMode[]) modes.append(h('button', { class: t.mode === md ? 'on' : '', onclick: () => b.setMode(t.id, md) }, MODE_NAME[md]));
+      for (const md of ['first', 'strong', 'armored', 'close'] as TargetMode[]) modes.append(h('button', { class: t.mode === md ? 'on' : '', onclick: () => b.setMode(t.id, md) }, MODE_NAME[md]));
       m.append(h('div', { class: 'popup-sub', text: 'Target' }), modes);
       if (b.mods.rounds.length) {
         const rounds = h('div', { class: 'seg', role: 'group', 'aria-label': 'Rounds' });
@@ -670,15 +682,17 @@ export class BattleScreen {
   private closeShop() { this.shopOpen = false; this.shopEl.classList.add('hidden'); }
 
   private renderShop() {
-    const b = this.battle, el = this.shopEl, near = b.nearGate();
-    const sig = `${b.gold}|${b.hero.items.join()}|${near}`;
+    const b = this.battle, el = this.shopEl, near = b.nearGate(), canShop = b.canShop();
+    const sig = `${b.gold}|${b.hero.items.join()}|${canShop}|${near}`;
     if (el.dataset.sig === sig) return;
     el.dataset.sig = sig;
     clear(el);
     el.append(h('div', { class: 'shop-head' }, h('b', { text: 'The gate shop' }), h('button', { class: 'btn icon', onclick: () => this.closeShop(), 'aria-label': 'Close' }, '✕')));
-    if (near) el.append(h('p', { class: 'popup-note', text: `Wren is at the gate. ${b.hero.items.length} of ${ITEM_SLOTS} slots used. Gold spent here is gold not spent on towers.` }));
-    else el.append(h('div', { class: 'shop-far' },
-      h('p', { class: 'popup-note', text: 'Wren buys at the gate.' }),
+    if (canShop) {
+      const where = near ? 'Wren is at the gate.' : 'Gate courier ready between waves.';
+      el.append(h('p', { class: 'popup-note', text: `${where} ${b.hero.items.length} of ${ITEM_SLOTS} slots used. Gold spent here is gold not spent on towers.` }));
+    } else el.append(h('div', { class: 'shop-far' },
+      h('p', { class: 'popup-note', text: 'During combat, Wren buys at the gate.' }),
       h('button', { class: 'btn primary act', onclick: () => { const g = b.gate[0]; b.moveHero(g[0] - 60, g[1]); this.scene.markMove(g[0] - 60, g[1]); } }, b.hero.dead ? 'Wren is down' : 'Send Wren to the gate')));
     const list = h('div', { class: 'shop-list' });
     for (const id of ITEM_ORDER) {
@@ -688,8 +702,8 @@ export class BattleScreen {
       list.append(h('div', { class: `item ${owned ? 'owned' : ''}` },
         h('div', {}, h('b', { text: it.name }), h('small', { text: it.desc })),
         owned
-          ? h('button', { class: `btn act ${near ? '' : 'poor'}`, onclick: () => b.sellItem(id) }, 'Sell ', coin(Math.floor(it.cost / 2)))
-          : h('button', { class: `btn act buy ${b.canBuy(id) ? '' : 'poor'} ${b.gold < it.cost ? 'short' : ''}`, disabled: !near, onclick: () => b.buy(id) }, coin(it.cost))));
+          ? h('button', { class: `btn act ${canShop ? '' : 'poor'}`, disabled: !canShop, onclick: () => b.sellItem(id) }, 'Sell ', coin(Math.floor(it.cost / 2)))
+          : h('button', { class: `btn act buy ${b.canBuy(id) ? '' : 'poor'} ${b.gold < it.cost ? 'short' : ''}`, disabled: !canShop, onclick: () => b.buy(id) }, coin(it.cost))));
     }
     el.append(list);
   }

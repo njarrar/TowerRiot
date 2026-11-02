@@ -5,21 +5,21 @@
   "lives": 20,
   "waves": 6,
   "level": 6,
-  "gold": 39,
+  "gold": 27,
   "towers": 7,
   "kills": 90,
-  "clock": 162.1
+  "clock": 153.333
  },
  {
   "stage": 2,
   "won": true,
   "lives": 20,
   "waves": 8,
-  "level": 8,
-  "gold": 58,
+  "level": 7,
+  "gold": 42,
   "towers": 11,
   "kills": 152,
-  "clock": 238.233
+  "clock": 216.2
  },
  {
   "stage": 3,
@@ -30,29 +30,29 @@
   "gold": 86,
   "towers": 11,
   "kills": 142,
-  "clock": 285.133
+  "clock": 277.033
  },
  {
   "stage": 4,
   "won": true,
   "lives": 20,
   "waves": 8,
-  "level": 14,
-  "gold": 107,
+  "level": 13,
+  "gold": 108,
   "towers": 13,
   "kills": 169,
-  "clock": 260.6
+  "clock": 254.667
  },
  {
   "stage": 5,
   "won": true,
   "lives": 20,
   "waves": 7,
-  "level": 13,
-  "gold": 41,
+  "level": 14,
+  "gold": 125,
   "towers": 10,
   "kills": 143,
-  "clock": 258.333
+  "clock": 250
  },
  {
   "stage": 6,
@@ -63,29 +63,29 @@
   "gold": 112,
   "towers": 11,
   "kills": 231,
-  "clock": 313.967
+  "clock": 301.833
  },
  {
   "stage": 7,
   "won": true,
-  "lives": 19,
+  "lives": 20,
   "waves": 9,
   "level": 10,
-  "gold": 77,
+  "gold": 74,
   "towers": 12,
-  "kills": 167,
-  "clock": 271.5
+  "kills": 168,
+  "clock": 236.233
  },
  {
   "stage": 8,
   "won": true,
-  "lives": 16,
+  "lives": 20,
   "waves": 10,
-  "level": 16,
-  "gold": 841,
+  "level": 15,
+  "gold": 354,
   "towers": 12,
-  "kills": 318,
-  "clock": 318.467
+  "kills": 322,
+  "clock": 302.667
  },
  {
   "stage": 9,
@@ -93,21 +93,21 @@
   "lives": 20,
   "waves": 10,
   "level": 16,
-  "gold": 109,
+  "gold": 95,
   "towers": 12,
   "kills": 198,
-  "clock": 307.667
+  "clock": 307.533
  },
  {
   "stage": 10,
   "won": true,
-  "lives": 18,
+  "lives": 11,
   "waves": 8,
-  "level": 12,
-  "gold": 125,
+  "level": 16,
+  "gold": 29,
   "towers": 12,
-  "kills": 155,
-  "clock": 269.933
+  "kills": 148,
+  "clock": 265.267
  },
  {
   "stage": 11,
@@ -118,105 +118,105 @@
   "gold": 71,
   "towers": 12,
   "kills": 237,
-  "clock": 311.533
+  "clock": 317.633
  },
  {
   "stage": 12,
   "won": true,
-  "lives": 13,
+  "lives": 11,
   "waves": 10,
   "level": 16,
-  "gold": 121,
+  "gold": 105,
   "towers": 13,
-  "kills": 217,
-  "clock": 317.7
+  "kills": 215,
+  "clock": 310.867
  },
  {
   "stage": 13,
   "won": true,
-  "lives": 22,
+  "lives": 30,
   "waves": 9,
   "level": 16,
-  "gold": 230,
+  "gold": 67,
   "towers": 13,
-  "kills": 232,
-  "clock": 276.933
+  "kills": 233,
+  "clock": 271.233
  },
  {
   "stage": 14,
   "won": true,
-  "lives": 23,
+  "lives": 30,
   "waves": 9,
   "level": 16,
-  "gold": 76,
+  "gold": 133,
   "towers": 13,
   "kills": 255,
-  "clock": 273.833
+  "clock": 264.133
  },
  {
   "stage": 15,
   "won": true,
-  "lives": 11,
+  "lives": 18,
   "waves": 7,
-  "level": 15,
-  "gold": 116,
+  "level": 16,
+  "gold": 149,
   "towers": 13,
   "kills": 152,
-  "clock": 375.8
+  "clock": 379.833
  },
  {
   "stage": 16,
   "won": true,
-  "lives": 16,
+  "lives": 30,
   "waves": 9,
   "level": 16,
-  "gold": 187,
+  "gold": 108,
   "towers": 13,
-  "kills": 202,
-  "clock": 326.4
+  "kills": 208,
+  "clock": 314.4
  },
  {
   "stage": 17,
   "won": true,
-  "lives": 18,
+  "lives": 30,
   "waves": 10,
   "level": 16,
-  "gold": 2616,
+  "gold": 351,
   "towers": 9,
-  "kills": 313,
-  "clock": 370.733
+  "kills": 318,
+  "clock": 321.367
  },
  {
   "stage": 18,
   "won": true,
-  "lives": 15,
+  "lives": 21,
   "waves": 9,
   "level": 16,
-  "gold": 197,
+  "gold": 153,
   "towers": 13,
-  "kills": 241,
-  "clock": 295.133
+  "kills": 236,
+  "clock": 293.233
  },
  {
   "stage": 19,
   "won": true,
-  "lives": 21,
+  "lives": 30,
   "waves": 10,
   "level": 16,
-  "gold": 2316,
+  "gold": 96,
   "towers": 13,
-  "kills": 327,
-  "clock": 316.9
+  "kills": 332,
+  "clock": 303.2
  },
  {
   "stage": 20,
   "won": true,
-  "lives": 18,
+  "lives": 11,
   "waves": 7,
   "level": 16,
-  "gold": 2098,
+  "gold": 61,
   "towers": 13,
-  "kills": 236,
-  "clock": 248.433
+  "kills": 229,
+  "clock": 258.1
  }
 ]

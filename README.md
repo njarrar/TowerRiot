@@ -35,7 +35,7 @@ Tap the ground to move her. She holds that spot and blocks up to two foes. Tap a
 | **E** | Attune | Passive. Towers near Wren attack faster. |
 | **R** | Sunrise | Every tower fires twice as fast, and every hidden foe shows. Opens at level 6. |
 
-The gate works as her well: stand there to heal and to shop.
+The gate works as her well: stand there to heal and to shop. Before the first wave, and whenever the field is clear, she can shop from anywhere. Time slows while you aim Lantern Snare.
 
 | Item | Cost | Effect |
 |---|---|---|
@@ -46,6 +46,8 @@ The gate works as her well: stand there to heal and to shop.
 | Warden's plate | 150 | +260 health, 20% less damage taken |
 | Cleaving spear | 260 | Strikes also hit foes beside the target |
 | Spear of dawn | 380 | +30 damage and 25% faster strikes |
+| Ember spear | 310 | +22 damage; strikes burn and make foes take 25% more damage |
+| Dawn mantle | 340 | +220 health, less damage taken, and nearby towers hit 12% harder |
 | Second dawn | 420 | The first time Wren falls, she stands right back up |
 
 ![Ember Pass, deep in the Ashen Rift](docs/images/battle-ember-pass.jpg)
@@ -54,7 +56,7 @@ The gate works as her well: stand there to heal and to shop.
 
 ## Six towers, twelve paths
 
-Each tower has three levels. At the top, split it into one of two forms.
+Each tower has three levels. At the top, split it into one of two forms. A split tower can then be tempered twice (Temper I and II) for more damage, or more range for bells and beacons.
 
 | Tower | Role | Split A | Split B |
 |---|---|---|---|
@@ -65,7 +67,7 @@ Each tower has three levels. At the top, split it into one of two forms.
 | **Root garden** | Thorns that hold a foe in place | Bramble: holds a whole group | Spore pod: a poison cloud |
 | **Beacon** | No attack. Boosts nearby towers and reveals Shades | War drum: faster towers nearby | Watchfire: longer range nearby |
 
-Set each tower to aim at the foe furthest along, the strongest or the closest. Load the Armory's ember, frost or storm rounds for extra effects.
+Set each tower to aim at the foe furthest along, the strongest, the most armored or the closest. Load the Armory's ember, frost or storm rounds for extra effects.
 
 ---
 
@@ -117,6 +119,8 @@ Stars earn Embers. Spend them across four trees between stages. Refunds are free
 - **Armory** (after stage 7): ember, frost and storm rounds, Shatter and Overload combos, faster reloads.
 - **Wren** (after stage 2): stronger sweeps, richer last hits, a longer snare, start at level 3.
 - **Bulwark** (after stage 12): more lives, a war chest, better resale, interest on banked gold.
+
+After stage 19 each tree opens two capstones. You may take only one of each pair. A perfect campaign earns 100 Embers: enough for every node plus one capstone per tree.
 
 ---
 
@@ -222,6 +226,18 @@ android/       Android app shell
 ```
 
 ---
+
+## What changed lately
+
+- **Late gold has a use:** Temper I and II on split towers, and two new shop items, Ember spear and Dawn mantle.
+- **Capstones:** two per tree after stage 19, pick one.
+- **Fixes:** Scatter gun now fires all three shells; Rail stays a single huge bolt; cannon shells lead foes on conveyor belts; bolts find a new target if theirs dies.
+- **Relics:** the Tide pearl now gives +15% range only to towers near water.
+- **Maps:** every plot can reach a road, the Stage 15 gate sits on screen, Stage 20 gets a third road, and Region 4 grows harder stage by stage.
+- **The Hollow** adapts from Region 2 on, and only when one element clearly leads.
+- **Foes** each have their own shape, in battle and on their icons.
+- **Thick walls** gives +10 lives.
+- **New target mode:** Armored.
 
 ## Design notes
 

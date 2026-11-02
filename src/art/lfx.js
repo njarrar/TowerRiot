@@ -220,7 +220,7 @@ function stormPylon(ctx,x,y,s,pass,seed,target){seed=seed||31;ctx.save();ctx.tra
 // Grub: eyeless segmented larva. Glow lives in its seams, not in a face.
 // ph is the walk phase in radians; left out, the grub stands still (menu icons).
 function grub(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
- const segs=[];const n=9;for(let i=0;i<n;i++){const t=i/(n-1);const px=-48+t*92;const py=-10-Math.sin(t*Math.PI)*6+Math.sin(t*9+seed)*1.2+(walk?Math.sin(ph-t*5)*1.8:0);const r=6+Math.sin(t*Math.PI)*9-(t>.85?3:0);segs.push([px,py,r]);}
+ const segs=[];const n=9;for(let i=0;i<n;i++){const t=i/(n-1);const px=-48+t*92;const py=-10-Math.sin(t*Math.PI)*6+Math.sin(t*9+seed)*1.2+(walk?Math.sin(ph-t*5)*1.8:0);const r=6+Math.sin(t*Math.PI)*9-Math.max(0,(t-.75)*8);segs.push([px,py,r]);}
  if(pass==='base'){
   // slime trail behind
   ctx.save();ctx.translate(-70,0);ctx.scale(1,.25);const tg=ctx.createLinearGradient(-50,0,40,0);tg.addColorStop(0,'rgba(20,30,28,0)');tg.addColorStop(1,'rgba(20,34,30,.75)');ctx.fillStyle=tg;ctx.beginPath();ctx.ellipse(0,0,50,14,0,0,TAU);ctx.fill();ctx.restore();
@@ -240,9 +240,9 @@ function grub(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk
    ctx.fillStyle='rgba(0,0,0,.5)';for(let k=0;k<3;k++){ctx.fillRect(px-rr*.4+r()*rr*.8,py-rr*.3+r()*rr*.6,1.2,1.2);}
    ctx.strokeStyle='rgba(60,60,58,.8)';ctx.lineWidth=.6;for(let k=0;k<3;k++){const a=-Math.PI*.5+(r()-.5)*1.4;ctx.beginPath();ctx.moveTo(px+Math.cos(a)*rr,py+Math.sin(a)*rr);ctx.lineTo(px+Math.cos(a)*(rr+3),py+Math.sin(a)*(rr+3));ctx.stroke();}
   });
-  // head: blunt wedge, split mandibles, no eyes
+  // head: blunt wedge overlapping thorax, split mandibles, no eyes
   const [hx,hy,hr]=segs[n-1];
-  ctx.fillStyle='#0d0e0f';ctx.beginPath();ctx.moveTo(hx-3,hy-hr-1);ctx.quadraticCurveTo(hx+hr+6,hy-hr*.6,hx+hr+7,hy+1);ctx.quadraticCurveTo(hx+hr,hy+hr,hx-3,hy+hr);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#0d0e0f';ctx.beginPath();ctx.moveTo(hx-hr*1.6,hy-hr-1.5);ctx.quadraticCurveTo(hx+hr+6,hy-hr*.6,hx+hr+7,hy+1);ctx.quadraticCurveTo(hx+hr,hy+hr+.5,hx-hr*1.6,hy+hr+1);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#c9bfa8';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(hx+hr+4,hy-2);ctx.quadraticCurveTo(hx+hr+13,hy-6,hx+hr+15,hy+1);ctx.moveTo(hx+hr+4,hy+3);ctx.quadraticCurveTo(hx+hr+12,hy+7,hx+hr+13,hy+1.5);ctx.stroke();
   ctx.strokeStyle='rgba(0,0,0,.6)';ctx.lineWidth=.6;ctx.stroke();
  } else {
@@ -363,15 +363,30 @@ function shellback(ctx,x,y,s,pass,seed,face,frost,ph){seed=seed||61;face=face||1
  }
  ctx.restore();}
 
-// Wren in the field: a tall hooded keeper with lantern and spear.
+// Wren in the field: a tall hooded keeper in slate-navy cloak and rust-red scarf with lantern and spear.
 function wren(ctx,x,y,s,pass){ctx.save();ctx.translate(x,y);ctx.scale(s,s);
  if(pass==='base'){shadow(ctx,4,1,16,4,.8);
-  ctx.strokeStyle='#4a3a28';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(9,2);ctx.lineTo(14,-44);ctx.stroke();ctx.fillStyle='#c9d6e2';poly(ctx,[[14,-44],[16,-52],[12.5,-45]]);ctx.fill();
-  ctx.fillStyle='#14161b';ctx.beginPath();ctx.moveTo(0,-38);ctx.quadraticCurveTo(-8,-36,-8,-24);ctx.lineTo(-11,0);ctx.lineTo(10,0);ctx.lineTo(7,-24);ctx.quadraticCurveTo(7,-36,0,-38);ctx.fill();
-  ctx.fillStyle='rgba(255,170,80,.25)';ctx.beginPath();ctx.moveTo(-8,-24);ctx.lineTo(-11,0);ctx.lineTo(-7,0);ctx.lineTo(-5,-24);ctx.fill();
-  ctx.fillStyle='#0d0f13';ctx.beginPath();ctx.ellipse(0,-37,5.5,6.5,0,0,TAU);ctx.fill();ctx.fillStyle='#030405';ctx.beginPath();ctx.ellipse(1.2,-35.5,3,3.6,0,0,TAU);ctx.fill();
-  ctx.strokeStyle='#14161b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-7,-22);ctx.lineTo(-13,-14);ctx.stroke();ctx.fillStyle='#16171a';ctx.fillRect(-16,-14,6,8);
- } else {glow(ctx,-13,-10,26,'#ffa040',.45);ctx.fillStyle='#ffe2a8';ctx.fillRect(-14.5,-12,3,5);}
+  // Flowing rust-red scarf tail behind shoulder
+  ctx.fillStyle='#96331e';poly(ctx,[[5,-28],[13,-20],[10,-14],[4,-22]]);ctx.fill();
+  // Spear shaft and bright steel head
+  ctx.strokeStyle='#5a4630';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(9,2);ctx.lineTo(14,-44);ctx.stroke();
+  ctx.fillStyle='#dce6f0';poly(ctx,[[14,-44],[16.5,-53],[12.2,-45]]);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(14,-44);ctx.lineTo(16.2,-52.5);ctx.stroke();
+  // Slate-navy traveller's cloak with warm lantern-lit edge
+  const cg=ctx.createLinearGradient(-10,-38,10,0);cg.addColorStop(0,'#2c3346');cg.addColorStop(.6,'#1f2433');cg.addColorStop(1,'#141822');
+  ctx.fillStyle=cg;ctx.beginPath();ctx.moveTo(0,-38);ctx.quadraticCurveTo(-8.5,-36,-8.5,-24);ctx.lineTo(-11.5,0);ctx.lineTo(10.5,0);ctx.lineTo(7.5,-24);ctx.quadraticCurveTo(7.5,-36,0,-38);ctx.fill();
+  ctx.fillStyle='rgba(255,186,96,.38)';ctx.beginPath();ctx.moveTo(-8.5,-25);ctx.lineTo(-11.5,0);ctx.lineTo(-6.8,0);ctx.lineTo(-4.8,-25);ctx.fill();
+  ctx.strokeStyle='rgba(190,205,230,.22)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(7.2,-25);ctx.lineTo(10.2,-1);ctx.stroke();
+  // Signature rust-red scarf collar
+  ctx.fillStyle='#b8442a';ctx.beginPath();ctx.moveTo(-7.5,-29);ctx.quadraticCurveTo(0,-25,7.2,-28.5);ctx.lineTo(6.5,-23.5);ctx.quadraticCurveTo(0,-20.5,-6.8,-24);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#df6848';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(-7,-28.5);ctx.quadraticCurveTo(0,-25,6.8,-28);ctx.stroke();
+  // Hood and face shadow
+  ctx.fillStyle='#23293a';ctx.beginPath();ctx.ellipse(0,-37,5.8,6.7,0,0,TAU);ctx.fill();
+  ctx.fillStyle='#06080c';ctx.beginPath();ctx.ellipse(1.2,-35.5,3,3.6,0,0,TAU);ctx.fill();
+  // Lantern arm and brass-capped lantern
+  ctx.strokeStyle='#23293a';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(-7,-22);ctx.lineTo(-13,-14);ctx.stroke();
+  ctx.fillStyle='#22201d';ctx.fillRect(-16,-14,6,8);ctx.fillStyle='#9e7838';ctx.fillRect(-16.5,-15,7,1.8);ctx.fillRect(-16.5,-6.5,7,1.4);
+ } else {glow(ctx,-13,-10,28,'#ffa040',.5);ctx.fillStyle='#ffe8b4';ctx.fillRect(-14.5,-12.2,3,4.8);}
  ctx.restore();}
 
 /* ---------- small ruin pieces for the map ---------- */
@@ -645,7 +660,7 @@ function paintField(ctx,W,H,M){
  M.waters.forEach((Wt,k)=>{const L=offset(Wt.pts,-Wt.w*.48,4+k,12),Rr=offset(Wt.pts,Wt.w*.48,6+k,12);[L,Rr].forEach(side=>{for(let i=0;i<side.length;i+=2){if(r()<.45)continue;const[px,py]=side[i];for(let j=0;j<4;j++){ctx.strokeStyle=`rgba(${30+r()*20},${36+r()*16},22,.9)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+j*2,py);ctx.quadraticCurveTo(px+j*2+(r()-.5)*6,py-6,px+j*2+(r()-.5)*8,py-10-r()*8);ctx.stroke()}}})});
  ctx.restore();
  // cliff face of the high ground
- const hp=M.high||[];for(let i=0;i<hp.length-1;i++){const[a,b]=hp[i],[e,f]=hp[i+1];if(b<4&&f<4)continue;if(a>=W-2&&e>=W-2)continue;const len=Math.hypot(e-a,f-b),n=Math.ceil(len/14);for(let k=0;k<n;k++){const u=k/n,px=mix(a,e,u),py=mix(b,f,u);masonry(ctx,[[px,py],[px+15,py+(f-b)/n],[px+15,py+(f-b)/n+24],[px,py+24]],px,py,px+15,py+30,'#4c4a45',.45+r()*.2,900+i*40+k,{ch:6,bw:7})}}
+ const hp=M.high||[];for(let i=0;i<hp.length-1;i++){const[a,b]=hp[i],[e,f]=hp[i+1];if(b<4&&f<4)continue;if(a<=2&&e<=2)continue;if(a>=W-2&&e>=W-2)continue;const len=Math.hypot(e-a,f-b);if(len<2)continue;const n=Math.max(1,Math.ceil(len/14));for(let k=0;k<n;k++){const u=k/n,v=(k+1)/n,px=mix(a,e,u),py=mix(b,f,u),qx=mix(a,e,v),qy=mix(b,f,v);const pad=Math.abs(qx-px)<3?4:0;const pts=pad?[[px,py],[px+pad,py+2],[qx+pad,qy+24],[qx,qy+24]]:[[px,py],[qx,qy],[qx,qy+24],[px,py+24]];masonry(ctx,pts,Math.min(px,qx)-1,Math.min(py,qy),Math.max(px,qx)+pad+1,Math.max(py,qy)+25,'#4c4a45',.45+r()*.2,900+i*40+k,{ch:6,bw:7})}}
  if(hp.length>3){ctx.save();ctx.strokeStyle='rgba(170,190,220,.16)';ctx.lineWidth=1.4;poly(ctx,hp.slice(1,-1));ctx.stroke();ctx.restore();}
  // stone bridge
  M.bridges.forEach(([bx,by,ang,bl],bi)=>{ctx.save();ctx.translate(bx,by);ctx.rotate(ang);shadow(ctx,4,18,bl+10,12,.8);const bW=27;

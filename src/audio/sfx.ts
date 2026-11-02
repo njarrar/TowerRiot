@@ -38,9 +38,11 @@ export class Audio {
     const gap = s === 'bolt' || s === 'coin' || s === 'hero' ? 0.05 : 0.08;
     if ((this.last.get(s) ?? -1) > now - gap) return;
     this.last.set(s, now);
+    // Slight ±4% pitch jitter on rapid combat hits prevents machine-gun ear fatigue.
+    const j = s === 'bolt' || s === 'boom' || s === 'zap' || s === 'hero' || s === 'root' ? 0.96 + Math.random() * 0.08 : 1;
     const tone = (type: OscillatorType, f0: number, f1: number, dur: number, vol: number, delay = 0) => {
       const o = c.createOscillator(), gn = c.createGain();
-      o.type = type; o.frequency.setValueAtTime(f0, now + delay); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), now + delay + dur);
+      o.type = type; o.frequency.setValueAtTime(f0 * j, now + delay); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1 * j), now + delay + dur);
       gn.gain.setValueAtTime(0.0001, now + delay); gn.gain.exponentialRampToValueAtTime(vol, now + delay + 0.01); gn.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
       o.connect(gn); gn.connect(m); o.start(now + delay); o.stop(now + delay + dur + 0.02);
     };

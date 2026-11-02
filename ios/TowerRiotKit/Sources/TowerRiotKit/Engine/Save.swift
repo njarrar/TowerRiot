@@ -73,8 +73,10 @@ public struct Save: Codable, Equatable, Sendable {
     public func canBuyNode(_ id: String) -> Bool {
         let data = GameData.shared
         guard let n = data.nodes[id], !nodes.contains(id), let tree = data.tree(of: n) else { return false }
-        if tree.after > cleared { return false }
+        let cl = cleared
+        if tree.after > cl || (n.after ?? 0) > cl { return false }
         if let req = n.req, !nodes.contains(req) { return false }
+        if let excl = n.excl, nodes.contains(excl) { return false }
         return embers.free >= n.cost
     }
 

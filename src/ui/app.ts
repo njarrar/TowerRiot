@@ -143,8 +143,14 @@ export class App {
     const regions = h('div', { class: 'regions' }, ...REGIONS.map((r, ri) => {
       const own = STAGES.filter(st => st.region === ri);
       const sealed = !isUnlocked(s, own[0].id);
-      // Each region is a strip of its own ground with a road through it; the stages are stops on the road.
-      const stops = own.map((_, i) => ({ x: 9 + i * (82 / (own.length - 1)), y: [66, 34, 62, 30, 52][i % 5] }));
+      // Each region has its own road silhouette: rolling valley, sweeping coast, stepped machine terrace, caldera climb.
+      const regionY = [
+        [68, 36, 62, 30, 50],
+        [34, 66, 38, 68, 44],
+        [64, 62, 30, 32, 54],
+        [70, 48, 28, 58, 34],
+      ][ri] ?? [66, 34, 62, 30, 52];
+      const stops = own.map((_, i) => ({ x: 9 + i * (82 / (own.length - 1)), y: regionY[i % regionY.length] }));
       const d = stops.map((p, i) => {
         if (i === 0) return `M -20 ${p.y + 6} C 0 ${p.y + 6} ${p.x - 4} ${p.y} ${p.x} ${p.y}`;
         const q = stops[i - 1], mx = (q.x + p.x) / 2;
@@ -200,10 +206,18 @@ export class App {
     const nodes = h('div', { class: 'tree' }, ...t.nodes.map((n, i) => {
       const owned = s.nodes.includes(n.id), can = canBuyNode(s, n.id);
       const req = n.req ? NODES.get(n.req) : undefined;
-      return h('div', { class: `tnode tier${Math.floor(i / 2)} ${owned ? 'owned' : ''} ${can ? 'can' : ''}` },
+      const exclNode = n.excl ? NODES.get(n.excl) : undefined;
+      const exclLocked = !!(n.excl && s.nodes.includes(n.excl));
+      const notes: string[] = [];
+      if (req && !owned && !s.nodes.includes(req.id)) notes.push(`Needs ${req.name}`);
+      if (n.after && c < n.after && !owned) notes.push(`Opens after stage ${n.after}`);
+      if (exclNode && !owned && !exclLocked) notes.push(`Capstone: locks ${exclNode.name}`);
+      return h('div', { class: `tnode tier${Math.floor(i / 2)} ${n.excl ? 'capstone' : ''} ${owned ? 'owned' : ''} ${can ? 'can' : ''} ${exclLocked ? 'excl-locked' : ''}` },
         h('b', { text: n.name }), h('p', { text: n.desc }),
-        req && !owned ? h('small', { text: `Needs ${req.name}` }) : null,
-        owned ? h('span', { class: 'badge', text: 'Learned' }) : h('button', { class: `btn act ${can ? '' : 'poor'}`, disabled: !can, onclick: () => { if (buyNode(s, n.id)) { this.persist(); this.audio.play('level'); this.trees(); } } }, `${n.cost} Embers`));
+        notes.length ? h('small', { text: notes.join(' · ') }) : null,
+        owned ? h('span', { class: 'badge', text: 'Learned' })
+          : exclLocked ? h('span', { class: 'badge muted', text: `Locked by ${exclNode?.name ?? 'Capstone'}` })
+          : h('button', { class: `btn act ${can ? '' : 'poor'}`, disabled: !can, onclick: () => { if (buyNode(s, n.id)) { this.persist(); this.audio.play('level'); this.trees(); } } }, `${n.cost} Embers`));
     }));
     this.mount(h('section', { class: 'screen trees' },
       h('header', { class: 'bar-top' },
@@ -251,7 +265,7 @@ export class App {
           h('li', { text: 'Holding the phone upright? Drag the map left and right. Red notches at its edges point to foes out of view.' }),
           h('li', { text: 'Tap the ground to move Wren. She holds that spot and blocks up to two foes. Tap a foe to send her after it.' }),
           h('li', { text: 'Wren gains levels inside each stage. Spend points on Q, W, E and R. Landing the killing blow pays 50% more gold.' }),
-          h('li', { text: 'Walk her to the gate to shop. Grab runes when they glow on the map.' }),
+          h('li', { text: 'Shop between waves from anywhere, or walk Wren to the gate during combat. Grab runes when they glow on the map.' }),
           h('li', { text: 'Keys: Q W E R skills, 1 to 6 build, Space next wave, F speed, P pause, M sound, B shop. Right click moves Wren.' })),
         erase)));
   }

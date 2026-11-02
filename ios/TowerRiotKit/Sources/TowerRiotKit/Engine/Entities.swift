@@ -1,6 +1,6 @@
 import Foundation
 
-public enum TargetMode: String, CaseIterable, Sendable { case first, strong, close }
+public enum TargetMode: String, CaseIterable, Sendable { case first, strong, armored, close }
 public enum DamageSource: Sendable, Equatable { case element(Element), env }
 
 /// A road at battle time: its path, closures, wreck and belts.
@@ -92,7 +92,7 @@ public struct Shot {
     public let tower: Int
     public let x0: Double, y0: Double
     public internal(set) var tx: Double, ty: Double
-    public let foe: Int
+    public internal(set) var foe: Int
     public internal(set) var t: Double
     public let dur: Double
     let dmg: Double
@@ -107,6 +107,7 @@ public struct Cloud { public let x: Double, y: Double, r: Double, dps: Double; p
 public struct PlotRt {
     public let x: Double, y: Double
     public let high: Bool
+    public let nearWater: Bool
     public internal(set) var sunk = false
     public let gear: SplitId?
 }
