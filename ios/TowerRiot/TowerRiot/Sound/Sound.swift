@@ -4,7 +4,7 @@ import os
 /// The game's sounds, made on the fly like the web game's WebAudio synth (src/audio/sfx.ts): no files, fully offline.
 /// Each sound is a few tones with pitch sweeps and short bursts of filtered noise.
 final class Sound {
-    enum Sfx: CaseIterable { case bolt, boom, zap, bell, root, coin, level, leak, wave, build, click, sweep, snare, sunrise, rune, boss, win, lose, hero }
+    enum Sfx: CaseIterable { case bolt, boom, zap, bell, root, coin, level, leak, wave, build, click, sweep, snare, sunrise, rune, boss, win, lose, hero, switchFlip, clear, warp }
 
     private let engine = AVAudioEngine()
     private var node: AVAudioSourceNode?
@@ -84,6 +84,9 @@ final class Sound {
         case .boss: tone(.saw, 70, 55, 1.6, 0.18, 0); hiss(300, 0.5, 1.4, 0.2, .low)
         case .win: for (i, f) in [523.0, 659, 784, 1047, 1319].enumerated() { tone(.triangle, f, f, 0.4, 0.1, Double(i) * 0.12) }
         case .lose: for (i, f) in [392.0, 330, 262, 196].enumerated() { tone(.triangle, f, f * 0.98, 0.5, 0.1, Double(i) * 0.18) }
+        case .switchFlip: tone(.triangle, 420, 620, 0.09, 0.09, 0); tone(.triangle, 720, 860, 0.06, 0.05, 0.05)
+        case .clear: hiss(750, 1, 0.22, 0.14, .low); tone(.triangle, 260, 440, 0.16, 0.08, 0.03)
+        case .warp: tone(.sine, 520, 1080, 0.16, 0.07, 0); tone(.sine, 980, 440, 0.14, 0.05, 0.08)
         }
     }
 

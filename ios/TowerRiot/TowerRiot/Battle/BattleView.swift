@@ -10,9 +10,9 @@ struct BattleView: View {
     @EnvironmentObject var app: AppModel
     @StateObject private var ctl: BattleController
 
-    init(stageId: Int) {
+    init(stageId: Int, variant: StageVariant = .standard, oaths: [OathId] = []) {
         // The controller needs the app; it is handed over in onAppear-free form via a holder.
-        _ctl = StateObject(wrappedValue: BattleController(stageId: stageId, app: AppHolder.shared!))
+        _ctl = StateObject(wrappedValue: BattleController(stageId: stageId, variant: variant, oaths: oaths, app: AppHolder.shared!))
     }
 
     var body: some View {
@@ -81,9 +81,15 @@ private struct HudLayer: View {
             if upright {
                 // Top strip: lives, gold, wave and the controls. Band below the map: Wren and the call button, then the skills.
                 HStack(alignment: .center, spacing: 8) {
-                    StatsView(ctl: ctl, vertical: false)
-                    Spacer(minLength: 0)
-                    ControlsView(ctl: ctl)
+                    if ctl.leftHandHud {
+                        ControlsView(ctl: ctl)
+                        Spacer(minLength: 0)
+                        StatsView(ctl: ctl, vertical: false)
+                    } else {
+                        StatsView(ctl: ctl, vertical: false)
+                        Spacer(minLength: 0)
+                        ControlsView(ctl: ctl)
+                    }
                 }
                 .padding(.horizontal, 8).padding(.bottom, 6)
                 .frame(width: size.width, height: map.minY, alignment: .bottom)
@@ -91,9 +97,15 @@ private struct HudLayer: View {
                 .overlay(Rectangle().fill(Ink.rule).frame(height: 1), alignment: .bottom)
                 VStack(spacing: 10) {
                     HStack(alignment: .top, spacing: 8) {
-                        HeroCard(ctl: ctl)
-                        Spacer(minLength: 0)
-                        CallView(ctl: ctl, compact: true)
+                        if ctl.leftHandHud {
+                            CallView(ctl: ctl, compact: true)
+                            Spacer(minLength: 0)
+                            HeroCard(ctl: ctl)
+                        } else {
+                            HeroCard(ctl: ctl)
+                            Spacer(minLength: 0)
+                            CallView(ctl: ctl, compact: true)
+                        }
                     }
                     SkillsView(ctl: ctl, columns: false)
                 }
@@ -104,41 +116,73 @@ private struct HudLayer: View {
                 .offset(y: map.maxY)
                 EdgeMarks(battle: b, map: map, full: full)
             } else if side {
-                // Left column: lives, gold, wave and the hero. Right column: controls, skills, the call button.
-                VStack(alignment: .leading, spacing: 8) {
-                    StatsView(ctl: ctl, vertical: true)
-                    Spacer(minLength: 0)
-                    HeroCard(ctl: ctl)
+                let leftW = max(0, map.minX - safe.leading)
+                let rightW = max(0, size.width - map.maxX - safe.trailing)
+                if ctl.leftHandHud {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ControlsView(ctl: ctl)
+                        SkillsView(ctl: ctl, columns: true)
+                        Spacer(minLength: 0)
+                        CallView(ctl: ctl, compact: true)
+                    }
+                    .padding(.vertical, 10).padding(.horizontal, 8)
+                    .frame(width: leftW, height: size.height, alignment: .topLeading)
+                    .offset(x: safe.leading)
+                    VStack(alignment: .trailing, spacing: 8) {
+                        StatsView(ctl: ctl, vertical: true)
+                        Spacer(minLength: 0)
+                        HeroCard(ctl: ctl)
+                    }
+                    .padding(.vertical, 10).padding(.horizontal, 8)
+                    .frame(width: rightW, height: size.height, alignment: .topTrailing)
+                    .offset(x: map.maxX)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        StatsView(ctl: ctl, vertical: true)
+                        Spacer(minLength: 0)
+                        HeroCard(ctl: ctl)
+                    }
+                    .padding(.vertical, 10).padding(.horizontal, 8)
+                    .frame(width: leftW, height: size.height, alignment: .topLeading)
+                    .offset(x: safe.leading)
+                    VStack(alignment: .trailing, spacing: 8) {
+                        ControlsView(ctl: ctl)
+                        SkillsView(ctl: ctl, columns: true)
+                        Spacer(minLength: 0)
+                        CallView(ctl: ctl, compact: true)
+                    }
+                    .padding(.vertical, 10).padding(.horizontal, 8)
+                    .frame(width: rightW, height: size.height, alignment: .topTrailing)
+                    .offset(x: map.maxX)
                 }
-                .padding(.vertical, 10).padding(.horizontal, 8)
-                .frame(width: max(0, map.minX - safe.leading), height: size.height, alignment: .topLeading)
-                .offset(x: safe.leading)
-                VStack(alignment: .trailing, spacing: 8) {
-                    ControlsView(ctl: ctl)
-                    SkillsView(ctl: ctl, columns: true)
-                    Spacer(minLength: 0)
-                    CallView(ctl: ctl, compact: true)
-                }
-                .padding(.vertical, 10).padding(.horizontal, 8)
-                .frame(width: max(0, size.width - map.maxX - safe.trailing), height: size.height, alignment: .topTrailing)
-                .offset(x: map.maxX)
             } else {
                 HStack(alignment: .center, spacing: 12) {
-                    HeroCard(ctl: ctl)
-                    SkillsView(ctl: ctl, columns: false)
-                    Spacer(minLength: 0)
-                    CallView(ctl: ctl, compact: false)
+                    if ctl.leftHandHud {
+                        CallView(ctl: ctl, compact: false)
+                        Spacer(minLength: 0)
+                        SkillsView(ctl: ctl, columns: false)
+                        HeroCard(ctl: ctl)
+                    } else {
+                        HeroCard(ctl: ctl)
+                        SkillsView(ctl: ctl, columns: false)
+                        Spacer(minLength: 0)
+                        CallView(ctl: ctl, compact: false)
+                    }
                 }
                 .padding(.leading, 10 + safe.leading).padding(.trailing, 10 + safe.trailing).padding(.vertical, 6)
                 .frame(width: size.width, height: size.height - map.maxY, alignment: .leading)
                 .background(Ink.paper)
                 .overlay(Rectangle().fill(Ink.rule).frame(height: 1), alignment: .top)
                 .offset(y: map.maxY)
+                // Over the map's top edge: lives and gold on one side, the controls on the other. Left-handed play swaps them.
+                let padL = max(0, safe.leading - map.minX), padR = max(0, safe.trailing - (size.width - map.maxX))
+                let rowW = max(0, map.width - 16 - padL - padR)
                 StatsView(ctl: ctl, vertical: false)
-                    .offset(x: map.minX + 8 + max(0, safe.leading - map.minX), y: map.minY + 8)
+                    .frame(width: rowW, alignment: ctl.leftHandHud ? .trailing : .leading)
+                    .offset(x: map.minX + 8 + padL, y: map.minY + 8)
                 ControlsView(ctl: ctl)
-                    .frame(width: map.width - 16 - max(0, safe.trailing - (size.width - map.maxX)), alignment: .trailing)
-                    .offset(x: map.minX + 8, y: map.minY + 8)
+                    .frame(width: rowW, alignment: ctl.leftHandHud ? .leading : .trailing)
+                    .offset(x: map.minX + 8 + padL, y: map.minY + 8)
             }
 
             if let hp = ctl.hintPlot, ctl.menu == nil, hp < b.plots.count {
@@ -162,13 +206,17 @@ private struct HudLayer: View {
                 MenuCard(ctl: ctl, menu: m, toView: toView, map: map, size: size)
             }
             if ctl.shopOpen {
+                let shopW = min(340, map.width - 16)
                 ShopView(ctl: ctl)
-                    .frame(width: min(340, map.width - 16))
+                    .frame(width: shopW)
                     .frame(maxHeight: map.height - 16, alignment: .top)
-                    .offset(x: map.maxX - min(340, map.width - 16) - 8, y: map.minY + 8)
+                    .offset(x: ctl.leftHandHud ? map.minX + 8 : map.maxX - shopW - 8, y: map.minY + 8)
             }
             if b.paused && !ctl.exitAsk && ctl.result == nil {
-                PauseCard(ctl: ctl).frame(width: size.width, height: size.height)
+                // Under the controls when they sit over the map, so pausing never covers them.
+                PauseStrip(ctl: ctl)
+                    .frame(width: map.width)
+                    .offset(x: map.minX, y: map.minY + (upright || side ? 10 : 60))
             }
             if ctl.exitAsk { ExitCard(ctl: ctl).frame(width: size.width, height: size.height) }
             if let r = ctl.result { ResultCard(ctl: ctl, r: r).frame(width: size.width, height: size.height) }
@@ -233,6 +281,7 @@ private struct StatsView: View {
     var body: some View {
         let b = ctl.battle
         let share = Double(b.lives) / Double(b.startLives), held = share >= 0.9 ? 3 : share >= 0.5 ? 2 : 1
+        let adapt = b.adaptationShare()
         let res = Element.allCases.compactMap { e -> (Element, Double)? in let v = b.resist[e] ?? 0; return v > 0 && e != .hero ? (e, v) : nil }
         let layout = vertical ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6)) : AnyLayout(HStackLayout(spacing: 6))
         layout {
@@ -246,6 +295,16 @@ private struct StatsView: View {
             Pill {
                 Image(systemName: "flag.fill").font(.system(size: 12)).foregroundStyle(Ink.inkDim)
                 Text("\(max(1, b.wave))/\(b.totalWaves)").font(Face.body(16, .heavy))
+            }
+            // Shown as on the web: only on stages where the Hollow can adapt, and only once one element leads.
+            if let el = adapt.top, adapt.share >= 0.28, b.stage.region > 0 || b.stage.adaptEvery != nil {
+                let hot = adapt.share > adapt.threshold
+                Pill {
+                    ArtIcon(name: "el-\(el.rawValue)", size: 14).foregroundStyle(hot ? Ink.hollow : Ink.inkDim)
+                    Text("\(Int(jsRound(adapt.share * 100)))%/42%").font(Face.body(12, .heavy))
+                        .foregroundStyle(hot ? Ink.hollow : Ink.inkDim)
+                }
+                .accessibilityLabel("Hollow Adaptation meter: \(Int(jsRound(adapt.share * 100)))% \(Words.element[el] ?? "") damage, threshold 42%")
             }
             ForEach(res, id: \.0) { e, v in
                 Pill {
@@ -276,14 +335,21 @@ private struct ControlsView: View {
     var body: some View {
         let b = ctl.battle
         HStack(spacing: 6) {
+            Button { ctl.toggleAutoNext() } label: {
+                Text("Auto").font(Face.body(12, .heavy)).lineLimit(1).minimumScaleFactor(0.6)
+                    .foregroundStyle(ctl.autoNext ? Ink.accentInk : Ink.inkDim)
+                    .frame(width: 44, height: 44)
+                    .background(RoundedRectangle(cornerRadius: 5).fill(ctl.autoNext ? Ink.accent : Ink.paperGlass))
+                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(ctl.autoNext ? Ink.accentLo : Ink.ruleStrong, lineWidth: 1))
+            }.buttonStyle(.plain).accessibilityLabel("Auto-call next wave").accessibilityAddTraits(ctl.autoNext ? .isSelected : [])
             IconButton(icon: ctl.soundOn ? "sound" : "mute", label: ctl.soundOn ? "Mute sound" : "Turn sound on", dim: !ctl.soundOn) { ctl.toggleSound() }
             Button { ctl.cycleSpeed() } label: {
                 Text("\(Int(b.speed))x").font(Face.body(16, .heavy)).foregroundStyle(Ink.ink)
-                    .frame(width: 42, height: 42)
+                    .frame(width: 44, height: 44)
                     .background(RoundedRectangle(cornerRadius: 5).fill(Ink.paperGlass))
                     .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Ink.ruleStrong, lineWidth: 1))
             }.buttonStyle(.plain).accessibilityLabel("Game speed")
-            IconButton(icon: b.paused ? "play" : "pause", label: b.paused ? "Resume" : "Pause") { ctl.togglePause() }
+            IconButton(icon: b.paused ? "play" : "pause", label: b.paused ? "Resume" : "Pause", active: b.paused) { ctl.togglePause() }
         }
     }
 }
@@ -296,16 +362,20 @@ private struct HeroCard: View {
         let b = ctl.battle, h = b.hero
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                ZStack(alignment: .bottomTrailing) {
-                    ArtPicture(name: "icon-hero", size: 34)
-                        .background(Circle().fill(Ink.ink)).clipShape(Circle())
-                    Text("\(h.level)").font(Face.body(11, .heavy)).foregroundStyle(Ink.paper)
-                        .frame(width: 18, height: 18).background(Circle().fill(ctl.levelFlash ? Ink.accent : Ink.ink))
-                        .offset(x: 4, y: 4)
-                }
+                Button { ctl.toggleLeash() } label: {
+                    ZStack(alignment: .bottomTrailing) {
+                        ArtPicture(name: "icon-hero", size: 34)
+                            .background(Circle().fill(ctl.showLeash ? Ink.accent : Ink.ink)).clipShape(Circle())
+                        Text("\(h.level)").font(Face.body(11, .heavy)).foregroundStyle(Ink.paper)
+                            .frame(width: 18, height: 18).background(Circle().fill(ctl.levelFlash ? Ink.accent : Ink.ink))
+                            .offset(x: 4, y: 4)
+                    }
+                    // A 44 point target around the 34 point portrait; the card's own padding gives it the room.
+                    .frame(width: 44, height: 44).contentShape(Rectangle()).padding(-5)
+                }.buttonStyle(.plain).accessibilityLabel("Toggle Wren leash ring").accessibilityAddTraits(ctl.showLeash ? .isSelected : [])
                 Text("Wren").font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
                 if h.points > 0 {
-                    Text("\(h.points) skill point\(h.points > 1 ? "s" : "")").font(Face.body(12, .heavy)).foregroundStyle(Ink.accent).lineLimit(1)
+                    Text("\(h.points) pt\(h.points > 1 ? "s" : "")").font(Face.body(12, .heavy)).foregroundStyle(Ink.accent).lineLimit(1).minimumScaleFactor(0.7)
                 } else if h.dead {
                     Text("Back in \(Int(h.respawnT.rounded(.up)))").font(Face.body(12, .bold)).foregroundStyle(Ink.inkDim)
                 }
@@ -322,7 +392,7 @@ private struct HeroCard: View {
                         .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(id == nil ? Ink.rule : Ink.inkDim, lineWidth: 1))
                 }
                 Button("Shop") { ctl.shopOpen.toggle() }
-                    .buttonStyle(PaperButton(kind: b.canShop() ? .primary : .plain))
+                    .buttonStyle(PaperButton(kind: b.nearGate() ? .primary : .plain))
                     .controlSize(.small)
             }
         }
@@ -398,15 +468,22 @@ private struct SkillButton: View {
                     .clipShape(RoundedRectangle(cornerRadius: 7)).allowsHitTesting(false)
             }
             .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(canLearn ? Ink.accent : aiming ? Ink.ink : Ink.ruleStrong, lineWidth: canLearn || aiming ? 2 : 1))
-            .overlay(alignment: .topTrailing) {
-                if canLearn {
-                    Text("+").font(Face.body(13, .heavy)).foregroundStyle(Ink.accentInk)
-                        .frame(width: 18, height: 18).background(Circle().fill(Ink.accent)).offset(x: 5, y: -5)
-                }
-            }
             .opacity(locked ? 0.55 : 1)
         }
         .buttonStyle(.plain)
+        .overlay(alignment: .topTrailing) {
+            if canLearn {
+                // Dedicated learn pill so tapping + upgrades even when skill is off cooldown. The disc is 24 points; its target is 44.
+                Button { ctl.learnSkill(key) } label: {
+                    Text("+").font(Face.body(13, .heavy)).foregroundStyle(Ink.accentInk)
+                        .frame(width: 24, height: 24).background(Circle().fill(Ink.accent))
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .offset(x: 16, y: -16)
+                .accessibilityLabel("Learn \(s.name)")
+            }
+        }
         .accessibilityLabel("\(s.name). \(s.desc)")
     }
 }
@@ -433,6 +510,11 @@ private struct CallView: View {
                             }
                         }
                     }
+                    if !nw.openingRoads.isEmpty {
+                        let opening = nw.openingRoads.count
+                        Text(opening == 1 ? "A new road opens next wave" : "\(opening) new roads open next wave")
+                            .font(Face.body(11, .heavy)).foregroundStyle(Ink.accent).lineLimit(1).minimumScaleFactor(0.7)
+                    }
                     if adapts {
                         Text(compact ? (lean.map { "Adapts: \(Words.element[$0] ?? "")" } ?? "Adapts")
                              : (lean.map { "The Hollow adapts this wave, against your \(Words.element[$0] ?? "")." } ?? "The Hollow adapts this wave."))
@@ -447,7 +529,7 @@ private struct CallView: View {
                     VStack(spacing: 0) {
                         Text(b.status == .prep ? "Start" : "Wave \(b.wave + 1) in \(Int((b.nextIn ?? 0).rounded(.up)))s")
                             .font(Face.body(16, .heavy))
-                        Text(b.status == .prep ? "Call the first wave" : "Call now: +\(b.earlyBonus) gold & skill haste")
+                        Text(b.status == .prep ? "Call the first wave" : "Call now: +\(b.earlyBonus) gold")
                             .font(Face.body(11, .semibold)).opacity(0.9)
                     }
                     .frame(minWidth: 130)
@@ -524,50 +606,94 @@ private struct MenuCard: View {
 
     @ViewBuilder func plotMenu(_ pi: Int) -> some View {
         let b = ctl.battle, p = b.plots[pi]
-        let perks = [p.high ? "+20% high ground" : nil, (b.mods.tidePearl && p.nearWater) ? "+15% Tide-pearl" : nil].compactMap { $0 }.joined(separator: ", ")
-        let plotTitle = p.gear != nil
-            ? "Build on a \(p.gear == .a ? "gold" : "iron") gear plot\(perks.isEmpty ? "" : " (\(perks))")"
-            : (perks.isEmpty ? "Build a tower" : "Build a tower (\(perks) range)")
-        Text(plotTitle)
-            .font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
-        HStack(spacing: 6) {
-            ForEach(b.stage.towers, id: \.self) { k in
-                let def = ctl.data.tower(k), cost = b.costOf(k), ok = b.canBuild(plot: pi, kind: k), armed = ctl.armed == k
-                Button { ctl.pickBuild(k) } label: {
-                    VStack(spacing: 2) {
-                        ArtPicture(name: "icon-tower-\(k.rawValue)", size: 44)
-                        Text(def.name).font(Face.body(12, .heavy)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.7)
-                        Text(Words.role[k] ?? "").font(Face.body(9, .semibold)).foregroundStyle(Ink.inkDim).lineLimit(2).multilineTextAlignment(.center).frame(height: 22)
-                        if armed { Text("Tap again to build").font(Face.body(10, .heavy)).foregroundStyle(Ink.accent).lineLimit(1).minimumScaleFactor(0.6) }
-                        else { Price(n: cost, size: 13).foregroundStyle(Ink.ink) }
-                    }
-                    .frame(width: 74)
-                    .padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 5).fill(armed ? Ink.paper2 : Ink.paper))
-                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(armed ? Ink.accent : Ink.rule, lineWidth: armed ? 2 : 1))
-                    .opacity(ok ? 1 : 0.5)
-                }
-                .buttonStyle(.plain)
+        if !p.unlocked {
+            Text("Submerged plot").font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
+            Text("Opens cleanly on Wave \(b.stage.plots[pi].openAtWave ?? 5) once terrain shifts.")
+                .font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
+                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 320, alignment: .leading)
+        } else if let rb = p.rubble {
+            Text("\(rb.kind.rawValue.capitalized) obstacle").font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
+            let note = rb.holdSec != nil
+                ? "Clear now for \(rb.cost)g, or stand Wren beside it for \(Int(rb.holdSec!))s once the first wave is called to salvage it free."
+                : "Pay \(rb.cost)g to clear this plot."
+            Text(note).font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
+                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 320, alignment: .leading)
+            Button { ctl.act { if b.clearPlot(pi) { ctl.closeMenu() } } } label: {
+                HStack(spacing: 6) { Text("Clear plot"); Price(n: rb.cost, size: 13) }
             }
-        }
-        if let k = ctl.armed {
-            let d = ctl.data.tower(k)
-            Text("\(d.name): \(d.blurb)\(d.hitsFlying ? "" : " Cannot hit fliers.")").font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
-                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 460, alignment: .leading)
+            .buttonStyle(PaperButton(kind: .primary, poor: !b.canClearPlot(pi), tall: true))
+            .disabled(!b.canClearPlot(pi))
+        } else {
+            let perks = [p.high ? "+20% high ground" : nil, (b.mods.tidePearl && p.nearWater) ? "+15% Tide-pearl" : nil].compactMap { $0 }.joined(separator: ", ")
+            let plotTitle = p.gear != nil
+                ? "Build on a \(p.gear == .a ? "gold" : "iron") gear plot\(perks.isEmpty ? "" : " (\(perks))")"
+                : (perks.isEmpty ? "Build a tower" : "Build a tower (\(perks) range)")
+            Text(plotTitle)
+                .font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
+            let cols = Array(repeating: GridItem(.fixed(96), spacing: 6), count: 3)
+            LazyVGrid(columns: cols, spacing: 6) {
+                ForEach(b.stage.towers, id: \.self) { k in
+                    let def = ctl.data.tower(k), cost = b.costOf(k), ok = b.canBuild(plot: pi, kind: k), armed = ctl.armed == k
+                    Button { ctl.pickBuild(k) } label: {
+                        VStack(spacing: 2) {
+                            ArtPicture(name: "icon-tower-\(k.rawValue)", size: 40)
+                            Text(def.name).font(Face.body(12, .heavy)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.7)
+                            Text(Words.role[k] ?? "").font(Face.body(9, .semibold)).foregroundStyle(Ink.inkDim).lineLimit(2).minimumScaleFactor(0.7).multilineTextAlignment(.center).frame(height: 22)
+                            if armed { Text("Tap again to build").font(Face.body(10, .heavy)).foregroundStyle(Ink.accent).lineLimit(1).minimumScaleFactor(0.6) }
+                            else { Price(n: cost, size: 13).foregroundStyle(Ink.ink) }
+                        }
+                        .frame(width: 92)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(armed ? Ink.paper2 : Ink.paper))
+                        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(armed ? Ink.accent : Ink.rule, lineWidth: armed ? 2 : 1))
+                        .opacity(ok ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if let k = ctl.armed {
+                let d = ctl.data.tower(k)
+                Text("\(d.name): \(d.blurb)\(d.hitsFlying ? "" : " Cannot hit fliers.")").font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
+                    .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 320, alignment: .leading)
+            }
         }
     }
 
     @ViewBuilder func towerMenu(_ t: Tower) -> some View {
         let b = ctl.battle, def = ctl.data.tower(t.kind), s = b.stats(t)
-        let spName = t.split.flatMap { sp in def.splits.first { $0.id == sp }?.name }
-        let title = spName.map { t.lv > 4 ? "\($0) (Temper \(t.lv == 5 ? "I" : "II"))" : $0 } ?? "\(def.name), level \(t.lv)"
-        Text(title).font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
-        let waterNote = (b.mods.tidePearl && t.plot < b.plots.count && b.plots[t.plot].nearWater) ? " Tide-pearl +15% range." : ""
-        let facts = (t.kind == .beacon ? "Range \(Int(s.range.rounded())). Lights hidden foes and boosts towers in its light."
-            : t.kind == .bell ? "Slows all foes in range. Range \(Int(s.range.rounded()))."
-            : "Damage \(Int(s.dmg.rounded())), \(String(format: "%.1f", 1 / s.rate)) hits a second, range \(Int(s.range.rounded())).") + waterNote
+        let spDef = t.split.flatMap { sp in def.splits.first { $0.id == sp } }
+        let title: String = {
+            if let spDef {
+                return t.lv >= b.data.maxTowerLevel ? "\(spDef.masteryName) · Mastery (Lv \(t.lv))" : spDef.name
+            }
+            return "\(def.name) · Lv \(t.lv)"
+        }()
+        HStack(alignment: .firstTextBaseline) {
+            Text(title).font(Face.body(15, .heavy)).foregroundStyle(Ink.ink)
+            Spacer(minLength: 8)
+            Text("\(Int(t.dmgDealt.rounded())) dmg · \(t.kills) kills")
+                .font(Face.body(11, .bold)).foregroundStyle(Ink.inkFaint)
+        }
+        let facts = t.kind == .beacon
+            ? "Range \(Int(s.range.rounded())). Lights hidden foes and boosts towers in its light."
+            : t.kind == .bell
+            ? "Slows all foes in range. Range \(Int(s.range.rounded()))."
+            : "Damage \(Int(s.dmg.rounded())), \(String(format: "%.1f", 1 / s.rate))/s, range \(Int(s.range.rounded()))."
         Text(t.down ? "This gear plot is lowered: the tower sleeps this wave." : facts).font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
             .fixedSize(horizontal: false, vertical: true).frame(maxWidth: 360, alignment: .leading)
+        if !s.buffs.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(s.buffs, id: \.self) { bf in
+                        Text(bf).font(Face.body(10, .bold)).foregroundStyle(Ink.ink)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Capsule().fill(Ink.paper2))
+                            .overlay(Capsule().strokeBorder(Ink.rule, lineWidth: 1))
+                    }
+                }
+            }
+            .frame(maxWidth: 360)
+        }
         if let rs = b.resist[def.element], rs > 0 {
             HStack(spacing: 6) {
                 ArtIcon(name: "el-\(def.element.rawValue)", size: 14)
@@ -579,13 +705,15 @@ private struct MenuCard: View {
         HStack(spacing: 6) {
             if let up = b.upgradeCost(t) {
                 let n = b.stats(t, lv: t.lv + 1)
-                let upLabel = t.split != nil ? "Temper \(t.lv == 4 ? "I" : "II")" : "Level \(t.lv + 1)"
-                let gain = t.kind == .beacon || t.kind == .bell ? "Range \(Int(s.range.rounded())) to \(Int(n.range.rounded()))"
-                    : "Damage \(Int(s.dmg.rounded())) to \(Int(n.dmg.rounded())), range \(Int(s.range.rounded())) to \(Int(n.range.rounded()))"
+                let isMastery = t.split != nil && t.lv == 4
+                let upLabel = isMastery ? (spDef?.masteryName ?? "Split Mastery") : "Level \(t.lv + 1)"
+                let gain = isMastery ? (spDef?.masteryDesc ?? "Split Mastery")
+                    : (t.kind == .beacon || t.kind == .bell ? "Range \(Int(s.range.rounded())) to \(Int(n.range.rounded()))"
+                       : "Damage \(Int(s.dmg.rounded())) to \(Int(n.dmg.rounded())), range \(Int(s.range.rounded())) to \(Int(n.range.rounded()))")
                 Button { ctl.act { _ = b.upgrade(t.id) } } label: {
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 6) { Text(upLabel); Price(n: up, size: 14) }
-                        Text(gain).font(Face.body(10, .semibold)).opacity(0.9)
+                        Text(gain).font(Face.body(10, .semibold)).opacity(0.9).lineLimit(2)
                     }
                 }
                 .buttonStyle(PaperButton(kind: .primary, poor: b.gold < up))
@@ -614,10 +742,16 @@ private struct MenuCard: View {
                 Segments(items: items, selected: t.round?.rawValue ?? "") { v in ctl.act { b.setRound(t.id, Rounds(rawValue: v)) } }
             }
         }
-        // Selling is rare and costs gold: a quiet line at the foot of the card, away from Upgrade.
-        Button { ctl.act { _ = b.sell(t.id) }; ctl.closeMenu() } label: {
-            HStack(spacing: 4) { Text("Sell for").font(Face.body(13, .bold)); Price(n: b.sellValue(t), size: 13) }
-                .foregroundStyle(Ink.inkDim).underline()
+        // 2-tap sell guard prevents accidental scrapping in fast combat.
+        let sellArmed = ctl.sellArmedId == t.id
+        Button { ctl.sellOrArm(t.id) } label: {
+            HStack(spacing: 4) {
+                Text(sellArmed ? "Tap again to sell for" : "Sell for").font(Face.body(13, .bold))
+                Price(n: b.sellValue(t), size: 13)
+            }
+            .foregroundStyle(sellArmed ? Ink.accent : Ink.inkDim)
+            .underline()
+            .frame(minHeight: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -632,29 +766,25 @@ private struct ShopView: View {
     @ObservedObject var ctl: BattleController
     var body: some View {
         let b = ctl.battle, near = b.nearGate(), canShop = b.canShop()
+        let freeCourier = near || b.status == .prep || (b.nextIn != nil && b.foes.isEmpty)
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("The gate shop").font(Face.body(16, .heavy)).foregroundStyle(Ink.ink)
                 Spacer()
-                Button { ctl.shopOpen = false } label: { Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundStyle(Ink.ink).frame(width: 32, height: 32) }
+                Button { ctl.shopOpen = false } label: { Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundStyle(Ink.ink).frame(width: 44, height: 44) }
                     .buttonStyle(.plain).accessibilityLabel("Close")
             }
             if canShop {
-                let whereText = near ? "Wren is at the gate." : "Gate courier ready between waves."
-                Text("\(whereText) \(b.hero.items.count) of \(ctl.data.itemSlots) slots used. Gold spent here is gold not spent on towers.")
+                let whereText = freeCourier ? "Gate / between-wave rate (base price)." : "Field courier delivery (+20% away from Gate)."
+                Text("\(whereText) \(b.hero.items.count) of \(ctl.data.itemSlots) bag slots used.")
                     .font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
             } else {
-                HStack {
-                    Text("During combat, Wren buys at the gate.").font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
-                    Spacer()
-                    Button(b.hero.dead ? "Wren is down" : "Send Wren to the gate") { ctl.sendToGate() }
-                        .buttonStyle(PaperButton(kind: .primary)).disabled(b.hero.dead)
-                }
+                Text("Wren must be alive to equip gear.").font(Face.body(12, .medium)).foregroundStyle(Ink.inkDim)
             }
             ScrollView {
                 VStack(spacing: 6) {
                     ForEach(ctl.data.itemOrder.filter { ctl.data.item($0).after <= b.mods.shopAfter }, id: \.self) { id in
-                        let it = ctl.data.item(id), owned = b.hero.items.contains(id)
+                        let it = ctl.data.item(id), owned = b.hero.items.contains(id), price = b.itemCost(id)
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(it.name).font(Face.body(14, .heavy)).foregroundStyle(Ink.ink)
@@ -666,7 +796,7 @@ private struct ShopView: View {
                                     .buttonStyle(PaperButton(poor: !canShop))
                                     .disabled(!canShop)
                             } else {
-                                Button { ctl.act { _ = b.buy(id) } } label: { Price(n: Int(it.cost), size: 13) }
+                                Button { ctl.act { _ = b.buy(id) } } label: { Price(n: price, size: 13) }
                                     .buttonStyle(PaperButton(kind: b.canBuy(id) ? .primary : .plain, poor: !b.canBuy(id)))
                                     .disabled(!canShop)
                             }
@@ -701,21 +831,24 @@ private struct Veil<Content: View>: View {
     }
 }
 
-/// Pause shows a small card over the map: resume, or leave the battle. The map stays in view.
-private struct PauseCard: View {
+/// Top pause strip: lets players pan, inspect towers, switches and rubble unobstructed.
+private struct PauseStrip: View {
     @ObservedObject var ctl: BattleController
     var body: some View {
-        VStack(spacing: 14) {
-            Text("Paused").font(Face.title(24)).foregroundStyle(Ink.ink)
-            HStack(spacing: 10) {
-                Button("Resume") { ctl.togglePause() }.buttonStyle(PaperButton(kind: .primary))
-                Button { ctl.requestExit() } label: { HStack(spacing: 6) { ArtIcon(name: "leave", size: 16); Text("Leave battle") } }
-                    .buttonStyle(PaperButton())
+        HStack(spacing: 10) {
+            // The hint drops away when the strip would not fit, as on an upright phone.
+            ViewThatFits(in: .horizontal) {
+                Text("Paused. Inspect towers & lanes")
+                Text("Paused")
             }
+            .font(Face.body(13, .heavy)).foregroundStyle(Ink.ink).lineLimit(1)
+            Button("Resume") { ctl.togglePause() }.buttonStyle(PaperButton(kind: .primary, tall: true))
+            Button { ctl.requestExit() } label: { HStack(spacing: 5) { ArtIcon(name: "leave", size: 15); Text("Leave") } }
+                .buttonStyle(PaperButton(tall: true))
         }
-        .padding(20)
-        .paperCard(Ink.paperGlass, radius: 9)
-        .shadow(color: Ink.shadow, radius: 16, y: 8)
+        .padding(.horizontal, 12).padding(.vertical, 6)
+        .paperCard(Ink.paperGlass, radius: 7)
+        .shadow(color: Ink.shadow, radius: 12, y: 4)
     }
 }
 
@@ -759,10 +892,22 @@ private struct ResultCard: View {
                     }
                     .padding(10).background(RoundedRectangle(cornerRadius: 5).fill(Ink.paper2))
                 }
+                VStack(spacing: 4) {
+                    GeometryReader { g in
+                        HStack(spacing: 1) {
+                            Rectangle().fill(Ink.accent).frame(width: g.size.width * CGFloat(r.bdTowersPct) / 100)
+                            Rectangle().fill(Ink.good).frame(width: g.size.width * CGFloat(r.bdHeroPct) / 100)
+                            Rectangle().fill(Ink.gold).frame(maxWidth: .infinity)
+                        }
+                    }
+                    .frame(height: 6).clipShape(Capsule())
+                    Text("Towers \(r.bdTowersPct)% · Wren \(r.bdHeroPct)%\(r.mvpText.map { " · \($0)" } ?? "")")
+                        .font(Face.body(11, .bold)).foregroundStyle(Ink.inkDim)
+                }
                 if r.won && r.embers > 0 { Text("+\(r.embers) Embers for the skill trees").font(Face.body(14, .heavy)).foregroundStyle(Ink.accent) }
                 HStack(spacing: 10) {
                     Button(r.won ? "Play again" : "Try again") { ctl.retry() }.buttonStyle(PaperButton(kind: r.won ? .plain : .primary))
-                    if r.won && st.id < 20 { Button("Next stage") { ctl.next() }.buttonStyle(PaperButton(kind: .primary)) }
+                    if r.won && st.id < 20 && ctl.variant != .alt { Button("Next stage") { ctl.next() }.buttonStyle(PaperButton(kind: .primary)) }
                     Button("Map") { ctl.exit() }.buttonStyle(PaperButton())
                 }
             }

@@ -26,7 +26,7 @@ struct RootView: View {
                 case .campaign(let focus): CampaignView(focus: focus)
                 case .trees: TreesView()
                 case .settings: SettingsView()
-                case .battle(let id): BattleView(stageId: id).id(app.battleRun)
+                case let .battle(id, variant, oaths): BattleView(stageId: id, variant: variant, oaths: oaths).id(app.battleRun)
                 }
             }
             .environment(\.upright, g.size.height > g.size.width * 1.15 && g.size.width < 760)

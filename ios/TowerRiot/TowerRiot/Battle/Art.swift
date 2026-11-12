@@ -98,8 +98,8 @@ final class Art {
         return n
     }
 
-    func set(_ n: SKSpriteNode, _ name: String) {
-        guard let f = frames[name] else { n.texture = nil; n.size = .zero; return }
+    func set(_ n: SKSpriteNode, _ name: String, fallback: String? = nil) {
+        guard let f = frames[name] ?? fallback.flatMap({ frames[$0] }) else { n.texture = nil; n.size = .zero; return }
         if n.texture !== f.texture { n.texture = f.texture }
         n.size = f.size
         n.anchorPoint = f.anchor

@@ -9,6 +9,8 @@ final class BattleController: ObservableObject {
     let scene: BattleScene
     private unowned let app: AppModel
     let autoSkills: Bool
+    let variant: StageVariant
+    let oaths: [OathId]
 
     /// Bumped a few times a second so the HUD redraws without redrawing every frame.
     @Published private(set) var tick = 0
@@ -16,9 +18,12 @@ final class BattleController: ObservableObject {
     @Published private(set) var banner: BannerItem?
     @Published var shopOpen = false
     @Published private(set) var aimingW = false
+    @Published var showLeash = false
+    @Published var autoNext = false
     @Published private(set) var hintPlot: Int?
-    /// A finger cannot hover: the first tap on a build button shows the range, the second pays.
+    /// A finger cannot hover: the first tap on a build button shows the range, the second pays (after arming delay).
     @Published private(set) var armed: TowerKind?
+    @Published private(set) var sellArmedId: Int?
     @Published private(set) var exitAsk = false
     @Published private(set) var result: ResultInfo?
     @Published private(set) var levelFlash = false
@@ -34,6 +39,8 @@ final class BattleController: ObservableObject {
         let won: Bool, stars: Int, embers: Int
         let text: String, nextStar: String?
         let cause: (kind: EnemyKind, lives: Int)?
+        let bdTowersPct: Int, bdHeroPct: Int, bdStatusPct: Int
+        let mvpText: String?
     }
 
     private var frames = 0
@@ -44,18 +51,61 @@ final class BattleController: ObservableObject {
     private var leakBy: [EnemyKind: Int] = [:]
     private var exitWasPaused = false
     private var ended = false
+    private var resultScheduled = false
+    private var embersGained = 0
+    private var panelOpenedAt = 0.0
+    private var armedAt = 0.0
+    private var sellArmedUntil = 0.0
 
-    init(stageId: Int, app: AppModel) {
+    init(stageId: Int, variant: StageVariant = .standard, oaths: [OathId] = [], app: AppModel) {
         self.app = app
+        self.variant = variant
+        self.oaths = oaths
         let st = app.data.stage(stageId)
-        battle = Battle(stage: st, mods: app.save.mods, seed: Int(Date().timeIntervalSince1970 * 1000) & 0xffff)
+        battle = Battle(stage: st, mods: app.save.mods, seed: Int(Date().timeIntervalSince1970 * 1000) & 0xffff, variant: variant, oaths: oaths)
         scene = BattleScene(battle: battle)
         autoSkills = app.autoSkills(for: stageId)
+        autoNext = app.save.settings.autoNext
         scene.look.reduceMotion = app.save.settings.reduceMotion
         scene.look.dmgNumbers = app.save.settings.dmgNumbers
+        scene.tapAimW = app.save.settings.tapAimW
         scene.onFrame = { [weak self] dt in self?.frame(dt) ?? [] }
         scene.onTap = { [weak self] x, y in self?.tap(x, y) }
-        scene.onAim = { [weak self] x, y in self?.scene.look.aimW = Vec(x, y) }
+        scene.onAim = { [weak self] x, y in
+            guard let self else { return }
+            let cancel = hypot2(x - self.battle.hero.x, y - self.battle.hero.y) > self.data.snare.range + 45
+            self.scene.look.aimW = cancel ? nil : Vec(x, y)
+            self.scene.look.showLeash = true
+        }
+        scene.onAimEnd = { [weak self] x, y, cancel in
+            guard let self else { return }
+            if !cancel && self.aimingW { _ = self.battle.castW(x: x, y: y) }
+            self.endAim()
+            self.tick &+= 1
+        }
+        // Switches, towers and plots keep their taps even when Wren stands beside them.
+        scene.grabBlocked = { [weak self] x, y in self?.structureAt(x, y) ?? false }
+        scene.onHeroDrag = { [weak self] x, y in
+            guard let self else { return }
+            self.showLeash = true
+            self.scene.look.showLeash = true
+            self.battle.moveHero(x: x, y: y)
+            if self.menu != nil { self.closeMenu() }
+        }
+        scene.onHeroDragEnd = { [weak self] x, y in
+            guard let self else { return }
+            self.battle.moveHero(x: x, y: y)
+            self.scene.markMove(x, y)
+            self.showLeash = false
+            self.scene.look.showLeash = false
+            self.tick &+= 1
+        }
+        scene.onHeroDragCancel = { [weak self] in
+            guard let self else { return }
+            self.showLeash = false
+            self.scene.look.showLeash = false
+            self.tick &+= 1
+        }
         scene.onPan = { [weak self] dx in self?.pan(by: dx) }
         start()
         // Open on the marked plot, or on Wren, when only part of the map shows.
@@ -65,6 +115,9 @@ final class BattleController: ObservableObject {
     var data: GameData { battle.data }
     var sound: Sound { app.sound }
     var soundOn: Bool { app.save.settings.sound }
+    var leftHandHud: Bool { app.save.settings.leftHandHud }
+    var tapGroundMove: Bool { app.save.settings.tapGroundMove }
+    var tapAimW: Bool { app.save.settings.tapAimW }
 
     private func start() {
         let st = battle.stage
@@ -106,6 +159,14 @@ final class BattleController: ObservableObject {
         battle.step(simDt)
         let events = battle.drain()
         react(events)
+        // Auto-call waits for a clear field, so waves never pile up on each other.
+        if autoNext && !battle.paused && !battle.over && battle.status == .running && battle.nextIn != nil && battle.wave < battle.totalWaves && battle.foes.isEmpty {
+            _ = battle.callWave()
+        }
+        // Nothing to throw once Wren is down or the fight is over: time must not stay slowed.
+        if aimingW && (battle.hero.dead || battle.over) { endAim() }
+        if sellArmedId != nil && Date().timeIntervalSince1970 >= sellArmedUntil { sellArmedId = nil }
+        scene.look.showLeash = showLeash || aimingW
         if bannerT > 0 {
             bannerT -= dt
             if bannerT <= 0 { if bannerQ.isEmpty { banner = nil } else { let n = bannerQ.removeFirst(); putBanner(n.0, n.1, n.2) } }
@@ -114,7 +175,7 @@ final class BattleController: ObservableObject {
         if let hp = hintPlot, battle.towers.count > 0 {
             _ = hp
             hintPlot = nil; scene.look.hintPlot = nil
-            showBanner("Tap the road to send Wren", "She fights there and grows stronger with every kill.", 4)
+            showBanner("Drag Wren to the road", "She holds up to 2 foes inside a 90 px leash and earns +50% gold on kills.", 4.5)
         }
         frames += 1
         if frames % 4 == 0 || !events.isEmpty && frames % 2 == 0 { tick &+= 1 }
@@ -133,27 +194,45 @@ final class BattleController: ObservableObject {
             case .heroHit: sound.play(.hero)
             case let .leak(_, _, lives, kind, _): sound.play(.leak); leakBy[kind, default: 0] += lives
             case .build, .upgrade: sound.play(.build)
+            case let .clearPlot(_, free): sound.play(.clear); showBanner(free ? "Plot salvaged" : "Rubble cleared", "This plot is open for building.", 1.8)
+            case let .switchFlip(_, label, state): sound.play(.switchFlip); showBanner(label, state != 0 ? "Mechanism engaged!" : "Mechanism reset.", 1.8)
+            case .warp: sound.play(.warp)
+            case let .riftWarn(_, wv): showBanner("New breach forming", "Watch the marked path before Wave \(wv).", 2.6)
+            case .riftOpen: sound.play(.wave); showBanner("Rift torn open", "A new lane has activated on the field!", 2.4)
+            case let .terraform(label): sound.play(.boss); showBanner("Ground shifts", label, 3.0, now: true)
+            case .gateShock: sound.play(.sunrise); showBanner("Bastion bell!", "The Keep shockwave stuns intruders at the gate.", 2.2)
             case .level: sound.play(.level); lvlT = 0.9; levelFlash = true; if autoSkills { b.autoLearn() }
             case let .wave(n, hint): sound.play(.wave); showBanner("Wave \(n) of \(b.totalWaves)", hint, 2)
             case let .adapt(el, resist): showBanner("The Hollow adapts", "It hardens against \(Words.element[el] ?? el.rawValue): \(Int((resist * 100).rounded()))% less damage. Mix your towers.", 3.4)
             case let .shift(label, on): showBanner(on ? label : "The way is open again", on ? "Foes on that road wait at the edge. Others go round." : "", 2.6)
             case .barrier: showBanner("The wreck gives way", "The beach road is open. Foes will use it now.", 3)
             case let .boss(kind): sound.play(.boss); let d = data.enemy(kind); showBanner(d.name, d.blurb, 4, now: true)
-            case let .phase(n, _, _): sound.play(.boss); showBanner("The Queen breaks: phase \(n + 1)", "The lava moves. Shades pour out.", 3)
+            case let .phase(n, _, _): sound.play(.boss); showBanner("Boss phase \(n + 1)", "New breaches tear open!", 3)
             case let .night(on): showBanner(on ? "Night falls" : "Morning", on ? "Towers outside a Beacon's light see less. Shades walk." : "Full sight again.", 2.4)
             case let .gear(up): if b.wave > 1 { showBanner(up == .a ? "Gold gears rise" : "Iron gears rise", "Towers on the lowered plots sleep this wave.", 2.4) }
-            case .sink: showBanner("The ground gives way", "A plot sinks. Any tower on it was refunded in full.", 2.6)
+            case .sink: showBanner("The ground gives way", oaths.contains(.shiftingEarth) ? "A plot sinks. Any tower on it was half refunded." : "A plot sinks. Any tower on it was refunded in full.", 2.6)
             case let .skill(key, _, _):
                 sound.play(key == .q ? .sweep : key == .w ? .snare : .sunrise)
                 if key == .r { showBanner("Sunrise", "Every tower fires twice as fast. Nothing hides.", 2) }
-            case let .rune(kind, picked): sound.play(.rune); if !picked { showBanner("\(data.rune(kind).name) rune", "Send Wren to pick it up.", 2.2) }
+            case let .rune(kind, picked): sound.play(.rune); if !picked { showBanner("\(data.rune(kind).name) rune", "Send Wren to pick it up before it fades.", 2.2) }
             case .heroDown: showBanner("Wren falls", "She returns at the gate in \(Int(b.hero.respawnT.rounded(.up))) s.", 2.4)
             case .revive: showBanner("Second dawn", "Wren stands back up.", 2)
             case let .early(gold): showBanner("Called early", "+\(gold) gold", 1.6)
-            case let .won(stars): sound.play(.win); end(won: true, stars: stars)
-            case .lost: sound.play(.lose); end(won: false, stars: 0)
+            case let .won(stars): sound.play(.win); scheduleEnd(won: true, stars: stars)
+            case .lost: sound.play(.lose); scheduleEnd(won: false, stars: 0)
             default: break
             }
+        }
+    }
+
+    private func scheduleEnd(won: Bool, stars: Int) {
+        guard !ended && !resultScheduled else { return }
+        resultScheduled = true
+        // The win is written down at once; only the card waits. Leaving before it shows never loses the stars.
+        if won { embersGained = app.record(stage: battle.stage.id, stars: stars, variant: variant, oaths: oaths) }
+        let delay = scene.look.reduceMotion ? 0.12 : (won ? 1.0 : 0.4)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.end(won: won, stars: stars)
         }
     }
 
@@ -181,45 +260,105 @@ final class BattleController: ObservableObject {
 
     func tap(_ x: Double, _ y: Double) {
         let b = battle
-        if aimingW { _ = b.castW(x: x, y: y); aimingW = false; scene.look.aimW = nil; return }
+        if aimingW { _ = b.castW(x: x, y: y); endAim(); return }
         shopOpen = false
-        if let t = b.towers.first(where: { abs($0.x - x) < 34 && y > $0.y - 110 && y < $0.y + 22 }) { openTower(t.id); return }
-        if let pi = b.plots.indices.first(where: { i in let p = b.plots[i]; return !p.sunk && ell(p.x - x, p.y - y) < 44 && !b.towers.contains { $0.plot == i } }) {
-            openPlot(pi); return
-        }
+        if let si = switchAt(x, y, reach: 34) { _ = b.toggleSwitch(si); tick &+= 1; return }
+        if let t = towerAt(x, y) { openTower(t.id); return }
+        if let pi = plotAt(x, y) { openPlot(pi); return }
         if menu != nil { closeMenu(); return }
-        if let foe = b.foes.first(where: { !$0.dead && hypot($0.x - x, $0.y - $0.def.bar * 0.4 - y) < 26 + $0.def.size * 8 }), !b.hero.dead {
+        if let foe = b.foes.first(where: { !$0.dead && hypot2($0.x - x, $0.y - $0.def.bar * 0.4 - y) < 26 + $0.def.size * 8 }), !b.hero.dead {
             b.attackFoe(foe.id); scene.markMove(foe.x, foe.y); return
         }
-        if !b.hero.dead { b.moveHero(x: x, y: y); scene.markMove(x, y) }
+        if !b.hero.dead && hypot2(b.hero.x - x, b.hero.y - 24 - y) < 38 {
+            showLeash.toggle(); tick &+= 1; return
+        }
+        // A near miss on a lever still counts when nothing else was under the finger.
+        if let si = switchAt(x, y, reach: switchReach) { _ = b.toggleSwitch(si); tick &+= 1; return }
+        if !b.hero.dead && tapGroundMove { b.moveHero(x: x, y: y); scene.markMove(x, y); showLeash = false }
+    }
+
+    /// A lever is small on a phone held sideways: its reach grows so it is never under 44 points across.
+    private var switchReach: Double { max(34, 22 / max(0.01, Double(panScale))) }
+
+    private func switchAt(_ x: Double, _ y: Double, reach: Double) -> Int? {
+        let b = battle
+        return b.switches.indices.first(where: { hypot2(b.switches[$0].def.at.x - x, b.switches[$0].def.at.y - y) < reach })
+    }
+
+    private func towerAt(_ x: Double, _ y: Double) -> Tower? {
+        battle.towers.first(where: { abs($0.x - x) < 34 && y > $0.y - 110 && y < $0.y + 22 })
+    }
+
+    private func plotAt(_ x: Double, _ y: Double) -> Int? {
+        let b = battle
+        return b.plots.indices.first(where: { i in let p = b.plots[i]; return !p.sunk && ell(p.x - x, p.y - y) < 44 && !b.towers.contains { $0.plot == i } })
+    }
+
+    /// True when a switch, tower or plot is under the point: a finger there is not picking Wren up.
+    private func structureAt(_ x: Double, _ y: Double) -> Bool {
+        switchAt(x, y, reach: 34) != nil || towerAt(x, y) != nil || plotAt(x, y) != nil
+    }
+
+    /// Leave W aiming, whether the snare was thrown or called off.
+    private func endAim() {
+        aimingW = false
+        showLeash = false
+        scene.look.aiming = false
+        scene.look.aimW = nil
+        scene.look.showLeash = false
     }
 
     func openPlot(_ i: Int) {
-        menu = .plot(i); armed = nil
+        let now = Date().timeIntervalSince1970
+        menu = .plot(i); armed = nil; sellArmedId = nil; panelOpenedAt = now
         scene.look.selPlot = i; scene.look.selTower = nil; scene.look.preview = nil
     }
 
     func openTower(_ id: Int) {
-        menu = .tower(id); armed = nil
+        let now = Date().timeIntervalSince1970
+        menu = .tower(id); armed = nil; sellArmedId = nil; panelOpenedAt = now
         scene.look.selTower = id; scene.look.selPlot = nil; scene.look.preview = nil
     }
 
     func closeMenu() {
-        menu = nil; armed = nil
+        menu = nil; armed = nil; sellArmedId = nil
         scene.look.selPlot = nil; scene.look.selTower = nil; scene.look.preview = nil
     }
 
-    /// First tap shows the range and what the tower does; the second tap builds.
+    /// First tap shows the range and what the tower does; the second tap builds (after brief bounce/arm delay).
     func pickBuild(_ kind: TowerKind) {
         guard case let .plot(pi) = menu else { return }
-        if armed != kind { armed = kind; scene.look.preview = kind; return }
+        let now = Date().timeIntervalSince1970
+        if now - panelOpenedAt < 0.2 { return }
+        if armed != kind || now - armedAt < 0.3 {
+            armed = kind; armedAt = now; scene.look.preview = kind; return
+        }
         if battle.build(plot: pi, kind: kind) != nil { closeMenu() }
+        tick &+= 1
+    }
+
+    /// 2-tap sell guard so fast taps never accidentally scrap an upgraded tower.
+    func sellOrArm(_ id: Int) {
+        let now = Date().timeIntervalSince1970
+        if now - panelOpenedAt < 0.2 { return }
+        if sellArmedId == id && now < sellArmedUntil {
+            if battle.sell(id) { closeMenu() }
+        } else {
+            sellArmedId = id
+            sellArmedUntil = now + 2.6
+        }
         tick &+= 1
     }
 
     func act(_ f: () -> Void) { f(); tick &+= 1 }
 
-    /// A skill button: learn it if there is a point to spend and it is not ready, else cast.
+    /// Explicit learn button press (separated from cast so tapping `+` never misfires a skill).
+    func learnSkill(_ k: SkillKey) {
+        if battle.learn(k) { sound.play(.click) }
+        tick &+= 1
+    }
+
+    /// Cast a skill, or learn it if unlearned (`r == 0`) or cooling down.
     func skillPress(_ k: SkillKey) {
         let b = battle
         if b.canLearn(k) && (b.hero.rank(k) == 0 || !b.skillReady(k)) { _ = b.learn(k); sound.play(.click); tick &+= 1; return }
@@ -228,8 +367,10 @@ final class BattleController: ObservableObject {
         case .r: _ = b.castR()
         case .w where b.skillReady(.w):
             aimingW.toggle()
+            showLeash = aimingW
+            scene.look.aiming = aimingW
             scene.look.aimW = aimingW ? Vec(b.hero.x + data.snare.range * 0.5 * b.hero.face, b.hero.y) : nil
-            if aimingW { showBanner("Lantern Snare", "Time slows. Tap where to throw it.", 1.8, now: true) }
+            if aimingW { showBanner("Lantern Snare", tapAimW ? "Time slows. Tap where to throw it." : "Time slows. Drag or tap inside range.", 1.8, now: true) }
         default: if b.canLearn(k) { _ = b.learn(k) }
         }
         tick &+= 1
@@ -243,6 +384,14 @@ final class BattleController: ObservableObject {
 
     func toggleSound() { app.toggleSound(); tick &+= 1 }
 
+    func toggleAutoNext() {
+        autoNext.toggle()
+        app.setSetting { $0.autoNext = autoNext }
+        tick &+= 1
+    }
+
+    func toggleLeash() { showLeash.toggle(); tick &+= 1 }
+
     func sendToGate() {
         guard let g = battle.gate.first else { return }
         battle.moveHero(x: g.x - 60, y: g.y); scene.markMove(g.x - 60, g.y)
@@ -252,7 +401,8 @@ final class BattleController: ObservableObject {
 
     /// Leave, asking first if a fight is under way.
     func requestExit() {
-        if ended || battle.status == .prep { exit(); return }
+        // Once the fight is decided there is nothing to lose: the result is already recorded.
+        if ended || resultScheduled || battle.status == .prep { exit(); return }
         exitWasPaused = battle.paused
         battle.paused = true
         exitAsk = true
@@ -265,22 +415,34 @@ final class BattleController: ObservableObject {
     }
 
     func exit() { app.screen = .campaign(focus: battle.stage.id) }
-    func retry() { app.play(battle.stage.id) }
-    func next() { app.play(battle.stage.id + 1) }
+    func retry() { app.play(battle.stage.id, variant: variant, oaths: oaths) }
+    /// The next stage always opens as a plain first run: Standard, with no Oaths carried over.
+    func next() { app.play(battle.stage.id + 1, variant: .standard, oaths: []) }
 
     private func end(won: Bool, stars: Int) {
         guard !ended else { return }
         ended = true
         let b = battle, st = b.stage
-        let gained = won ? app.record(stage: st.id, stars: stars) : 0
+        let gained = won ? embersGained : 0
         let need = starLives(b.startLives), lost = b.startLives - b.lives
         let nextStar = won && stars < 3 ? "Lose \(b.startLives - need.three) lives or fewer for 3 stars. You lost \(lost)." : nil
         let worst = leakBy.max { $0.value < $1.value }
+        let bd = b.breakdown
+        let tot = max(1.0, bd.towers + bd.hero + bd.skills + bd.status)
+        let tPct = Int(jsRound(bd.towers / tot * 100))
+        let hPct = Int(jsRound((bd.hero + bd.skills) / tot * 100))
+        let sPct = max(0, 100 - tPct - hPct)
+        let mvp = b.mvpTower()
+        let mvpTitle = mvp.map { tw in
+            tw.split.flatMap { sp in data.tower(tw.kind).splits.first { $0.id == sp }?.name } ?? data.tower(tw.kind).name
+        }
         result = ResultInfo(
             won: won, stars: stars, embers: gained,
             text: won ? "\(st.name) cleared with \(b.lives) lives left. Wren reached level \(b.hero.level)." : "You held until wave \(b.wave) of \(b.totalWaves).",
             nextStar: nextStar,
-            cause: !won && worst != nil ? (worst!.key, worst!.value) : nil)
+            cause: !won && worst != nil ? (worst!.key, worst!.value) : nil,
+            bdTowersPct: tPct, bdHeroPct: hPct, bdStatusPct: sPct,
+            mvpText: mvpTitle.map { "MVP: \($0) (\(Int(mvp!.dmgDealt.rounded())))" })
         closeMenu()
         shopOpen = false
     }
