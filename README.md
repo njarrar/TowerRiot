@@ -263,16 +263,24 @@ android/       Android app shell
 
 ## What changed lately
 
+The November 2026 overhaul:
+
 - **Towers stop at level 5:** one mastery for each split replaces Temper I and II.
-- **Maps move:** ponds drain, rifts open mid-battle with a wave's warning, tunnels carry foes ahead, and every boss breaks the map as its health falls.
-- **Levers and rubble:** boom gates, fork levers and a conveyor brake. Rubble on plots: pay, or let Wren clear it once the fight is on.
-- **Variant B** for all 20 stages, and three **Oaths**.
+- **Maps move:** ponds drain, rifts open mid-battle with a wave's warning, and tunnels carry foes ahead.
+- **Every boss breaks the map:** at half health the Mire King and the Colossus open new roads, the Tidewyrm seals the north pass, and the Hollow Queen floods the cloister.
+- **Levers that work:** boom gates hold walkers at the bar on all seven gate stages. Fork levers send foes down roads that open mid-battle. A lever's cooldown starts when its effect ends, so Wren can't keep one on for good.
+- **Rubble on plots:** pay to clear it, or let Wren clear it for free once the fight is on.
+- **Variant B** for all 20 stages. Each one reverses whole or not at all, and its text says what it does.
+- **Three Oaths**, each on all 20 stages. Twin Rifts: every road is live from wave 1 and foes are 15% tougher. Shifting Earth: two plots sink mid-battle at half refund, and tides, lava and steam hold roads 40% shorter. Long Night: night never lifts. A first clear with any Oath pays 1 Ember, once per stage.
 - **Wren holds a post:** drag her there and she fights within a 90 px leash. Kills far from her give 15% XP.
 - **Shop anywhere:** a courier adds 20% away from the gate in a fight.
-- **Runes fade** after 22 seconds.
-- **Trees open sooner** (after stages 1, 4 and 7) and capstones after stage 14, at new prices. Interest on banked gold is gone. Old saves get their nodes refunded once.
-- **A fourth relic:** the Ash Sigil, from the Hollow Queen.
+- **Runes fade** after 22 seconds, with a warning first.
+- **Trees open sooner** (after stages 1, 4 and 7) and capstones after stage 14, at new prices. Interest on banked gold is gone. Old saves get their nodes refunded once, with a note on the trees screen.
+- **A fourth relic:** the Ash Sigil, from the Hollow Queen, now granted.
+- **Difficulty:** stages 1 to 6 are easy, then it rises. Losing your last life is always a loss, even if the last foe falls on the same tick.
 - **Settings:** tap to move, tap to aim, auto-call once the field is clear, a left-handed HUD.
+- **Easier to tap:** buttons, chips, tabs and levers take taps across 44 px. Dialogs keep keyboard focus inside. The lighthouse beam stops when motion is reduced. Pen input works.
+- **iOS fixes:** no stuck slow motion after a cancelled aim, taps near Wren reach the towers and plots around her, the left-handed HUD works in every layout, and a win counts even if you leave during the result screen.
 
 ## Design notes
 
