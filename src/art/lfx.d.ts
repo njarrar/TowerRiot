@@ -19,7 +19,7 @@ export interface Lfx {
   grub(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
   moth(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, alt: number): void;
   shellback(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, frost: number, ph?: number): void;
-  wren(c: Ctx, x: number, y: number, s: number, pass: Pass): void;
+  wren(c: Ctx, x: number, y: number, s: number, pass: Pass, face?: number, swing?: number): void;
   gate(c: Ctx, x: number, y: number, pass: Pass): void;
   ruinWall(c: Ctx, x: number, y: number, len: number, seed: number): void;
   deadTree(c: Ctx, x: number, y: number, s: number, seed: number): void;

@@ -53,10 +53,17 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 
 /* ------------------------------------------------------------------ buttons */
 .btn {
+  position: relative;
   border: 1px solid var(--rule-strong); background: var(--paper); color: var(--ink);
   padding: 9px 16px; border-radius: var(--radius-s); font-weight: 600; cursor: pointer; white-space: nowrap;
   box-shadow: 0 1px 0 var(--shadow);
   transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+/* Touch floor: a control drawn smaller than 44px still takes taps across 44px. The pad is invisible and moves no layout. */
+.btn::after, .seg button::after, .sell-link::after, .face::after {
+  content: ''; position: absolute;
+  top: min(0px, calc((100% - 44px) / 2)); bottom: min(0px, calc((100% - 44px) / 2));
+  left: min(0px, calc((100% - 44px) / 2)); right: min(0px, calc((100% - 44px) / 2));
 }
 .btn:hover { background: var(--paper-2); border-color: var(--ink-faint); }
 .btn:active { transform: translateY(1px); box-shadow: none; }
@@ -64,7 +71,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-lo); font-weight: 800; }
 .btn.primary:hover { background: var(--accent-hi); }
 .btn.big { padding: 13px 26px; font-size: 1.06rem; min-width: 200px; }
-.btn.icon { width: 42px; height: 42px; padding: 0; font-weight: 800; }
+.btn.icon { min-width: 44px; min-height: 44px; padding: 0 8px; font-weight: 800; font-size: 0.86rem; }
 .btn.danger { border-color: var(--life); color: var(--life); }
 .btn.danger.solid { background: var(--life); color: var(--accent-ink); }
 .erase { margin-top: 18px; display: grid; gap: 10px; justify-items: start; }
@@ -153,14 +160,17 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .stars.small { justify-content: flex-start; font-size: 1.3rem; margin: 6px 0; }
 .stars .on { color: var(--gold); text-shadow: 0 1px 0 var(--gold-deep); }
 
-/* trees: each column is a chain, top to bottom, joined by a rod. */
+/* trees: real SVG dependency wires behind 2-column cards. Gold reserved for stars/coin: capstone uses rust --accent. */
 .trees > .fine { max-width: 60ch; margin: 0 auto; }
 .seg.tabs { display: flex; width: fit-content; max-width: 100%; margin: 14px auto 6px; flex-wrap: wrap; }
-.tree { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; gap: 22px 16px; margin-top: 14px; }
-.tnode { position: relative; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-m); padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
-.tnode.tier1::before, .tnode.tier2::before, .tnode.tier3::before { content: ''; position: absolute; left: 24px; top: -23px; width: 2px; height: 22px; background: var(--rule-strong); }
-.tnode.owned + .tnode + .tnode::before { background: var(--ink); }
-.tnode.capstone { border-top: 2px solid var(--gold-deep); }
+.tree { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; gap: 22px 16px; margin-top: 14px; }
+.refund-note { display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 70ch; margin: 0 auto 10px; padding: 6px 8px 6px 14px; background: var(--accent-wash); border: 1px solid var(--accent); border-radius: var(--radius-m); color: var(--ink); font-weight: 600; }
+.tree-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible; }
+.tree-wires .wire { fill: none; stroke: var(--rule-strong); stroke-width: 2; }
+.tree-wires .wire.can { stroke: var(--accent); stroke-dasharray: 4 3; }
+.tree-wires .wire.owned { stroke: var(--ink); stroke-width: 2.5; }
+.tnode { position: relative; z-index: 1; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-m); padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
+.tnode.capstone { border-top: 2px solid var(--accent); }
 .tnode.excl-locked { opacity: 0.62; }
 .tnode b { font-weight: 800; font-size: 1.02rem; color: var(--ink); }
 .tnode p { margin: 0; color: var(--ink-dim); font-size: 0.94rem; }
@@ -186,7 +196,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 
 /* segmented */
 .seg { display: inline-flex; gap: 2px; background: var(--paper-3); border-radius: var(--radius-s); padding: 3px; max-width: 100%; flex-wrap: wrap; }
-.seg button { border: 0; background: transparent; padding: 6px 10px; border-radius: 4px; cursor: pointer; color: var(--ink-dim); font-weight: 600; font-size: 0.86rem; white-space: nowrap; }
+.seg button { position: relative; border: 0; background: transparent; padding: 6px 10px; border-radius: 4px; cursor: pointer; color: var(--ink-dim); font-weight: 600; font-size: 0.86rem; white-space: nowrap; }
 .seg button.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px var(--shadow); font-weight: 800; }
 
 /* ------------------------------------------------------------------ battle */
@@ -256,7 +266,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 
 .hero-card { background: var(--paper-glass); border: 1px solid var(--rule); border-radius: var(--radius-l); padding: 8px; display: grid; gap: 5px; box-shadow: 0 1px 2px var(--shadow); }
 .hero-top { display: flex; align-items: center; gap: 8px; }
-.face { position: relative; width: 38px; height: 38px; flex: none; border-radius: 50%; background: var(--paper-3); border: 2px solid var(--ink); overflow: visible; }
+.face { position: relative; width: 38px; height: 38px; flex: none; border-radius: 50%; background: var(--paper-3); border: 2px solid var(--ink); overflow: visible; cursor: pointer; }
 .face img { width: 100%; height: 100%; border-radius: 50%; display: block; }
 .lvl { position: absolute; right: -6px; bottom: -4px; min-width: 20px; height: 20px; padding: 0 4px; display: grid; place-items: center; border-radius: 10px; background: var(--ink); color: var(--paper); font-weight: 800; font-size: 0.74rem; box-shadow: 0 0 0 2px var(--paper); }
 .hero-name { font-weight: 800; color: var(--ink); }
@@ -282,6 +292,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .skill .learn { position: absolute; top: 3px; right: 4px; display: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 900; line-height: 18px; font-size: 0.85rem; text-align: center; }
 .skill.can-learn { border-color: var(--ink); }
 .skill.can-learn .learn { display: block; }
+/* The + stays small; its tap area is the 44px corner of the skill button it sits in. */
+.skill .learn::after { content: ''; position: absolute; top: -3px; right: -4px; width: 44px; height: 44px; }
 .skill.none:not(.can-learn) .sk-ico, .skill.none:not(.can-learn) .name { opacity: 0.45; }
 .skill.ready { border-color: var(--ink); }
 .skill.ready .sk-ico { color: var(--accent); }
@@ -371,7 +383,9 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
   .stage-card { padding: 12px; }
   .stage-card h2 { font-size: 1.2rem; }
   .stage-card p { font-size: 0.84rem; margin: 6px 0; }
-  .stage-card dl { display: none; }
+  .stage-card dl { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.78rem; margin: 6px 0; padding-top: 6px; }
+  .stage-card dt { display: none; }
+  .stage-card dd { margin: 0; color: var(--ink-dim); }
   .stage-card .stars.small { margin: 2px 0; font-size: 1.05rem; }
   .screen.campaign { padding-top: calc(8px + var(--safe-t)); }
   .campaign .bar-top { margin-bottom: 8px; }
@@ -434,7 +448,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .btn.upgrade .up-t { display: inline-flex; gap: 10px; align-items: center; font-weight: 800; }
 .btn.upgrade small { font-weight: 500; opacity: 0.92; font-size: 0.76rem; }
 .btn.upgrade.poor { opacity: 1; background: var(--paper-2); color: var(--ink-dim); border-color: var(--rule-strong); }
-.sell-link { justify-self: end; display: inline-flex; gap: 4px; align-items: center; background: none; border: 0; padding: 6px 2px 0; color: var(--ink-dim); font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
+.sell-link { position: relative; justify-self: end; display: inline-flex; gap: 4px; align-items: center; background: none; border: 0; padding: 6px 2px 0; color: var(--ink-dim); font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; }
 .sell-link:hover { color: var(--life); }
 .shop-far { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--paper-2); border-radius: var(--radius-m); padding: 8px 10px; }
 .shop-far .popup-note { margin: 0; color: var(--ink); font-weight: 600; }
@@ -471,9 +485,70 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .band .hero-card > .hero-bottom { grid-column: 2; grid-row: 1 / span 3; }
 @media (max-height: 480px) { .band .hero-card { flex-basis: 330px; } .band .face { width: 30px; height: 30px; } }
 
-/* Build menu: every tower in one row, so the choice reads left to right. */
-.build-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
-.popup { max-width: min(700px, 94vw); }
+/* Build menu: clean 3x2 grid for quick thumb & mouse reach. */
+.build-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.popup { max-width: min(460px, 94vw); }
+
+/* New UI additions: Pause strip, Variant B & Oaths, Relics, Field Guide, Adaptation Gauge, Breakdown, Left-Hand HUD */
+.pause-strip { position: absolute; z-index: 8; top: calc(var(--wy) + 10px + var(--safe-t)); left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--paper-glass); border: 1px solid var(--rule-strong); border-top: 3px solid var(--ink); border-radius: var(--radius-m); padding: 8px 14px; box-shadow: 0 10px 26px var(--shadow); }
+.pause-strip .ps-title { font-weight: 800; font-size: 0.92rem; color: var(--ink); }
+.pause-strip .ps-acts { display: flex; gap: 6px; align-items: center; }
+.paused .stage-canvas { filter: saturate(0.82); }
+
+.auto-wave.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.adapt-gauge { font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; background: var(--paper-glass); border: 1px solid var(--rule-strong); color: var(--ink-dim); white-space: nowrap; }
+.adapt-gauge.hot { border-color: var(--hollow); color: var(--hollow); background: var(--hollow-wash); }
+
+.tower-stats-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: 0.78rem; }
+.t-stat { font-weight: 800; color: var(--ink); background: var(--paper-2); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); }
+.t-buff { font-weight: 700; color: var(--good); background: var(--good-wash); padding: 2px 7px; border-radius: 999px; font-size: 0.74rem; }
+.sell-link.armed { color: var(--life); font-weight: 800; background: oklch(56% 0.19 27 / 0.08); padding: 5px 10px; border-radius: var(--radius-s); text-decoration: none; }
+
+.breakdown { display: grid; gap: 5px; margin: 4px 0; }
+.bd-bar { height: 8px; border-radius: 4px; overflow: hidden; display: flex; background: var(--paper-3); }
+.bd-bar .bd-t { background: var(--ink); }
+.bd-bar .bd-h { background: var(--accent); }
+.bd-bar .bd-s { background: var(--hollow); }
+.bd-lbl { font-size: 0.78rem; color: var(--ink-dim); font-weight: 600; }
+
+.relic-shelf { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; padding: 8px 12px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: var(--radius-m); }
+.rs-lbl { font-weight: 800; font-size: 0.84rem; color: var(--ink); margin-right: 4px; }
+.relic-chip { font-size: 0.78rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--paper); border: 1px solid var(--rule); color: var(--ink-faint); }
+.relic-chip.on { border-color: var(--accent); color: var(--ink); background: var(--accent-wash); }
+
+.variant-seg { margin: 8px 0 4px; }
+.oaths { margin-bottom: 12px; }
+.oath-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.stage-card .oath-desc { margin: 2px 0 0; font-size: 0.8rem; line-height: 1.35; }
+.oath-desc b { color: var(--ink); }
+.oath-btn { padding: 6px 10px; font-size: 0.78rem; }
+.oath-btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-lo); }
+.oath-btn.done:not(.on) { border-color: var(--good); color: var(--good); }
+.foe-dd { display: flex; gap: 8px; align-items: center; }
+
+.guide-modal { width: min(780px, calc(100vw - 24px)); max-height: calc(100vh - 36px); overflow: auto; background: var(--paper); border: 1px solid var(--rule-strong); border-top: 3px solid var(--ink); border-radius: 0 0 var(--radius-l) var(--radius-l); padding: 18px; box-shadow: 0 22px 54px var(--scrim); }
+.guide-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-top: 12px; }
+.guide-card { display: flex; gap: 10px; align-items: flex-start; background: var(--paper-2); border: 1px solid var(--rule); border-radius: var(--radius-m); padding: 10px; }
+.guide-card.flat { flex-direction: column; gap: 4px; }
+.guide-card img { width: 52px; height: 52px; flex: none; }
+.guide-card small { display: block; color: var(--ink-faint); font-size: 0.76rem; margin: 2px 0 4px; }
+.guide-card p { margin: 0; font-size: 0.84rem; color: var(--ink-dim); line-height: 1.35; }
+.guide-skill-head { display: flex; align-items: center; gap: 6px; }
+.guide-skill-head .svg-ico { width: 18px; height: 18px; color: var(--accent); }
+
+.left-hand .hud .col-l { left: auto; right: var(--safe-r); }
+.left-hand .hud .col-r { right: auto; left: var(--safe-l); }
+.left-hand .hud .band { flex-direction: row-reverse; }
+.left-hand .hud .band .hud-call { margin-left: 0; margin-right: auto; }
+.left-hand .hud .over .hud-stats { left: auto; right: calc(8px + var(--safe-r)); }
+.left-hand .hud .over .hud-ctrl { right: auto; left: calc(8px + var(--safe-l)); }
+
+@media (max-width: 760px) {
+  .node { width: 88px; }
+  .node .nm { font-size: 0.68rem; padding: 1px 6px; }
+  .route .node:last-of-type .nm { transform: translateX(-14px); }
+}
 
 /* Result: what the next star takes, and the foe that broke the gate. */
 .result .next-star { color: var(--ink); font-weight: 600; }
@@ -530,9 +605,12 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
   .stage-card h2 { font-size: 1.25rem; }
   .stage-card .where { font-size: 0.82rem; }
   .stage-card p { font-size: 0.86rem; margin: 2px 0 0; }
-  .stage-card dl { display: none; }
+  .stage-card dl { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.78rem; margin: 6px 0; padding-top: 6px; }
+  .stage-card dt { display: none; }
+  .stage-card dd { margin: 0; color: var(--ink-dim); }
   .stage-card .stars.small { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
   .stage-card .btn.big, .stage-card > .fine { grid-column: 1 / -1; margin-top: 10px; }
+  .stage-card .oaths { grid-column: 1 / -1; margin-top: 6px; }
 }
 /* Upright phones: the top bar's three parts would crowd one line, so the title takes its own. */
 @media (max-width: 520px) {

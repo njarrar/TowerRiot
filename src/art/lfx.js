@@ -212,7 +212,12 @@ function stormPylon(ctx,x,y,s,pass,seed,target){seed=seed||31;ctx.save();ctx.tra
   // hum on the coil
   ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,4,b0-mh*.4,24,'#ff8a40',.12);ctx.restore();
   if(target){bolt(ctx,cx,topY,(target[0]-x)/s,(target[1]-y)/s,seed+9,22,2.2);}
-  else{bolt(ctx,cx,topY,cx+50,topY-22,seed+9,12,1.2);bolt(ctx,cx,topY,cx-38,topY+6,seed+12,10,1);}
+  else{
+   ctx.save();ctx.globalCompositeOperation='lighter';
+   ctx.strokeStyle='rgba(180,165,255,.42)';ctx.lineWidth=1.1;ctx.beginPath();ctx.ellipse(cx,topY,10,4,0,0,TAU);ctx.stroke();
+   glow(ctx,cx,topY,14,'#a99cff',.42);
+   ctx.restore();
+  }
  }
  ctx.restore();}
 
@@ -240,11 +245,12 @@ function grub(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk
    ctx.fillStyle='rgba(0,0,0,.5)';for(let k=0;k<3;k++){ctx.fillRect(px-rr*.4+r()*rr*.8,py-rr*.3+r()*rr*.6,1.2,1.2);}
    ctx.strokeStyle='rgba(60,60,58,.8)';ctx.lineWidth=.6;for(let k=0;k<3;k++){const a=-Math.PI*.5+(r()-.5)*1.4;ctx.beginPath();ctx.moveTo(px+Math.cos(a)*rr,py+Math.sin(a)*rr);ctx.lineTo(px+Math.cos(a)*(rr+3),py+Math.sin(a)*(rr+3));ctx.stroke();}
   });
-  // head: blunt wedge overlapping thorax, split mandibles, no eyes
+  // head: blunt carapace cowl overlapping thorax, crisp split mandibles, no eyes
   const [hx,hy,hr]=segs[n-1];
   ctx.fillStyle='#0d0e0f';ctx.beginPath();ctx.moveTo(hx-hr*1.6,hy-hr-1.5);ctx.quadraticCurveTo(hx+hr+6,hy-hr*.6,hx+hr+7,hy+1);ctx.quadraticCurveTo(hx+hr,hy+hr+.5,hx-hr*1.6,hy+hr+1);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#c9bfa8';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(hx+hr+4,hy-2);ctx.quadraticCurveTo(hx+hr+13,hy-6,hx+hr+15,hy+1);ctx.moveTo(hx+hr+4,hy+3);ctx.quadraticCurveTo(hx+hr+12,hy+7,hx+hr+13,hy+1.5);ctx.stroke();
-  ctx.strokeStyle='rgba(0,0,0,.6)';ctx.lineWidth=.6;ctx.stroke();
+  ctx.strokeStyle='rgba(195,215,205,.25)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(hx-hr*1.2,hy-hr-1);ctx.quadraticCurveTo(hx+hr+4,hy-hr*.5,hx+hr+6,hy-1);ctx.stroke();
+  ctx.strokeStyle='#d4cab4';ctx.lineWidth=1.9;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(hx+hr+4,hy-2);ctx.quadraticCurveTo(hx+hr+13,hy-6,hx+hr+16,hy+.5);ctx.moveTo(hx+hr+4,hy+3);ctx.quadraticCurveTo(hx+hr+12,hy+7,hx+hr+14,hy+2);ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,.65)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(hx+hr+4,hy-1);ctx.lineTo(hx+hr+15,hy+.5);ctx.stroke();
  } else {
   // seams leak the Hollow
   ctx.save();ctx.globalCompositeOperation='lighter';
@@ -364,29 +370,38 @@ function shellback(ctx,x,y,s,pass,seed,face,frost,ph){seed=seed||61;face=face||1
  ctx.restore();}
 
 // Wren in the field: a tall hooded keeper in slate-navy cloak and rust-red scarf with lantern and spear.
-function wren(ctx,x,y,s,pass){ctx.save();ctx.translate(x,y);ctx.scale(s,s);
- if(pass==='base'){shadow(ctx,4,1,16,4,.8);
+function wren(ctx,x,y,s,pass,face,swing){face=face||1;swing=swing||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ const stride=Math.sin(swing*8)*1.8;
+ if(pass==='base'){shadow(ctx,4*face,1,17,4.4,.82);
+  // Subtle warm keyline halo behind silhouette so Wren separates cleanly against dark slate or lava.
+  ctx.strokeStyle='rgba(255,244,218,.42)';ctx.lineWidth=2.6;ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(0,-42);ctx.lineTo(-9.5,-24);ctx.lineTo(-12,1);ctx.lineTo(11,1);ctx.lineTo(8,-24);ctx.closePath();ctx.stroke();
+  // Animated boots/stride under hem
+  ctx.fillStyle='#101218';ctx.fillRect(-5+stride,-3,4,4);ctx.fillRect(2-stride,-3,4,4);
   // Flowing rust-red scarf tail behind shoulder
-  ctx.fillStyle='#96331e';poly(ctx,[[5,-28],[13,-20],[10,-14],[4,-22]]);ctx.fill();
-  // Spear shaft and bright steel head
-  ctx.strokeStyle='#5a4630';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(9,2);ctx.lineTo(14,-44);ctx.stroke();
-  ctx.fillStyle='#dce6f0';poly(ctx,[[14,-44],[16.5,-53],[12.2,-45]]);ctx.fill();
-  ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(14,-44);ctx.lineTo(16.2,-52.5);ctx.stroke();
-  // Slate-navy traveller's cloak with warm lantern-lit edge
-  const cg=ctx.createLinearGradient(-10,-38,10,0);cg.addColorStop(0,'#2c3346');cg.addColorStop(.6,'#1f2433');cg.addColorStop(1,'#141822');
+  ctx.fillStyle='#96331e';poly(ctx,[[5,-28],[14,-20+stride*.6],[11,-13+stride*.4],[4,-22]]);ctx.fill();
+  // Spear shaft, brass bolster and bright steel head
+  ctx.strokeStyle='#5a4630';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(9,2);ctx.lineTo(14,-45);ctx.stroke();
+  ctx.fillStyle='#c89640';ctx.fillRect(12.2,-45.5,3.2,2);
+  ctx.fillStyle='#e2ecf6';poly(ctx,[[14,-45],[17,-55],[11.8,-46]]);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.78)';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(14,-45);ctx.lineTo(16.7,-54.2);ctx.stroke();
+  // Slate-navy traveller's cloak with warm lantern-lit edge and stitched trim
+  const cg=ctx.createLinearGradient(-10,-38,10,0);cg.addColorStop(0,'#30384e');cg.addColorStop(.6,'#212738');cg.addColorStop(1,'#141822');
   ctx.fillStyle=cg;ctx.beginPath();ctx.moveTo(0,-38);ctx.quadraticCurveTo(-8.5,-36,-8.5,-24);ctx.lineTo(-11.5,0);ctx.lineTo(10.5,0);ctx.lineTo(7.5,-24);ctx.quadraticCurveTo(7.5,-36,0,-38);ctx.fill();
-  ctx.fillStyle='rgba(255,186,96,.38)';ctx.beginPath();ctx.moveTo(-8.5,-25);ctx.lineTo(-11.5,0);ctx.lineTo(-6.8,0);ctx.lineTo(-4.8,-25);ctx.fill();
-  ctx.strokeStyle='rgba(190,205,230,.22)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(7.2,-25);ctx.lineTo(10.2,-1);ctx.stroke();
+  ctx.fillStyle='rgba(255,186,96,.4)';ctx.beginPath();ctx.moveTo(-8.5,-25);ctx.lineTo(-11.5,0);ctx.lineTo(-6.8,0);ctx.lineTo(-4.8,-25);ctx.fill();
+  ctx.strokeStyle='rgba(215,228,245,.32)';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(7.2,-25);ctx.lineTo(10.2,-1);ctx.stroke();
+  // Brass keeper's belt buckle
+  ctx.fillStyle='#d4a04a';ctx.fillRect(-3,-17,5,2.2);
   // Signature rust-red scarf collar
   ctx.fillStyle='#b8442a';ctx.beginPath();ctx.moveTo(-7.5,-29);ctx.quadraticCurveTo(0,-25,7.2,-28.5);ctx.lineTo(6.5,-23.5);ctx.quadraticCurveTo(0,-20.5,-6.8,-24);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#df6848';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(-7,-28.5);ctx.quadraticCurveTo(0,-25,6.8,-28);ctx.stroke();
-  // Hood and face shadow
-  ctx.fillStyle='#23293a';ctx.beginPath();ctx.ellipse(0,-37,5.8,6.7,0,0,TAU);ctx.fill();
+  // Hood, face shadow & sharp glint
+  ctx.fillStyle='#242b3d';ctx.beginPath();ctx.ellipse(0,-37,6,6.9,0,0,TAU);ctx.fill();
   ctx.fillStyle='#06080c';ctx.beginPath();ctx.ellipse(1.2,-35.5,3,3.6,0,0,TAU);ctx.fill();
   // Lantern arm and brass-capped lantern
-  ctx.strokeStyle='#23293a';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(-7,-22);ctx.lineTo(-13,-14);ctx.stroke();
-  ctx.fillStyle='#22201d';ctx.fillRect(-16,-14,6,8);ctx.fillStyle='#9e7838';ctx.fillRect(-16.5,-15,7,1.8);ctx.fillRect(-16.5,-6.5,7,1.4);
- } else {glow(ctx,-13,-10,28,'#ffa040',.5);ctx.fillStyle='#ffe8b4';ctx.fillRect(-14.5,-12.2,3,4.8);}
+  ctx.strokeStyle='#23293a';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-7,-22);ctx.lineTo(-13,-14);ctx.stroke();
+  ctx.fillStyle='#22201d';ctx.fillRect(-16,-14,6,8);ctx.fillStyle='#a8803c';ctx.fillRect(-16.5,-15,7,1.8);ctx.fillRect(-16.5,-6.5,7,1.4);
+ } else {glow(ctx,-13,-10,30,'#ffa040',.54);ctx.fillStyle='#ffe8b4';ctx.fillRect(-14.5,-12.2,3,4.8);}
  ctx.restore();}
 
 /* ---------- small ruin pieces for the map ---------- */
@@ -416,19 +431,21 @@ function standingStone(ctx,x,y,h,seed){const r=rng(seed);shadow(ctx,x+10,y+2,18,
  poly(ctx,[[x-w,y],[x+w,y],[x+w*.7,y-h],[x-w*.4,y-h-4]]);const g=ctx.createLinearGradient(x-w,0,x+w,0);g.addColorStop(0,'#55565a');g.addColorStop(.5,'#34353a');g.addColorStop(1,'#16171a');ctx.fillStyle=g;ctx.fill();
  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(x-2,y-h*.3);ctx.lineTo(x+1,y-h*.45);ctx.lineTo(x-1,y-h*.6);ctx.stroke();}
 function plot(ctx,x,y,seed,empty){const r=rng(seed);
- // a pale paved pad set into the ground, flat, so it reads as "build here" and not as a loose slab
- shadow(ctx,x+2,y+3,46,13,.22);
+ // Recessed octagonal stone socket carved flush into terrain so towers seat naturally without floating pancakes.
  ctx.save();ctx.translate(x,y);
- ctx.fillStyle='#8a8172';ctx.beginPath();ctx.ellipse(0,0,40,17,0,0,TAU);ctx.fill();
- const g=ctx.createLinearGradient(0,-16,0,14);g.addColorStop(0,'#e3dac6');g.addColorStop(1,'#c7bca5');
- ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,-1.5,36,14,0,0,TAU);ctx.fill();
- ctx.save();ctx.beginPath();ctx.ellipse(0,-1.5,36,14,0,0,TAU);ctx.clip();
- ctx.strokeStyle='rgba(96,84,66,.32)';ctx.lineWidth=1;
- ctx.beginPath();ctx.ellipse(0,-1.5,20,7.6,0,0,TAU);ctx.stroke();
- for(let k=0;k<8;k++){const a=k/8*TAU+r()*.2;ctx.beginPath();ctx.moveTo(Math.cos(a)*20,-1.5+Math.sin(a)*7.6);ctx.lineTo(Math.cos(a)*38,-1.5+Math.sin(a)*15);ctx.stroke();}
- for(let k=0;k<14;k++){ctx.fillStyle=`rgba(${90+r()*30},${110+r()*30},${60+r()*20},.35)`;const a=r()*TAU,d=24+r()*12;ctx.fillRect(Math.cos(a)*d,-1.5+Math.sin(a)*d*.39,1.5+r()*2,1);}
+ ctx.fillStyle='rgba(26,22,18,.28)';ctx.beginPath();ctx.ellipse(0,1.5,41,17.5,0,0,TAU);ctx.fill();
+ ctx.fillStyle='#686155';ctx.beginPath();ctx.ellipse(0,0,38,15.5,0,0,TAU);ctx.fill();
+ const g=ctx.createLinearGradient(0,-14,0,13);g.addColorStop(0,'#a9a08d');g.addColorStop(.5,'#cfc5af');g.addColorStop(1,'#e2d8c2');
+ ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(0,-0.5,34,13.5,0,0,TAU);ctx.fill();
+ ctx.save();ctx.beginPath();ctx.ellipse(0,-0.5,34,13.5,0,0,TAU);ctx.clip();
+ ctx.strokeStyle='rgba(70,58,44,.4)';ctx.lineWidth=1.1;
+ ctx.beginPath();ctx.ellipse(0,-0.5,19,7.2,0,0,TAU);ctx.stroke();
+ for(let k=0;k<8;k++){const a=k/8*TAU+.2;ctx.beginPath();ctx.moveTo(Math.cos(a)*19,-0.5+Math.sin(a)*7.2);ctx.lineTo(Math.cos(a)*35,-0.5+Math.sin(a)*14);ctx.stroke();}
+ for(let k=0;k<10;k++){ctx.fillStyle=`rgba(${78+r()*25},${76+r()*20},${62+r()*18},.3)`;const a=r()*TAU,d=21+r()*11;ctx.fillRect(Math.cos(a)*d,-0.5+Math.sin(a)*d*.39,1.4+r()*1.8,1);}
  ctx.restore();
- ctx.strokeStyle='rgba(255,250,236,.55)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(0,-1.5,36,14,0,Math.PI*1.05,Math.PI*1.95);ctx.stroke();
+ // Lower rim catches morning sun while upper rim stays shadowed inside the recess
+ ctx.strokeStyle='rgba(40,34,26,.55)';ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(0,-0.5,34,13.5,0,Math.PI*1.06,Math.PI*1.94);ctx.stroke();
+ ctx.strokeStyle='rgba(255,248,232,.55)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(0,-0.5,34,13.5,0,Math.PI*0.08,Math.PI*0.92);ctx.stroke();
  ctx.restore();}
 
 /* ---------- vignette tiles: one subject on its own patch of ground ---------- */
@@ -565,28 +582,32 @@ function forgeCannon(ctx,x,y,s,pass,seed){seed=seed||71;ctx.save();ctx.translate
  const w=40,h=46,dep=16;
  if(pass==='base'){shadow(ctx,16,4,66,18,.75);
   masonry(ctx,[[w,0],[w+dep,-dep*.7],[w+dep-3,-h-dep*.7],[w-3,-h]],w-3,-h-dep,w+dep,2,'#5f5a52',.32,seed+1,{ch:9,bw:9});
-  masonry(ctx,[[-w,0],[w,0],[w-3,-h],[-w+3,-h]],-w,-h,w,0,'#5f5a52',.78,seed+2,{ch:9,moss:30});
-  // gun ports
-  ctx.fillStyle='#050608';[-20,14].forEach(px=>{ctx.beginPath();ctx.moveTo(px,-12);ctx.lineTo(px,-24);ctx.quadraticCurveTo(px+5,-30,px+10,-24);ctx.lineTo(px+10,-12);ctx.fill()});
-  // iron bands
-  ctx.fillStyle='#1b1c1f';ctx.fillRect(-w,-h*.62,w*2,3);ctx.fillStyle='rgba(200,200,210,.3)';for(let i=-w+3;i<w;i+=9)ctx.fillRect(i,-h*.62+1,1,1);
+  masonry(ctx,[[-w,0],[w,0],[w-3,-h],[-w+3,-h]],-w,-h,w,0,'#5f5a52',.78,seed+2,{ch:9});
+  // recessed gun ports + lower masonry buttresses
+  ctx.fillStyle='#050608';[-22,12].forEach(px=>{ctx.beginPath();ctx.moveTo(px,-12);ctx.lineTo(px,-24);ctx.quadraticCurveTo(px+5,-30,px+10,-24);ctx.lineTo(px+10,-12);ctx.fill()});
+  ctx.fillStyle='#1b1c1f';ctx.fillRect(-w,-h*.62,w*2,3.5);ctx.fillStyle='rgba(215,175,105,.45)';for(let i=-w+3;i<w;i+=9)ctx.fillRect(i,-h*.62+1,1.4,1.4);
   // gun deck
   planks(ctx,[[-w+3,-h],[w-3,-h],[w+dep-3,-h-dep*.7],[-w+dep+3,-h-dep*.7]],-w,-h-dep,w+dep,-h,'#7a5a3c',.85,seed+3,false);
-  // sandbag / stone parapet on the back half
-  for(let i=0;i<7;i++){const px=-w+10+i*11,py=-h-dep*.7-1;ctx.fillStyle=shade('#5a554c',.6+((i*37)%10)/25);ctx.beginPath();ctx.ellipse(px,py,6,3.4,0,0,TAU);ctx.fill();ctx.fillStyle='rgba(190,200,220,.12)';ctx.fillRect(px-4,py-3,7,1)}
+  // brass trunnion carriage rails
+  ctx.fillStyle='#24262b';ctx.fillRect(-16,-h-6,32,6);ctx.fillStyle='#c48c38';ctx.fillRect(-14,-h-5,4,4);ctx.fillRect(10,-h-5,4,4);
+  for(let i=0;i<7;i++){const px=-w+10+i*11,py=-h-dep*.7-1;ctx.fillStyle=shade('#5a554c',.6+((i*37)%10)/25);ctx.beginPath();ctx.ellipse(px,py,6,3.4,0,0,TAU);ctx.fill();ctx.fillStyle='rgba(190,200,220,.14)';ctx.fillRect(px-4,py-3,7,1)}
   // coal brazier for the fuse
   ctx.fillStyle='#16171a';ctx.fillRect(w-12,-h-dep*.7+2,10,7);
- } else {glow(ctx,w-7,-h-dep*.7+3,14,'#ff7a2a',.4);ctx.fillStyle='rgba(255,140,60,.8)';ctx.fillRect(w-10,-h-dep*.7+2,6,2)}
+ } else {glow(ctx,w-7,-h-dep*.7+3,16,'#ff7a2a',.45);ctx.fillStyle='rgba(255,160,70,.88)';ctx.fillRect(w-10,-h-dep*.7+2,6,2.2)}
  ctx.restore();}
 function cannonBarrel(ctx,x,y,s,aim,recoil,flash){ctx.save();ctx.translate(x,y-50*s);ctx.scale(s,s);
  const dx=Math.cos(aim),dy=Math.sin(aim)*.5,ang=Math.atan2(dy,dx);
- ctx.fillStyle='#1d1e22';ctx.beginPath();ctx.ellipse(0,4,14,6,0,0,TAU);ctx.fill();
+ // Traversing iron turntable + cheek plates
+ ctx.fillStyle='#1b1c20';ctx.beginPath();ctx.ellipse(0,5,16,6.8,0,0,TAU);ctx.fill();
+ ctx.strokeStyle='rgba(210,165,92,.4)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(0,4.5,14,5.4,0,0,TAU);ctx.stroke();
  ctx.rotate(ang);const rc=-recoil*7;
- const g=ctx.createLinearGradient(0,-8,0,8);g.addColorStop(0,'#5a5d66');g.addColorStop(.45,'#2a2c32');g.addColorStop(1,'#0c0d10');
- ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(rc-6,-9);ctx.lineTo(rc+30,-7);ctx.lineTo(rc+30,7);ctx.lineTo(rc-6,9);ctx.closePath();ctx.fill();
- ctx.fillStyle='#16171a';ctx.fillRect(rc+4,-9,3,18);ctx.fillRect(rc+26,-8,5,16);ctx.fillStyle='rgba(200,205,215,.3)';ctx.fillRect(rc-6,-9,36,1);
- ctx.fillStyle='#020203';ctx.beginPath();ctx.ellipse(rc+31,0,2.4,5.5,0,0,TAU);ctx.fill();
- if(flash>0){ctx.globalCompositeOperation='lighter';const f=flash/.14;glow(ctx,rc+36,0,22,'#ffa040',.7*f);ctx.fillStyle=`rgba(255,230,180,${f})`;poly(ctx,[[rc+31,-5],[rc+50,0],[rc+31,5]]);ctx.fill()}
+ const g=ctx.createLinearGradient(0,-9,0,9);g.addColorStop(0,'#6c707a');g.addColorStop(.4,'#2f3239');g.addColorStop(1,'#0d0e11');
+ ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(rc-8,-10);ctx.lineTo(rc+31,-7.2);ctx.lineTo(rc+31,7.2);ctx.lineTo(rc-8,10);ctx.closePath();ctx.fill();
+ // Brass reinforcing bands + flared muzzle lip
+ ctx.fillStyle='#c48e3c';ctx.fillRect(rc-4,-10,3,20);ctx.fillRect(rc+10,-9,3,18);
+ ctx.fillStyle='#17181c';ctx.fillRect(rc+25,-8.5,6.5,17);ctx.fillStyle='rgba(220,226,238,.36)';ctx.fillRect(rc-7,-9.5,37,1.2);
+ ctx.fillStyle='#020203';ctx.beginPath();ctx.ellipse(rc+32,0,2.6,5.8,0,0,TAU);ctx.fill();
+ if(flash>0){ctx.globalCompositeOperation='lighter';const f=flash/.14;glow(ctx,rc+38,0,24,'#ffa040',.75*f);ctx.fillStyle=`rgba(255,230,180,${f})`;poly(ctx,[[rc+32,-5.5],[rc+52,0],[rc+32,5.5]]);ctx.fill()}
  ctx.restore();}
 // Beacon: tall stone column with an iron fire cage. Fire drawn live by beaconFire.
 function beaconTower(ctx,x,y,s,pass,seed){seed=seed||81;ctx.save();ctx.translate(x,y);ctx.scale(s,s);
@@ -614,16 +635,20 @@ function beaconFire(ctx,x,y,s,T){ctx.save();ctx.translate(x+3*s,y-140*s);ctx.sca
 function rootGarden(ctx,x,y,s,pass,seed){seed=seed||91;ctx.save();ctx.translate(x,y);ctx.scale(s,s);
  const r=rng(seed);
  if(pass==='base'){shadow(ctx,14,3,62,16,.7);
-  ctx.save();ctx.scale(1,.4);const sg=ctx.createRadialGradient(0,0,0,0,0,56);sg.addColorStop(0,'rgba(20,26,14,.9)');sg.addColorStop(1,'rgba(20,26,14,0)');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(0,0,56,0,TAU);ctx.fill();ctx.restore();
+  ctx.save();ctx.scale(1,.4);const sg=ctx.createRadialGradient(0,0,0,0,0,56);sg.addColorStop(0,'rgba(22,36,14,.92)');sg.addColorStop(1,'rgba(22,36,14,0)');ctx.fillStyle=sg;ctx.beginPath();ctx.arc(0,0,56,0,TAU);ctx.fill();ctx.restore();
   for(let i=0;i<9;i++){const a=Math.PI+i/8*Math.PI,px=Math.cos(a)*44,py=Math.sin(a)*15;block(ctx,px-7,py,14,8+r()*10,6,seed+i*5,'#57554f')}
-  ctx.strokeStyle='#0d0f0a';ctx.lineCap='round';
+  // Layered deep-grove foliage canopy behind the thorn boughs
+  [[-16,-48,17,'#2c4d21'],[18,-50,16,'#315725'],[0,-66,20,'#3e6c2f'],[-8,-58,14,'#52863d'],[10,-58,13,'#5c9245']].forEach(([cx,cy,cr,col])=>{
+   ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,cr,0,TAU);ctx.fill();
+  });
+  ctx.strokeStyle='#161a10';ctx.lineCap='round';
   const br=(bx,by,a,len,w,d)=>{if(d>5||len<4)return;const ex=bx+Math.cos(a)*len,ey=by+Math.sin(a)*len;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(bx,by);ctx.quadraticCurveTo((bx+ex)/2+(r()-.5)*len*.4,(by+ey)/2,ex,ey);ctx.stroke();
-   if(d>1&&r()<.6){ctx.fillStyle='#0d0f0a';poly(ctx,[[ex,ey],[ex+3,ey-6],[ex+1,ey+1]]);ctx.fill()}
+   if(d>1&&r()<.6){ctx.fillStyle='#182214';poly(ctx,[[ex,ey],[ex+3,ey-6],[ex+1,ey+1]]);ctx.fill()}
    const k=1+(r()<.6?1:0);for(let i=0;i<=k;i++)br(ex,ey,a+(r()-.5)*1.2,len*(.66+r()*.12),w*.64,d+1)};
   br(0,0,-Math.PI/2,40,9,0);
-  // surface roots
+  // surface roots + moss highlights
   for(let i=0;i<6;i++){const a=i/6*TAU+.4;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,-2);ctx.quadraticCurveTo(Math.cos(a)*22,Math.sin(a)*6,Math.cos(a)*40,Math.sin(a)*13);ctx.stroke()}
-  ctx.strokeStyle='rgba(120,160,90,.18)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-3,-6);ctx.lineTo(-2,-38);ctx.stroke();
+  ctx.strokeStyle='rgba(140,195,105,.35)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(-3,-6);ctx.lineTo(-2,-38);ctx.stroke();
  }
  ctx.restore();}
 function rootPods(ctx,x,y,s,T,hot){ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.globalCompositeOperation='lighter';
@@ -639,7 +664,7 @@ function paintField(ctx,W,H,M){
  const img=ctx.createImageData(W,H),d=img.data;const nA=makeNoise(3),nB=makeNoise(5);
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;const n=nA(x/90,y/45,5),m=nB(x/7,y/3.5,3),q=nA(x/22+300,y/11,3);
   const P=M.pal;let c;
-  if(P){const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[0,1,2].map(j=>mix(mix(P.grassLo[j],P.grassHi[j],n),P.moss[j],moss));
+  if(P){const moss=M.biome===2?0:ss(.5,.68,nB(x/60+20,y/30,4));c=[0,1,2].map(j=>mix(mix(P.grassLo[j],P.grassHi[j],n),P.moss[j],moss));
    if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=c.map((v,j)=>mix(v,P.high[j],st*.55));}
    const k=.9+m*.2;c=c.map(v=>v*k);}
   else{c=[mix(22,34,n),mix(21,31,n),mix(18,24,n)];const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[mix(c[0],26,moss),mix(c[1],36,moss),mix(c[2],22,moss)];
@@ -659,18 +684,38 @@ function paintField(ctx,W,H,M){
  // reeds
  M.waters.forEach((Wt,k)=>{const L=offset(Wt.pts,-Wt.w*.48,4+k,12),Rr=offset(Wt.pts,Wt.w*.48,6+k,12);[L,Rr].forEach(side=>{for(let i=0;i<side.length;i+=2){if(r()<.45)continue;const[px,py]=side[i];for(let j=0;j<4;j++){ctx.strokeStyle=`rgba(${30+r()*20},${36+r()*16},22,.9)`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+j*2,py);ctx.quadraticCurveTo(px+j*2+(r()-.5)*6,py-6,px+j*2+(r()-.5)*8,py-10-r()*8);ctx.stroke()}}})});
  ctx.restore();
- // cliff face of the high ground
- const hp=M.high||[];for(let i=0;i<hp.length-1;i++){const[a,b]=hp[i],[e,f]=hp[i+1];if(b<4&&f<4)continue;if(a<=2&&e<=2)continue;if(a>=W-2&&e>=W-2)continue;const len=Math.hypot(e-a,f-b);if(len<2)continue;const n=Math.max(1,Math.ceil(len/14));for(let k=0;k<n;k++){const u=k/n,v=(k+1)/n,px=mix(a,e,u),py=mix(b,f,u),qx=mix(a,e,v),qy=mix(b,f,v);const pad=Math.abs(qx-px)<3?4:0;const pts=pad?[[px,py],[px+pad,py+2],[qx+pad,qy+24],[qx,qy+24]]:[[px,py],[qx,qy],[qx,qy+24],[px,py+24]];masonry(ctx,pts,Math.min(px,qx)-1,Math.min(py,qy),Math.max(px,qx)+pad+1,Math.max(py,qy)+25,'#4c4a45',.45+r()*.2,900+i*40+k,{ch:6,bw:7})}}
- if(hp.length>3){ctx.save();ctx.strokeStyle='rgba(170,190,220,.16)';ctx.lineWidth=1.4;poly(ctx,hp.slice(1,-1));ctx.stroke();ctx.restore();}
- // stone bridge
+ // Smooth contoured 2.5D cliff shelving of the high ground
+ const hp=M.high||[];
+ if(hp.length>3){
+  ctx.save();
+  for(let i=0;i<hp.length-1;i++){
+   const [a,b]=hp[i],[e,f]=hp[i+1];
+   if((b<4&&f<4)||(a<=2&&e<=2)||(a>=W-2&&e>=W-2))continue;
+   if(f>H-4&&b>H-4)continue;
+   const g=ctx.createLinearGradient(0,Math.min(b,f),0,Math.max(b,f)+24);
+   g.addColorStop(0,M.biome===2?'#4c4e52':M.biome===3?'#3b2a26':'#524d44');
+   g.addColorStop(1,M.biome===2?'#222428':M.biome===3?'#181110':'#262420');
+   ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(e,f);ctx.lineTo(e,f+22);ctx.quadraticCurveTo((a+e)/2,(b+f)/2+26,a,b+22);ctx.closePath();ctx.fill();
+  }
+  ctx.strokeStyle='rgba(195,210,225,.24)';ctx.lineWidth=1.6;poly(ctx,hp.slice(0,-1));ctx.stroke();
+  ctx.restore();
+ }
+ // stone or iron-girder bridges
  M.bridges.forEach(([bx,by,ang,bl],bi)=>{ctx.save();ctx.translate(bx,by);ctx.rotate(ang);shadow(ctx,4,18,bl+10,12,.8);const bW=27;
-  masonry(ctx,[[-bl,-bW],[bl,-bW],[bl,bW],[-bl,bW]],-bl,-bW,bl,bW,'#5a5852',.75,401+bi,{ch:6,bw:14});
+  masonry(ctx,[[-bl,-bW],[bl,-bW],[bl,bW],[-bl,bW]],-bl,-bW,bl,bW,M.biome===2?'#4f545c':'#5a5852',.75,401+bi,{ch:6,bw:14});
   ctx.fillStyle='#2c2b28';ctx.fillRect(-bl,-bW-6,bl*2,6);ctx.fillRect(-bl,bW,bl*2,7);ctx.fillStyle='rgba(180,190,210,.18)';ctx.fillRect(-bl,-bW-6,bl*2,1);
   for(let x=-bl;x<bl;x+=22){ctx.fillStyle='#3a3936';ctx.fillRect(x,-bW-12,7,8);ctx.fillRect(x,bW-2,7,10)}
   ctx.fillStyle='#141412';ctx.fillRect(-bl,bW+7,bl*2,5);ctx.restore()});
- M.ruins.forEach(([x,y,l],i)=>ruinWall(ctx,x,y,l,501+i*10));
- M.stones.forEach(([x,y,h],i)=>standingStone(ctx,x,y,h,i+1));
- M.trees.forEach(([x,y,s],i)=>{if(M.pal&&M.pal.leafy&&i%3!==2)leafyTree(ctx,x,y,s,7+i,M.pal.leaf);else deadTree(ctx,x,y,s,7+i,M.pal?M.pal.bark:null);});
+ // Biome-specific environmental props: ZERO green moss/oaks inside Cogwheel Foundry (2) or Ashen Rift (3)!
+ if(M.biome===2){
+  M.ruins.forEach(([x,y,l],i)=>{ctx.save();ctx.translate(x,y);shadow(ctx,8,4,l*.45,10,.6);ctx.fillStyle='#3c3f45';ctx.fillRect(-l*.4,-18,l*.8,18);ctx.strokeStyle='#c48e3c';ctx.lineWidth=2;ctx.strokeRect(-l*.4,-18,l*.8,18);ctx.restore();});
+  M.stones.forEach(([x,y,h],i)=>{ctx.save();ctx.translate(x,y);shadow(ctx,4,3,h*.7,6,.55);ctx.strokeStyle='#7a6040';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,-4,h*.6,h*.28,0,0,TAU);ctx.stroke();for(let k=0;k<6;k++){const a=k/6*TAU;ctx.beginPath();ctx.moveTo(Math.cos(a)*h*.55,-4+Math.sin(a)*h*.24);ctx.lineTo(Math.cos(a)*h*.75,-4+Math.sin(a)*h*.32);ctx.stroke();}ctx.restore();});
+  M.trees.forEach(([x,y,s],i)=>{ctx.save();ctx.translate(x,y);shadow(ctx,10*s,3,24*s,7*s,.6);ctx.fillStyle='#2a2c30';ctx.fillRect(-7*s,-44*s,14*s,44*s);ctx.fillStyle='#b88234';ctx.fillRect(-8*s,-46*s,16*s,5*s);ctx.fillStyle='#3f434a';ctx.fillRect(-14*s,-14*s,28*s,14*s);ctx.restore();});
+ } else {
+  M.ruins.forEach(([x,y,l],i)=>ruinWall(ctx,x,y,l,501+i*10));
+  M.stones.forEach(([x,y,h],i)=>standingStone(ctx,x,y,h,i+1));
+  M.trees.forEach(([x,y,s],i)=>{if(M.pal&&M.pal.leafy&&i%3!==2)leafyTree(ctx,x,y,s,7+i,M.pal.leaf);else deadTree(ctx,x,y,s,7+i,M.pal?M.pal.bark:null);});
+ }
  M.plots.forEach(([x,y],i)=>plot(ctx,x,y,600+i*3,1));
 }
 const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField};

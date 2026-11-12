@@ -10,8 +10,8 @@ import { pointAt, smooth, type Vec } from '../game/path';
 import { makeRng } from '../game/rng';
 import { TOWERS, type TowerKind } from '../game/data/towers';
 import type { EnemyKind } from '../game/data/enemies';
-import { RUNES } from '../game/data/shop';
-import { SNARE } from '../game/data/hero';
+import { RUNES, RUNE_WARN_SEC } from '../game/data/shop';
+import { ATTUNE, HERO, SNARE } from '../game/data/hero';
 import type { StageDef } from '../game/data/stages';
 
 export const W = 1280;
@@ -61,6 +61,10 @@ export interface View {
   reduceMotion: boolean;
   /** Show damage numbers over foes. Gold and lives always show. */
   dmgNumbers: boolean;
+  /** Show hero 90 px leash & Attune aura guide (e.g. while dragging or hovering Wren). */
+  showLeash?: boolean;
+  hoveredPlot?: number | null;
+  hoveredSwitch?: number | null;
   /** A plot to mark for a new player (stage 1, before the first tower). */
   hintPlot?: number | null;
   /** A still frame (title screen): no health bars or shells in flight. */
@@ -82,6 +86,9 @@ export class Scene {
   private posts: Vec[] = [];
   private rifts: { x: number; y: number }[] = [];
   private waterPts: { pts: Vec[]; w: number }[] = [];
+  private drainWaters: { idx: number; pts: Vec[]; w: number }[] = [];
+  /** Roads already shown tearing open, so a second `riftOpen` for the same road adds no second ring or shake. */
+  private openedRoads = new Set<string>();
   private seeds = new Map<number, number>();
   /** How each foe looks in motion: drawn only, so the fight itself (timing, ranges, gate) never changes. */
   private gaits = new Map<number, Gait>();
@@ -105,7 +112,14 @@ export class Scene {
     const st = b.stage;
     this.stage = st;
     this.parts = []; this.fx = []; this.floats = []; this.coins = []; this.seeds.clear(); this.gaits.clear();
-    this.waterPts = st.waters.map(w => ({ pts: smooth(w.ctrl), w: w.w }));
+    this.openedRoads.clear();
+    this.waterPts = [];
+    this.drainWaters = [];
+    st.waters.forEach((w, idx) => {
+      const pts = smooth(w.ctrl);
+      if (w.drainAtWave !== undefined) this.drainWaters.push({ idx, pts, w: w.w });
+      else this.waterPts.push({ pts, w: w.w });
+    });
     const decor = makeDecor(b);
     this.posts = decor.posts;
     this.rifts = [...b.spawns.values()].map(rs => {
@@ -116,10 +130,10 @@ export class Scene {
     bg.width = W; bg.height = H;
     const c = bg.getContext('2d')!;
     X.paintField(c, W, H, {
-      roads: b.roads.map(r => ({ pts: r.path.pts, w: r.def.w })).sort((a, z) => a.w - z.w),
+      roads: b.roads.filter(r => r.def.openAtWave === undefined && r.def.openOnPhase === undefined).map(r => ({ pts: r.path.pts, w: r.def.w })).sort((a, z) => a.w - z.w),
       waters: this.waterPts, high: st.high ?? [], bridges: st.bridges,
       ruins: decor.ruins, stones: decor.stones, trees: decor.trees, plots: [],
-      pal: st.lava ? null : DAY_PAL[st.region],
+      pal: st.lava ? null : DAY_PAL[st.region], biome: st.region,
     });
     this.washRegion(c, st);
     b.plots.forEach((p, i) => L.plot(c, p.x, p.y, 600 + i * 3, 1));
@@ -169,10 +183,10 @@ export class Scene {
 
   private put(sp: Sprite, x: number, y: number) { this.g.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); }
 
-  static towerScale(t: { lv: number }) { return 0.6 + 0.06 * (Math.min(t.lv, 4) - 1); }
+  static towerScale(t: { lv: number }) { return 0.6 + 0.06 * (Math.min(t.lv, 5) - 1); }
 
   private towerSprite(t: Tower): Sprite {
-    const key = `${t.kind}:${Math.min(t.lv, 4)}:${t.split ?? ''}:${t.plot}`;
+    const key = `${t.kind}:${Math.min(t.lv, 5)}:${t.split ?? ''}:${t.plot}`;
     let sp = this.sprites.get(key);
     if (!sp) {
       const S = Scene.towerScale(t), seed = 200 + t.plot * 7;
@@ -180,6 +194,19 @@ export class Scene {
       this.sprites.set(key, sp);
     }
     return sp;
+  }
+
+  /**
+   * Hit-test an interactive map switch in world coordinates.
+   * With `touchPad` the target grows as the map shrinks, so it is never under 44 css px across on screen.
+   */
+  hitSwitch(b: Battle, wx: number, wy: number, touchPad = false): number | null {
+    const r = touchPad ? Math.max(34, 22 * 1.15 / this.scale) : 34;
+    for (let i = 0; i < b.switches.length; i++) {
+      const [sx, sy] = b.switches[i].def.at;
+      if (Math.hypot(wx - sx, (wy - sy) * 1.15) < r) return i;
+    }
+    return null;
   }
 
   /**
@@ -271,6 +298,47 @@ export class Scene {
         case 'heroDown': this.float(b.hero.x, b.hero.y - 80, 'Wren falls', '#ff8a7a', true); break;
         case 'revive': this.fx.push({ k: 'sun', x: b.hero.x, y: b.hero.y, r: 0, max: 1, life: 1 }); break;
         case 'rune': if (e.picked) this.float(b.hero.x, b.hero.y - 80, RUNES[e.kind].name, RUNES[e.kind].color, true); break;
+        case 'riftWarn': {
+          const r = b.roads.find(x => x.def.id === e.road);
+          if (r) { const p = pointAt(r.path, 36); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 0, max: 85, life: 1.1, c: '255,155,70' }); }
+          break;
+        }
+        case 'riftOpen': {
+          if (this.openedRoads.has(e.road)) break;
+          this.openedRoads.add(e.road);
+          const r = b.roads.find(x => x.def.id === e.road);
+          if (r) { const p = pointAt(r.path, 36); this.fx.push({ k: 'ring', x: p.x, y: p.y, r: 0, max: 140, life: 1, c: '96,226,180' }); this.shake = Math.max(this.shake, 5); }
+          break;
+        }
+        case 'clearPlot': {
+          const pl = b.plots[e.plot];
+          if (pl) {
+            for (let i = 0; i < 10; i++) { const a = R() * TAU; this.parts.push({ x: pl.x, y: pl.y - 6, vx: Math.cos(a) * 65, vy: Math.sin(a) * 35 - 40, life: 0.65, max: 0.65, c: '#7a6c58', s: 2.5, kind: 'chip', grav: 1 }); }
+            this.fx.push({ k: 'ring', x: pl.x, y: pl.y, r: 0, max: 52, life: 0.6, c: e.free ? '140,220,160' : '230,190,110' });
+          }
+          break;
+        }
+        case 'switchFlip': {
+          const sw = b.switches.find(x => x.def.id === e.id);
+          if (sw) {
+            const [sx, sy] = sw.def.at;
+            this.fx.push({ k: 'ring', x: sx, y: sy, r: 0, max: 58, life: 0.65, c: '230,185,95' });
+            for (let i = 0; i < 6; i++) { const a = R() * TAU; this.parts.push({ x: sx, y: sy - 10, vx: Math.cos(a) * 55, vy: Math.sin(a) * 40, life: 0.35, max: 0.35, c: '#ffd480', s: 2, kind: 'spark' }); }
+          }
+          break;
+        }
+        case 'terraform':
+          this.shake = Math.max(this.shake, 8);
+          this.fx.push({ k: 'ring', x: W / 2, y: H / 2, r: 0, max: 420, life: 0.9, c: '180,220,210' });
+          break;
+        case 'warp':
+          this.fx.push({ k: 'ring', x: e.fromX, y: e.fromY, r: 0, max: 46, life: 0.55, c: '90,210,255' });
+          this.fx.push({ k: 'ring', x: e.toX, y: e.toY, r: 0, max: 54, life: 0.65, c: '255,150,70' });
+          break;
+        case 'gateShock':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 180, life: 0.85, c: '255,215,120' });
+          this.shake = Math.max(this.shake, 6);
+          break;
         default: break;
       }
     }
@@ -278,9 +346,9 @@ export class Scene {
 
   /** Gold from kills close together in time and place adds up in one number instead of a stack. */
   private goldPop(x: number, y: number, gold: number, hero: boolean) {
-    const f = this.floats.find(o => o.gold !== undefined && o.max - o.life < 0.5 && Math.hypot(o.x - x, o.y - y) < 140);
+    const f = this.floats.find(o => o.gold !== undefined && o.max - o.life < 0.45 && Math.hypot(o.x - x, o.y - y) < 95);
     if (f) {
-      f.gold! += gold; f.text = `+${f.gold}`; f.life = f.max;
+      f.gold! += gold; f.text = `+${f.gold}`; f.life = f.max; f.y -= 3;
       if (hero) { f.c = '#ffd76a'; f.big = true; }
       return;
     }
@@ -289,8 +357,8 @@ export class Scene {
   }
 
   private float(x: number, y: number, text: string, c: string, big: boolean) {
-    if (this.floats.length > 60) this.floats.shift();
-    this.floats.push({ x: x + (this.r() - 0.5) * 12, y, text, c, big, life: big ? 1.4 : 0.8, max: big ? 1.4 : 0.8 });
+    if (this.floats.length >= 28) this.floats.shift();
+    this.floats.push({ x: x + (this.r() - 0.5) * 14, y: Math.max(85, y), text, c, big, life: big ? 1.4 : 0.8, max: big ? 1.4 : 0.8 });
   }
 
   /* ------------------------------------------------------------------ frame */
@@ -338,6 +406,32 @@ export class Scene {
     if (this.shake > 0 && !view.reduceMotion) g.translate((R() - 0.5) * this.shake, (R() - 0.5) * this.shake);
     g.drawImage(this.bg, 0, 0, W, H);
 
+    // Dynamic drainable water bodies (wet channel until drain wave, then exposed sandbar bed).
+    for (const dw of this.drainWaters) {
+      const drained = b.waters[dw.idx]?.drained ?? false;
+      g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+      L.strokePts(g, dw.pts);
+      if (!drained) {
+        g.strokeStyle = st.lava ? 'rgba(110,40,18,.92)' : 'rgba(56,112,138,.86)'; g.lineWidth = dw.w; g.stroke();
+        g.globalCompositeOperation = 'lighter';
+        g.strokeStyle = st.lava ? 'rgba(255,140,60,.4)' : 'rgba(220,235,245,.32)'; g.lineWidth = 1.8; g.setLineDash([6, 26, 12, 40]); g.lineDashOffset = -T * 24; g.stroke();
+      } else {
+        g.strokeStyle = st.lava ? 'rgba(66,54,48,.88)' : 'rgba(154,142,118,.84)'; g.lineWidth = dw.w * 0.92; g.stroke();
+        g.strokeStyle = 'rgba(72,62,48,.32)'; g.lineWidth = 2; g.setLineDash([4, 18]); g.stroke();
+      }
+      g.setLineDash([]); g.restore();
+    }
+
+    // Dynamically awakened roads (openAtWave or openOnPhase once opened).
+    for (const r of b.roads) {
+      if ((r.def.openAtWave === undefined && r.def.openOnPhase === undefined) || !r.active) continue;
+      g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+      L.strokePts(g, r.path.pts);
+      g.strokeStyle = st.lava ? 'rgba(46,38,34,.92)' : 'rgba(192,172,138,.9)'; g.lineWidth = r.def.w; g.stroke();
+      g.strokeStyle = 'rgba(24,20,16,.24)'; g.lineWidth = 2; g.setLineDash([6, 12]); g.stroke();
+      g.setLineDash([]); g.restore();
+    }
+
     // Water glints, or lava flowing.
     g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
     for (const w of this.waterPts) {
@@ -354,10 +448,24 @@ export class Scene {
     }
     g.setLineDash([]); g.restore();
 
-    this.drawMapRules(b, T);
+    // Subtle Sanctuary healing arc around Keep Gate when Wren is injured or inside radius.
+    if (!view.still) {
+      for (const [gx, gy] of b.gate) {
+        const near = !b.hero.dead && Math.hypot(gx - b.hero.x, gy - b.hero.y) < HERO.gateRadius;
+        if (near || (!b.hero.dead && b.hero.hp < b.heroMaxHp() * 0.85)) {
+          g.save();
+          g.strokeStyle = near ? 'rgba(128,210,110,.36)' : 'rgba(235,195,120,.2)';
+          g.lineWidth = 1.6; g.setLineDash([6, 8]);
+          g.beginPath(); g.ellipse(gx, gy, HERO.gateRadius, HERO.gateRadius / Y_SQUASH, 0, 0, TAU); g.stroke();
+          g.restore();
+        }
+      }
+    }
+
+    this.drawMapRules(b, T, view);
     this.drawPlots(b, view, T);
     this.drawRifts(T);
-    if (b.rune) this.drawRune(b.rune, T);
+    if (b.rune) this.drawRune(b.rune, T, view.reduceMotion);
 
     // Base pass, sorted by depth.
     const ents: { y: number; d: () => void }[] = [];
@@ -410,10 +518,31 @@ export class Scene {
     for (const f of b.foes) this.drawFoe(f, 'emit', T);
     if (!b.hero.dead) this.drawHero(b, 'emit', T, !!view.still);
     for (const [gx, gy] of b.gate) L.gate(g, gx, gy, 'emit');
-    if (st.lighthouse) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, st.lighthouse[0], st.lighthouse[1] - 110, 60, '#ffe6b0', 0.5); g.restore(); }
+    if (st.lighthouse) {
+      const [lx, ly] = st.lighthouse;
+      // The beam sweeps; with calm motion it rests at one angle.
+      const beamAng = view.reduceMotion ? -0.6 : T * 0.65;
+      g.save(); g.globalCompositeOperation = 'lighter';
+      g.translate(lx, ly - 110); g.rotate(beamAng);
+      const beamG = g.createLinearGradient(0, 0, 380, 0);
+      beamG.addColorStop(0, 'rgba(255,230,175,.36)'); beamG.addColorStop(1, 'rgba(255,230,175,0)');
+      g.fillStyle = beamG; g.beginPath(); g.moveTo(0, -10); g.lineTo(380, -76); g.lineTo(380, 76); g.lineTo(0, 10); g.closePath(); g.fill();
+      g.restore();
+      g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, lx, ly - 110, 62, '#ffe6b0', 0.55); g.restore();
+    }
 
     if (!view.still) this.drawShots(b);
     this.drawFx(T);
+    if (st.weather === 'rain' && !view.reduceMotion) {
+      g.save();
+      g.strokeStyle = 'rgba(195,222,245,.24)'; g.lineWidth = 1.1; g.lineCap = 'round';
+      for (let i = 0; i < 65; i++) {
+        const rx = ((i * 97 + T * 420) % (W + 120)) - 60;
+        const ry = ((i * 71 + T * 880) % (H + 80)) - 40;
+        g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 14, ry + 28); g.stroke();
+      }
+      g.restore();
+    }
     this.drawRanges(b, view);
     this.drawCrows(T, dt, view.reduceMotion);
     if (!view.reduceMotion) L.fog(g, W, H, 9, T * 10, st.lava ? 0.05 : 0.025);
@@ -422,7 +551,7 @@ export class Scene {
     // Overlays that ignore shake.
     g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
     L.vignette(g, W, H, b.night ? 0.7 : 0.16);
-    if (this.flash > 0) { g.fillStyle = `rgba(255,${b.status === 'lost' ? 80 : 230},${b.status === 'lost' ? 60 : 180},${this.flash * 0.35})`; g.fillRect(0, 0, W, H); }
+    if (this.flash > 0 && !view.reduceMotion) { g.fillStyle = `rgba(255,${b.status === 'lost' ? 80 : 230},${b.status === 'lost' ? 60 : 180},${this.flash * 0.35})`; g.fillRect(0, 0, W, H); }
     for (const c of this.coins) { g.fillStyle = '#d9962a'; g.beginPath(); g.ellipse(c.x, c.y, 4.5 * Math.abs(Math.cos(c.u * 12)) + 1, 4.5, 0, 0, TAU); g.fill(); g.strokeStyle = '#5a2e08'; g.lineWidth = 1; g.stroke(); }
     g.textAlign = 'center';
     for (const f of this.floats) {
@@ -474,8 +603,65 @@ export class Scene {
 
   /* ------------------------------------------------------------------ pieces */
 
-  private drawMapRules(b: Battle, T: number) {
+  private drawMapRules(b: Battle, T: number, view: View) {
     const g = this.g, st = this.stage;
+    // Telegraphed upcoming Rift breaches & dashed threat path splines (1 full wave in advance!).
+    for (const r of b.roads) {
+      if (!r.telegraph) continue;
+      const p0 = pointAt(r.path, 36);
+      g.save();
+      g.strokeStyle = `rgba(218,86,52,${0.32 + 0.16 * Math.sin(T * 4)})`;
+      g.lineWidth = 3; g.setLineDash([8, 10]); g.lineDashOffset = -T * 32;
+      L.strokePts(g, r.path.pts); g.stroke(); g.setLineDash([]);
+      g.fillStyle = 'rgba(28,16,14,.86)'; g.beginPath(); g.arc(p0.x, p0.y, 13, 0, TAU); g.fill();
+      g.strokeStyle = '#ff8a50'; g.lineWidth = 2; g.stroke();
+      g.fillStyle = '#ffe6b8'; g.font = '800 12px Barlow, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('!', p0.x, p0.y + 0.5);
+      g.restore();
+    }
+    // Portals / Chutes / Drift Rifts with directional flow arcs.
+    for (const pt of b.portals) {
+      const col = pt.def.kind === 'rift' ? '#ff7a3a' : pt.def.kind === 'chute' ? '#e5a444' : '#5ad8ff';
+      const [fx, fy] = pt.fromPos, [tx, ty] = pt.toPos;
+      g.save();
+      g.globalAlpha = pt.active ? 0.92 : 0.35;
+      g.strokeStyle = col; g.lineWidth = 1.6; g.setLineDash([5, 7]); g.lineDashOffset = -T * 24;
+      g.beginPath(); g.moveTo(fx, fy); g.quadraticCurveTo((fx + tx) / 2, Math.min(fy, ty) - 42, tx, ty); g.stroke(); g.setLineDash([]);
+      for (const [px, py] of [pt.fromPos, pt.toPos]) {
+        g.fillStyle = 'rgba(18,22,26,.8)'; g.beginPath(); g.ellipse(px, py, 16, 8, 0, 0, TAU); g.fill();
+        g.strokeStyle = col; g.lineWidth = 2; g.stroke();
+        if (pt.active) { g.globalCompositeOperation = 'lighter'; L.glow(g, px, py, 16, col, 0.35 + 0.1 * Math.sin(T * 5)); g.globalCompositeOperation = 'source-over'; }
+      }
+      g.restore();
+    }
+    // Interactive tactical map switches (Fork track, Boom gate, Foundry conveyor brake).
+    b.switches.forEach((sw, si) => {
+      const [sx, sy] = sw.def.at;
+      const hot = view.hoveredSwitch === si;
+      const active = sw.activeT > 0;
+      const ready = sw.cdLeft <= 0 && !active;
+      const col = active ? '#5ee8c0' : ready ? '#e6a83e' : '#7a756c';
+      g.save();
+      L.shadow(g, sx + 2, sy + 5, 16, 6, 0.45);
+      g.fillStyle = '#2d2924'; g.beginPath(); g.ellipse(sx, sy + 2, 16, 8, 0, 0, TAU); g.fill();
+      g.strokeStyle = hot ? '#fff3d4' : col; g.lineWidth = hot ? 2.5 : 1.8; g.stroke();
+      // Lever handle tilted according to state
+      g.strokeStyle = '#d8cbb4'; g.lineWidth = 3; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + (sw.state ? 10 : -10), sy - 14); g.stroke();
+      g.fillStyle = col; g.beginPath(); g.arc(sx + (sw.state ? 10 : -10), sy - 14, 4.5, 0, TAU); g.fill();
+      if (sw.boosted) { g.strokeStyle = 'rgba(255,214,140,.75)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(sx, sy + 2, 22, 11, 0, 0, TAU); g.stroke(); }
+      if (sw.cdLeft > 0 || active) {
+        const share = active ? sw.activeT / (sw.def.dur ?? 10) : 1 - sw.cdLeft / sw.def.cd;
+        g.strokeStyle = active ? '#6ff5d0' : 'rgba(246,240,228,.75)'; g.lineWidth = 2.5;
+        g.beginPath(); g.arc(sx, sy - 6, 15, -Math.PI / 2, -Math.PI / 2 + share * TAU); g.stroke();
+      }
+      // Boom bar across road when a gate switch seals it.
+      if (sw.def.mode === 'gate' && active) {
+        g.strokeStyle = '#d98a2b'; g.lineWidth = 6; g.beginPath(); g.moveTo(sx - 26, sy - 6); g.lineTo(sx + 26, sy - 6); g.stroke();
+        g.strokeStyle = '#1d1914'; g.lineWidth = 6; g.setLineDash([7, 7]); g.beginPath(); g.moveTo(sx - 26, sy - 6); g.lineTo(sx + 26, sy - 6); g.stroke(); g.setLineDash([]);
+      }
+      g.restore();
+    });
     // Tides and lava closures.
     (st.shifts ?? []).forEach((s, i) => {
       const on = b.shiftActive(i);
@@ -547,6 +733,31 @@ export class Scene {
         g.beginPath(); g.arc(0, 0, 34, 0, TAU); g.stroke(); g.restore();
         if (!up) { g.fillStyle = 'rgba(10,12,10,.45)'; g.beginPath(); g.ellipse(p.x, p.y, 34, 14, 0, 0, TAU); g.fill(); }
       }
+      if (!p.unlocked) {
+        g.save();
+        g.fillStyle = this.stage.lava ? 'rgba(80,45,30,.45)' : 'rgba(65,108,132,.48)';
+        g.beginPath(); g.ellipse(p.x, p.y - 1, 32, 13, 0, 0, TAU); g.fill();
+        g.strokeStyle = 'rgba(220,235,245,.32)'; g.lineWidth = 1.2; g.setLineDash([4, 5]); g.stroke();
+        g.restore();
+        return;
+      }
+      if (p.rubble) {
+        g.save();
+        L.shadow(g, p.x + 2, p.y + 3, 30, 11, 0.45);
+        g.fillStyle = p.rubble.kind === 'slag' ? '#4a352e' : p.rubble.kind === 'crane' ? '#585c62' : '#645c50';
+        g.beginPath(); g.ellipse(p.x - 9, p.y - 4, 13, 8, -0.2, 0, TAU); g.ellipse(p.x + 10, p.y - 3, 12, 7, 0.25, 0, TAU); g.ellipse(p.x + 1, p.y - 10, 11, 8, 0, 0, TAU); g.fill();
+        g.strokeStyle = 'rgba(255,220,160,.45)'; g.lineWidth = 1.2;
+        if (view.selPlot === i || view.hoveredPlot === i) {
+          g.beginPath(); g.ellipse(p.x, p.y - 2, 39, 16, 0, 0, TAU); g.stroke();
+        }
+        if (p.rubble.holdSec && p.rubbleLeft < p.rubble.holdSec) {
+          const prog = Math.max(0, Math.min(1, 1 - p.rubbleLeft / p.rubble.holdSec));
+          g.strokeStyle = '#7fe698'; g.lineWidth = 3;
+          g.beginPath(); g.arc(p.x, p.y - 10, 20, -Math.PI / 2, -Math.PI / 2 + prog * TAU); g.stroke();
+        }
+        g.restore();
+        return;
+      }
       if (used) return;
       if (view.hintPlot === i && view.selPlot !== i) {
         // A steady double ring, no pulse: easy to find, quiet once seen.
@@ -606,14 +817,25 @@ export class Scene {
     });
   }
 
-  private drawRune(r: { kind: keyof typeof RUNES; x: number; y: number }, T: number) {
+  private drawRune(r: { kind: keyof typeof RUNES; x: number; y: number; ttl: number }, T: number, calm: boolean) {
     const g = this.g, c = RUNES[r.kind].color, bob = Math.sin(T * 3) * 4;
+    // About to fade: it blinks and counts down. With calm motion a steady ring stands in for the blink.
+    const fading = r.ttl <= RUNE_WARN_SEC;
+    const blink = fading && !calm ? 0.4 + 0.6 * Math.abs(Math.sin(T * 5)) : 1;
     L.shadow(g, r.x, r.y + 4, 16, 5, 0.5);
-    g.save(); g.translate(r.x, r.y - 26 + bob); g.rotate(T);
+    g.save(); g.globalAlpha = blink; g.translate(r.x, r.y - 26 + bob); g.rotate(T);
     g.fillStyle = '#1a1c20'; g.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; g.lineTo(Math.cos(a) * 13, Math.sin(a) * 13); } g.fill();
     g.strokeStyle = c; g.lineWidth = 2.5; g.stroke();
     g.restore();
-    g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, r.x, r.y - 26 + bob, 34, c, 0.55); g.restore();
+    g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, r.x, r.y - 26 + bob, 34, c, 0.55 * blink); g.restore();
+    if (!fading) return;
+    g.save();
+    if (calm) { g.strokeStyle = c; g.lineWidth = 2; g.beginPath(); g.ellipse(r.x, r.y + 3, 24, 9, 0, 0, TAU); g.stroke(); }
+    const left = String(Math.max(1, Math.ceil(r.ttl)));
+    g.font = '800 14px Barlow, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 3.5; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(left, r.x, r.y - 54);
+    g.fillStyle = '#fff3d4'; g.fillText(left, r.x, r.y - 54);
+    g.restore();
   }
 
   private drawTowerBase(t: Tower) {
@@ -623,27 +845,21 @@ export class Scene {
     this.put(this.towerSprite(t), t.x, t.y);
     if (t.kind === 'cannon') X.cannonBarrel(g, t.x + 4 * S, t.y, S, t.aim, Math.max(0, 1 - t.fired * 4), 0);
     if (t.down) g.restore();
-    // Level plaque at the foot of the tower: rust pips (Lv 1-3), gold once split (Lv 4), glowing amber-white pips when Tempered (Lv 5-6).
-    const n = Math.min(t.lv, 3), temper = Math.max(0, t.lv - 4), px = t.x, py = t.y + 20;
-    g.fillStyle = 'rgba(40,30,20,.3)'; g.fillRect(px - 18, py - 4, 38, 13);
-    g.fillStyle = 'rgba(246,240,228,.95)'; g.strokeStyle = temper > 0 ? '#c8923a' : 'rgba(70,56,40,.7)'; g.lineWidth = temper > 0 ? 1.4 : 1;
-    g.beginPath(); g.roundRect(px - 19, py - 6, 38, 13, 3); g.fill(); g.stroke();
-    for (let i = 0; i < 3; i++) {
-      const qx = px - 14 + i * 10, qy = py - 3;
-      g.fillStyle = i < temper ? '#fff3c4' : i < n ? (t.lv >= 4 ? '#d9a23a' : '#a63d26') : 'rgba(70,56,40,.12)';
-      g.fillRect(qx, qy, 8, 7);
-      if (i < temper) { g.strokeStyle = '#d96b27'; g.lineWidth = 1; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
-      else if (i >= n) { g.strokeStyle = 'rgba(70,56,40,.45)'; g.lineWidth = 1; g.strokeRect(qx + 0.5, qy + 0.5, 7, 6); }
+    // Integrated plinth rune gem for loaded elemental rounds (replaces floating badge dots).
+    if (t.round) {
+      const c = t.round === 'ember' ? '#ff8a3a' : t.round === 'frost' ? '#8fd0ff' : '#b9a8ff';
+      g.save();
+      g.fillStyle = '#1c1814'; g.beginPath(); g.arc(t.x, t.y - 5, 5.2, 0, TAU); g.fill();
+      g.fillStyle = c; g.beginPath(); g.arc(t.x, t.y - 5, 3.6, 0, TAU); g.fill();
+      g.restore();
     }
-    if (t.round) { const c = t.round === 'ember' ? '#ff8a3a' : t.round === 'frost' ? '#8fd0ff' : '#b9a8ff'; g.fillStyle = c; g.beginPath(); g.arc(t.x + 30, t.y + 8, 4, 0, TAU); g.fill(); }
     if (t.down) {
-      // A small paper tag over the plaque: what is wrong and when it ends.
-      const ty = py - 22;
-      g.font = '800 12px Barlow, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      const w = g.measureText('Rests this wave').width + 14;
-      g.fillStyle = 'rgba(246,240,228,.96)'; g.strokeStyle = 'rgba(70,56,40,.6)';
-      g.beginPath(); g.roundRect(px - w / 2, ty - 9, w, 18, 3); g.fill(); g.stroke();
-      g.fillStyle = '#3a3128'; g.fillText('Rests this wave', px, ty + 0.5);
+      // Compact crescent sleep icon badge above tower plinth without boxy text strings.
+      g.save();
+      g.fillStyle = 'rgba(24,22,20,.88)'; g.beginPath(); g.arc(t.x, t.y - 26, 9, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(220,195,150,.75)'; g.lineWidth = 1.2; g.stroke();
+      g.fillStyle = '#e8d4a6'; g.beginPath(); g.arc(t.x - 1, t.y - 26, 4.5, 0.6, TAU - 0.6); g.fill();
+      g.restore();
     }
   }
 
@@ -712,14 +928,33 @@ export class Scene {
     g.restore();
     g.globalAlpha = 1;
     if (pass === 'base') {
-      if (f.rootT > 0) { g.fillStyle = '#0d0f0a'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rx = x + Math.cos(a) * 14 * S, ry = y + Math.sin(a) * 4; g.beginPath(); g.moveTo(rx - 3, ry); g.lineTo(rx + Math.cos(a) * 3, ry - 12 - f.rootT * 4); g.lineTo(rx + 3, ry); g.fill(); } }
-      if (f.slowT > 0 || f.freezeT > 0) { g.fillStyle = f.freezeT > 0 ? 'rgba(200,235,255,.6)' : 'rgba(190,225,250,.35)'; g.beginPath(); g.ellipse(x, y + 2, 18 * S, 5 * S, 0, 0, TAU); g.fill(); }
-      if (f.burnT > 0) { g.fillStyle = 'rgba(255,120,40,.5)'; g.beginPath(); g.ellipse(x, y - 8, 6, 10, 0, 0, TAU); g.fill(); }
+      if (f.rootT > 0) { g.fillStyle = '#182414'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rx = x + Math.cos(a) * 14 * S, ry = y + Math.sin(a) * 4; g.beginPath(); g.moveTo(rx - 3, ry); g.lineTo(rx + Math.cos(a) * 3, ry - 12 - f.rootT * 4); g.lineTo(rx + 3, ry); g.fill(); } }
+      if (f.freezeT > 0) {
+        // Faceted ice crystal cage for Hard Freeze
+        g.fillStyle = 'rgba(185,232,255,.55)'; g.strokeStyle = 'rgba(240,252,255,.9)'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(x - 14 * S, y); g.lineTo(x - 10 * S, y - 22 * S); g.lineTo(x, y - 28 * S); g.lineTo(x + 11 * S, y - 20 * S); g.lineTo(x + 14 * S, y); g.closePath(); g.fill(); g.stroke();
+      } else if (f.slowT > 0) {
+        g.fillStyle = 'rgba(190,225,250,.35)'; g.beginPath(); g.ellipse(x, y + 2, 18 * S, 5 * S, 0, 0, TAU); g.fill();
+      }
+      if (f.burnT > 0) {
+        // Multi-tongue rising ember flames
+        for (let k = -1; k <= 1; k++) {
+          const fh = 12 + Math.sin(T * 14 + k * 2) * 3;
+          g.fillStyle = k === 0 ? 'rgba(255,195,80,.82)' : 'rgba(255,112,38,.72)';
+          g.beginPath(); g.moveTo(x + k * 5 - 3, y - 4); g.quadraticCurveTo(x + k * 5 + Math.sin(T * 9 + k) * 3, y - 4 - fh, x + k * 5 + 3, y - 4); g.fill();
+        }
+      }
+      if (f.vulnT > 0) {
+        // Armor break / Sunder orange ring beneath foe
+        g.strokeStyle = 'rgba(255,158,64,.82)'; g.lineWidth = 1.6; g.setLineDash([4, 3]);
+        g.beginPath(); g.ellipse(x, y + 2, 19 * S, 6.5 * S, 0, 0, TAU); g.stroke(); g.setLineDash([]);
+      }
     }
     if (pass === 'emit' && !hidden) {
+      if (f.shielded) ringGlow(g, x, y - f.def.bar * 0.4, 20 * S, '90,220,185', 0.35 + 0.08 * Math.sin(T * 5));
       if (f.hp < f.max || f.def.traits?.boss) {
         const w = f.def.traits?.boss ? 90 : 34, hy = y - f.def.bar * K;
-        bar0(g, x, hy, f.hp / f.max, f.def.traits?.boss ? '#e0503a' : f.shielded ? '#5ac8a8' : '#c8552e', w);
+        bar0(g, x, hy, f.hp / f.max, f.def.traits?.boss ? '#e0503a' : f.shielded ? '#5ac8a8' : f.vulnT > 0 ? '#e88b3a' : '#c8552e', w);
       }
       if (f.hitT > 0) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - f.def.bar * 0.5, 16 * S, '#ffffff', f.hitT * 2); g.restore(); }
     }
@@ -732,12 +967,16 @@ export class Scene {
       g.save();
       g.fillStyle = 'rgba(255,244,214,.38)'; g.beginPath(); g.ellipse(h.x, h.y + 2, 30, 11, 0, 0, TAU); g.fill();
       g.strokeStyle = 'rgba(255,236,190,.95)'; g.lineWidth = 2.5; g.beginPath(); g.ellipse(h.x, h.y + 2, 30, 11, 0, 0, TAU); g.stroke();
+      for (let i = 0; i < h.items.length; i++) {
+        const px = h.x - 10 + i * 10, py = h.y + 13;
+        g.fillStyle = '#d49a38'; g.beginPath(); g.moveTo(px, py - 3.5); g.lineTo(px + 3.5, py); g.lineTo(px, py + 3.5); g.lineTo(px - 3.5, py); g.closePath(); g.fill();
+      }
       g.restore();
-      L.wren(g, h.x, h.y, 1.4, 'base');
+      L.wren(g, h.x, h.y, 1.4, 'base', h.face || 1, h.moving ? T : h.swing);
       if (h.swing > 0) { g.strokeStyle = `rgba(220,235,250,${h.swing * 3})`; g.lineWidth = 3; g.beginPath(); g.arc(h.x + h.face * 12, h.y - 30, 30, h.face > 0 ? -1.4 : Math.PI + 1.4, h.face > 0 ? 0.3 : Math.PI - 0.3, h.face < 0); g.stroke(); }
       return;
     }
-    L.wren(g, h.x, h.y, 1.4, 'emit');
+    L.wren(g, h.x, h.y, 1.4, 'emit', h.face || 1, h.moving ? T : h.swing);
     if (still) return;
     // Health and level above her head.
     bar0(g, h.x, h.y - 98, h.hp / b.heroMaxHp(), '#7fd06a', 46);
@@ -806,7 +1045,15 @@ export class Scene {
       const waterBonus = b.mods.tidePearl && p.nearWater ? 0.15 : 0;
       ring(p.x, p.y, def.range[0] * (1 + b.mods.towerRange[view.preview] + b.mods.rangeAll + waterBonus) * (p.high ? 1.2 : 1), 'rgba(255,214,140,A)');
     }
-    if (view.aimW) { const [x, y] = view.aimW; ring(x, y, SNARE.radius, 'rgba(255,190,110,A)'); }
+    if (view.aimW) {
+      const [x, y] = view.aimW;
+      ring(b.hero.x, b.hero.y, SNARE.range, 'rgba(255,214,140,A)');
+      ring(x, y, SNARE.radius, 'rgba(255,150,70,A)');
+    }
+    if (view.showLeash && !b.hero.dead) {
+      ring(b.hero.anchorX, b.hero.anchorY, HERO.leash, 'rgba(255,214,140,A)');
+      if (b.hero.ranks.e > 0) ring(b.hero.x, b.hero.y, ATTUNE.radius, 'rgba(130,220,145,A)');
+    }
   }
 
   private drawCrows(T: number, dt: number, reduce: boolean) {
@@ -858,6 +1105,12 @@ export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: numb
         c.fillStyle = '#485666'; c.beginPath(); c.moveTo(sd * 19, -40); c.lineTo(sd * 28, -58); c.lineTo(sd * 23, -36); c.closePath(); c.fill();
         c.strokeStyle = '#9ed8f5'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(sd * 20, -40); c.lineTo(sd * 27.5, -57); c.stroke();
       }
+    }
+    if (lv >= 5) {
+      // Radiant Mastery crown halo at Lv 5
+      c.strokeStyle = '#ffd978'; c.lineWidth = 1.6;
+      c.beginPath(); c.ellipse(0, -138, 18, 5.5, 0, 0, TAU); c.stroke();
+      c.fillStyle = '#fff5cf'; c.beginPath(); c.arc(0, -144, 3.2, 0, TAU); c.fill();
     }
     c.restore();
   }
@@ -969,7 +1222,13 @@ export function paintFoe(
       }
       break;
     case 'shell':
-      L.shellback(g, bx, by, 0.5, pass, seed, face, 1, legs);
+      L.shellback(g, bx, by, 0.5, pass, seed, face, opts.chilled ? 1 : 0, legs);
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        g.strokeStyle = 'rgba(218,176,108,.45)'; g.lineWidth = 1.4;
+        g.beginPath(); g.ellipse(0, -14, 24, 14, 0, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
+        g.restore();
+      }
       break;
     case 'sapper':
       L.shellback(g, bx, by, 0.42, pass, seed + 4, face, 0, legs);

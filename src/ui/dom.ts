@@ -27,3 +27,28 @@ export function icon(markup: string, cls = 'svg-ico'): HTMLSpanElement {
   s.innerHTML = markup;
   return s;
 }
+
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Keep Tab inside `box` while it is on screen (a modal card), and call `onEscape` on Esc.
+ * Returns a function that lets go. It also lets go by itself once `box` leaves the page.
+ */
+export function trapFocus(box: HTMLElement, onEscape?: () => void): () => void {
+  const release = () => document.removeEventListener('keydown', onKey, true);
+  const onKey = (e: KeyboardEvent) => {
+    if (!box.isConnected) { release(); return; }
+    if (e.key === 'Escape' && onEscape) { e.preventDefault(); e.stopPropagation(); onEscape(); return; }
+    if (e.key !== 'Tab') return;
+    const items = [...box.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(el => el.getClientRects().length > 0);
+    if (!items.length) { e.preventDefault(); return; }
+    const first = items[0], last = items[items.length - 1], cur = document.activeElement;
+    const inside = !!cur && box.contains(cur);
+    if (e.shiftKey ? (!inside || cur === first) : (!inside || cur === last)) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+    }
+  };
+  document.addEventListener('keydown', onKey, true);
+  return release;
+}
