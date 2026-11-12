@@ -5,12 +5,17 @@
  */
 import { makePath, pointAt, distToPath, smooth, type Path, type Vec } from './path';
 import { makeRng } from './rng';
-import { ENEMIES, armorScale, goldScale, hpScale, type EnemyDef, type EnemyKind } from './data/enemies';
-import { TOWERS, BEACON_BUFF, type Element, type Rounds, type TowerKind } from './data/towers';
-import { spawnsOf, type Road, type StageDef } from './data/stages';
-import { HERO, xpToNext, SKILLS, SWEEP, SNARE, ATTUNE, SUNRISE, type SkillKey } from './data/hero';
-import { ITEMS, ITEM_SLOTS, SELL_ITEM, RUNE_EVERY, RUNE_FIRST, RUNE_ORDER, RUNES, type ItemId, type RuneKind } from './data/shop';
+import { ENEMIES, goldScale, hpScale, type EnemyDef, type EnemyKind } from './data/enemies';
+import { MAX_TOWER_LEVEL, TOWERS, type Element, type Rounds, type TowerKind } from './data/towers';
+import { SHIFTING_EARTH_REFUND,
+  resolveStageVariant, spawnsOf,
+  type OathId, type PortalDef, type Road, type RubbleDef, type StageDef, type StageVariant, type SwitchDef, type TerraformDef,
+} from './data/stages';
+import { HERO, heroRespawn, xpToNext, SKILLS, SWEEP, SNARE, ATTUNE, SUNRISE, type SkillKey } from './data/hero';
+import { COURIER_SURCHARGE, ITEMS, ITEM_SLOTS, SELL_ITEM, RUNE_EVERY, RUNE_FIRST, RUNE_LIFETIME, RUNE_ORDER, RUNES, type ItemId, type RuneKind } from './data/shop';
 import { baseMods, type Mods } from './mods';
+import { deliverDamage, type AttributionBucket, type DamageBreakdown, type DmgEl } from './combat';
+import { evalTowerStats, type TowerStats } from './tower-stats';
 
 /** The game is drawn in a 3/4 view: ranges are ellipses, squashed by this factor on y. */
 export const Y_SQUASH = 1.25;
@@ -21,17 +26,61 @@ export const LIGHTHOUSE_RANGE = 380;
 /** Share of each wave group sent on wave n of total: 55% on the first wave, all of it on the last. */
 export const waveRamp = (n: number, total: number) => total <= 1 ? 1 : 0.55 + 0.45 * (n - 1) / (total - 1);
 const ELEMENTS: Element[] = ['pierce', 'fire', 'frost', 'storm', 'nature'];
-type DmgEl = Element | 'env';
 export type TargetMode = 'first' | 'strong' | 'armored' | 'close';
 
 export interface RoadRt {
   def: Road;
   path: Path;
+  /** False until openAtWave / openOnPhase or terraform awakens it. */
+  active: boolean;
+  /** True 1 wave before openAtWave so renderers telegraph cracking soil/rift embers. */
+  telegraph: boolean;
+  /** False after closeAtWave or terraform closure; walkers already on road finish cleanly. */
+  spawnOpen: boolean;
   closed: boolean;
-  /** Distance along the road where a tide or lava closure sits, if any. */
+  /** Distance along the road where a tide, lava, or gate closure sits, if any. */
   closeAt: number | null;
   barrier: { hp: number; max: number; d: number; x: number; y: number } | null;
   belts: { from: number; to: number; mult: number }[];
+}
+
+export interface PlotRt {
+  x: number;
+  y: number;
+  high: boolean;
+  nearWater: boolean;
+  sunk: boolean;
+  gear?: 'a' | 'b';
+  unlocked: boolean;
+  rubble: RubbleDef | null;
+  rubbleLeft: number;
+}
+
+export interface SwitchRt {
+  def: SwitchDef;
+  state: 0 | 1;
+  activeT: number;
+  cdLeft: number;
+  boosted: boolean;
+}
+
+export interface WaterRt {
+  id?: string;
+  w: number;
+  path: Path;
+  drained: boolean;
+}
+
+export interface PortalRt {
+  def: PortalDef;
+  fromRoad: RoadRt;
+  toRoad: RoadRt;
+  fromD: number;
+  toD: number;
+  fromPos: Vec;
+  toPos: Vec;
+  active: boolean;
+  count: number;
 }
 
 export interface Foe {
@@ -51,6 +100,7 @@ export interface Foe {
   slow: number;
   slowT: number;
   rootT: number;
+  staggerT: number;
   freezeT: number;
   freezeImmune: number;
   burnT: number;
@@ -67,6 +117,8 @@ export interface Foe {
   burstT: number;
   hitT: number;
   dead: boolean;
+  /** Bitmask preventing cyclic or repeated jumps across the same portal. */
+  warpedMask: number;
 }
 
 export interface Tower {
@@ -87,6 +139,11 @@ export interface Tower {
   down: boolean;
   /** Seconds since its last attack, for the renderer. */
   fired: number;
+  /** Shot counter for Repeater Lv 5 every-4th twin bolt mastery. */
+  shotCount: number;
+  /** Telemetry exposed in Tower Inspector & Result breakdown. */
+  dmgDealt: number;
+  kills: number;
 }
 
 export interface Shot {
@@ -159,22 +216,39 @@ export type BattleEvent =
   | { t: 'gear'; up: 'a' | 'b' }
   | { t: 'sink'; plot: number }
   | { t: 'night'; on: boolean }
-  | { t: 'interest'; gold: number }
   | { t: 'early'; gold: number }
+  | { t: 'riftWarn'; road: string; wave: number }
+  | { t: 'riftOpen'; road: string }
+  | { t: 'clearPlot'; plot: number; free: boolean }
+  | { t: 'switchFlip'; id: string; label: string; state: 0 | 1 }
+  | { t: 'terraform'; label: string }
+  | { t: 'warp'; fromX: number; fromY: number; toX: number; toY: number; kind: PortalDef['kind'] }
+  | { t: 'gateShock'; x: number; y: number }
   | { t: 'won'; stars: number } | { t: 'lost' };
 
 export type Status = 'prep' | 'running' | 'won' | 'lost';
 
 interface Queued { at: number; kind: EnemyKind; spawn?: string }
 
-export interface BattleOptions { mods?: Mods; seed?: number }
+export interface BattleOptions {
+  mods?: Mods;
+  seed?: number;
+  variant?: StageVariant;
+  oaths?: OathId[];
+}
 
 export class Battle {
   readonly stage: StageDef;
+  readonly rawStage: StageDef;
+  readonly variant: StageVariant;
+  readonly oaths: OathId[];
   readonly mods: Mods;
   readonly roads: RoadRt[];
   readonly spawns: Map<string, RoadRt[]>;
-  readonly plots: { x: number; y: number; high: boolean; nearWater: boolean; sunk: boolean; gear?: 'a' | 'b' }[];
+  readonly plots: PlotRt[];
+  readonly waters: WaterRt[];
+  readonly switches: SwitchRt[];
+  readonly portals: PortalRt[];
   readonly gate: Vec[];
   readonly startLives: number;
   readonly scale: number;
@@ -199,33 +273,58 @@ export class Battle {
   clouds: Cloud[] = [];
   vents: { x: number; y: number; road: RoadRt; d: number; every: number; t: number; dmg: number }[] = [];
   hero: HeroState;
-  rune: { kind: RuneKind; x: number; y: number } | null = null;
+  rune: { kind: RuneKind; x: number; y: number; ttl: number } | null = null;
   nextRune = RUNE_FIRST;
   resist: Record<Element, number> = { pierce: 0, fire: 0, frost: 0, storm: 0, nature: 0, hero: 0 };
   dmgWindow: Record<Element, number> = { pierce: 0, fire: 0, frost: 0, storm: 0, nature: 0, hero: 0 };
+  breakdown: DamageBreakdown = { towers: 0, hero: 0, skills: 0, status: 0 };
   events: BattleEvent[] = [];
   kills = 0;
   leaks = 0;
 
+  private activeHigh: Vec[] | null;
+  private appliedTerraforms = new Set<number>();
   private queue: Queued[] = [];
   private waveT = 0;
   private ids = 1;
   private shiftShift = 0;
   private leakedThisWave = false;
+  private gateShockUsedWave = -1;
   private threatDirty = true;
   private threat = new Map<RoadRt, number>();
   private airThreat = new Map<RoadRt, number>();
   private shiftOn: boolean[] = [];
 
-  constructor(stage: StageDef, opts: BattleOptions = {}) {
+  constructor(rawStage: StageDef, opts: BattleOptions = {}) {
+    this.rawStage = rawStage;
+    this.variant = opts.variant ?? 'standard';
+    this.oaths = opts.oaths ?? [];
+    const stage = resolveStageVariant(rawStage, this.variant, this.oaths);
     this.stage = stage;
     this.mods = opts.mods ?? baseMods();
     this.rng = makeRng(opts.seed ?? 1234);
     this.scale = hpScale(stage.id) * (stage.hpMul ?? 1);
+    this.activeHigh = stage.high ? stage.high.map(p => [...p] as Vec) : null;
+
     this.roads = stage.roads.map(def => {
       const path = makePath(def.id, smooth(def.ctrl));
-      const rt: RoadRt = { def, path, closed: false, closeAt: null, barrier: null, belts: [] };
+      const openWave = def.openAtWave ?? 1;
+      const active = openWave <= 1 && !def.openOnPhase;
+      const rt: RoadRt = {
+        def, path,
+        active,
+        telegraph: openWave === 2,
+        spawnOpen: active && (def.closeAtWave === undefined || def.closeAtWave > 1),
+        closed: false,
+        closeAt: null,
+        barrier: null,
+        belts: [],
+      };
       for (const s of stage.shifts ?? []) if (s.closes.includes(def.id)) rt.closeAt = nearestD(path, s.at);
+      // A gate switch holds walkers at its boom, exactly like a tide holds them at a ford.
+      for (const sw of stage.switches ?? []) {
+        if (sw.mode === 'gate' && rt.closeAt === null && (sw.closesB ?? []).includes(def.id)) rt.closeAt = nearestD(path, sw.at);
+      }
       for (const b of stage.barriers ?? []) if (b.road === def.id) {
         const p = pointAt(path, path.tot * b.at);
         rt.barrier = { hp: b.hp * this.scale, max: b.hp * this.scale, d: path.tot * b.at, x: p.x, y: p.y };
@@ -233,19 +332,46 @@ export class Battle {
       for (const b of stage.belts ?? []) if (b.road === def.id) rt.belts.push({ from: path.tot * b.from, to: path.tot * b.to, mult: b.mult });
       return rt;
     });
+
     for (const v of stage.vents ?? []) {
-      const road = this.roads.find(r => r.def.id === v.road)!;
+      const road = this.roads.find(r => r.def.id === v.road);
+      if (!road) continue;
       const d = road.path.tot * v.at, p = pointAt(road.path, d);
       this.vents.push({ x: p.x, y: p.y, road, d, every: v.every, t: v.every, dmg: v.dmg });
     }
+
     this.spawns = new Map([...spawnsOf(stage)].map(([k, rs]) => [k, rs.map(r => this.roads.find(x => x.def === r)!)]));
-    const waters = stage.lava ? [] : stage.waters.map(w => ({ w, path: makePath('w', smooth(w.ctrl)) }));
+
+    this.waters = stage.waters.map(w => ({
+      id: w.id,
+      w: w.w,
+      path: makePath(w.id ?? 'w', smooth(w.ctrl)),
+      drained: false,
+    }));
+
     this.plots = stage.plots.map(p => ({
       x: p.at[0], y: p.at[1],
-      high: !!stage.high && inPoly(p.at, stage.high),
-      nearWater: waters.some(({ w, path }) => distToPath(path, p.at[0], p.at[1]) < w.w / 2 + 160),
-      sunk: false, gear: p.gear,
+      high: false,
+      nearWater: false,
+      sunk: false,
+      gear: p.gear,
+      unlocked: (p.openAtWave ?? 1) <= 1,
+      rubble: p.rubble ? { ...p.rubble } : null,
+      rubbleLeft: p.rubble?.holdSec ?? 0,
     }));
+    this.recomputePlotTraits();
+
+    this.switches = (stage.switches ?? []).map(def => ({ def, state: 0, activeT: 0, cdLeft: 0, boosted: false }));
+    this.portals = (stage.portals ?? []).map(def => {
+      const fromRoad = this.roads.find(r => r.def.id === def.fromRoad)!;
+      const toRoad = this.roads.find(r => r.def.id === def.toRoad)!;
+      const fromD = fromRoad.path.tot * def.fromAt;
+      const toD = toRoad.path.tot * def.toAt;
+      const fp = pointAt(fromRoad.path, fromD);
+      const tp = pointAt(toRoad.path, toD);
+      return { def, fromRoad, toRoad, fromD, toD, fromPos: [fp.x, fp.y], toPos: [tp.x, tp.y], active: (def.openAtWave ?? 1) <= 1, count: 0 };
+    });
+
     const ends = new Map<string, Vec>();
     for (const r of this.roads) { const e = r.path.pts[r.path.pts.length - 1]; ends.set(`${Math.round(e[0])},${Math.round(e[1])}`, e); }
     this.gate = [...ends.values()];
@@ -253,6 +379,8 @@ export class Battle {
     this.lives = this.startLives;
     this.gold = stage.startGold + this.mods.gold;
     this.shiftOn = (stage.shifts ?? []).map(() => false);
+    if (this.oaths.includes('longNight')) this.night = true;
+
     const lvl = 1 + this.mods.heroLevel;
     const [sx, sy] = this.heroStartPoint();
     this.hero = {
@@ -265,35 +393,53 @@ export class Battle {
     for (const r of this.roads) { this.threat.set(r, 0); this.airThreat.set(r, 0); }
   }
 
+  private recomputePlotTraits() {
+    const activeWaters = this.stage.lava ? [] : this.waters.filter(w => !w.drained);
+    this.plots.forEach(p => {
+      p.high = !!this.activeHigh && inPoly([p.x, p.y], this.activeHigh);
+      p.nearWater = activeWaters.some(w => distToPath(w.path, p.x, p.y) < w.w / 2 + 160);
+    });
+    for (const t of this.towers) if (this.plots[t.plot]) t.high = this.plots[t.plot].high;
+  }
+
   /**
-   * Where Wren starts. A start placed by the gate moves out to the main road, past its middle,
-   * so she meets the first foes and earns XP from the start.
+   * Where Wren starts. Keeps Stage 1 near the Keep gate so the tutorial prompt teaches dragging her
+   * onto the crossing; later stages place her near the heroStart or 0.62 point if parked at gate.
    */
   private heroStartPoint(): Vec {
     const st = this.stage.heroStart;
+    if (this.stage.id === 1) return st;
     if (!this.gate.some(g => Math.hypot(g[0] - st[0], g[1] - st[1]) < 300)) return st;
-    const r = [...this.roads].sort((a, z) => z.path.tot - a.path.tot)[0];
+    const r = [...this.roads].filter(x => x.active).sort((a, z) => z.path.tot - a.path.tot)[0] ?? this.roads[0];
     const p = pointAt(r.path, r.path.tot * 0.62);
     return [p.x, p.y];
   }
+
+  setPaused(v: boolean) { this.paused = v; }
+  setSpeed(v: number) { this.speed = clamp(v, 1, 3); }
+  setPreviewGold(v: number) { this.gold = v; }
 
   /* ------------------------------------------------------------------ commands */
 
   get totalWaves() { return this.stage.waves.length; }
 
-  /** What the next wave will send, after the early-wave ramp. Null once every wave has started. */
-  nextWave(): { n: number; hint: string; foes: { kind: EnemyKind; count: number }[] } | null {
+  /** What the next wave will send, after early-wave ramp, including which rifts open/telegraph. */
+  nextWave(): { n: number; hint: string; foes: { kind: EnemyKind; count: number }[]; spawns: string[]; openingRoads: string[] } | null {
     const n = this.wave + 1;
     const w = this.stage.waves[n - 1];
     if (!w) return null;
     const ramp = waveRamp(n, this.totalWaves);
     const foes: { kind: EnemyKind; count: number }[] = [];
+    const spawnSet = new Set<string>();
     for (const g of w.groups) {
       const count = Math.max(1, Math.round(g.n * ramp));
       const had = foes.find(f => f.kind === g.kind);
       if (had) had.count += count; else foes.push({ kind: g.kind, count });
+      if (g.spawn) spawnSet.add(g.spawn);
     }
-    return { n, hint: w.hint, foes };
+    if (spawnSet.size === 0) for (const k of this.spawns.keys()) spawnSet.add(k);
+    const openingRoads = this.roads.filter(r => r.def.openAtWave === n).map(r => r.def.id);
+    return { n, hint: w.hint, foes, spawns: [...spawnSet], openingRoads };
   }
 
   /** True if the Hollow adapts when wave `n` starts. */
@@ -303,14 +449,25 @@ export class Battle {
     return n > 1 && n <= this.totalWaves && (n - 1) % every === 0;
   }
 
-  /** The element the Hollow would harden against if it adapted now, if any. */
-  adaptLean(): Element | null {
-    let total = 0, top: Element | null = null;
-    for (const e of ELEMENTS) { total += this.dmgWindow[e]; if (!top || this.dmgWindow[e] > this.dmgWindow[top]) top = e; }
-    return top && total > 0 && this.dmgWindow[top] / total > 0.42 ? top : null;
+  /** Current leading element pressure toward the 42% adaptation threshold. */
+  adaptationShare(): { top: Element | null; share: number; threshold: number } {
+    let total = 0;
+    let top: Element | null = null;
+    for (const e of ELEMENTS) {
+      total += this.dmgWindow[e];
+      if (!top || this.dmgWindow[e] > this.dmgWindow[top]) top = e;
+    }
+    const share = top && total > 0 ? this.dmgWindow[top] / total : 0;
+    return { top, share, threshold: 0.42 };
   }
 
-  /** Start the next wave. Early calls pay gold and shave hero cooldowns for the time saved. */
+  /** The element the Hollow would harden against if it adapted now, if any. */
+  adaptLean(): Element | null {
+    const { top, share, threshold } = this.adaptationShare();
+    return share > threshold ? top : null;
+  }
+
+  /** Start the next wave. Early calls pay bonus gold WITHOUT shaving skill cooldowns. */
   callWave(): boolean {
     if (this.status === 'won' || this.status === 'lost') return false;
     if (this.wave >= this.totalWaves) return false;
@@ -318,9 +475,6 @@ export class Battle {
     if (this.status === 'running' && this.nextIn !== null && this.nextIn > 0) {
       const bonus = Math.ceil(this.nextIn * 2 * (1 + this.mods.early));
       this.gold += bonus;
-      const saved = this.nextIn * 0.35;
-      for (const k of ['q', 'w', 'r'] as SkillKey[]) this.hero.cd[k] = Math.max(0, this.hero.cd[k] - saved);
-      if (this.hero.dead) this.hero.respawnT = Math.max(0.1, this.hero.respawnT - saved);
       this.events.push({ t: 'early', gold: bonus });
     }
     this.status = 'running';
@@ -338,16 +492,24 @@ export class Battle {
     return Math.round(s.cost * (1 + this.mods.costMul));
   }
 
+  masteryCost(kind: TowerKind, which: 'a' | 'b'): number {
+    const s = TOWERS[kind].splits.find(x => x.id === which)!;
+    return Math.round(s.masteryCost * (1 + this.mods.costMul));
+  }
+
   canBuild(plot: number, kind: TowerKind): boolean {
     const p = this.plots[plot];
-    return !!p && !p.sunk && this.stage.towers.includes(kind) && !this.towers.some(t => t.plot === plot) && this.gold >= this.costOf(kind);
+    return !!p && p.unlocked && !p.sunk && !p.rubble && this.stage.towers.includes(kind) && !this.towers.some(t => t.plot === plot) && this.gold >= this.costOf(kind);
   }
 
   build(plot: number, kind: TowerKind): Tower | null {
     if (!this.canBuild(plot, kind)) return null;
     const p = this.plots[plot], cost = this.costOf(kind);
     this.gold -= cost;
-    const t: Tower = { id: this.ids++, kind, plot, x: p.x, y: p.y, lv: 1, split: null, spent: cost, cd: 0.4, mode: 'first', round: null, aim: 0, high: p.high, down: false, fired: 9 };
+    const t: Tower = {
+      id: this.ids++, kind, plot, x: p.x, y: p.y, lv: 1, split: null, spent: cost, cd: 0.4,
+      mode: 'first', round: null, aim: 0, high: p.high, down: false, fired: 9, shotCount: 0, dmgDealt: 0, kills: 0,
+    };
     t.down = !!p.gear && !this.gearUp(p.gear);
     this.towers.push(t);
     this.threatDirty = true;
@@ -355,9 +517,43 @@ export class Battle {
     return t;
   }
 
+  canClearPlot(plot: number): boolean {
+    const p = this.plots[plot];
+    return !!p && p.unlocked && !p.sunk && !!p.rubble && this.gold >= p.rubble.cost;
+  }
+
+  clearPlot(plot: number, free = false): boolean {
+    const p = this.plots[plot];
+    if (!p || !p.unlocked || p.sunk || !p.rubble) return false;
+    if (!free && this.gold < p.rubble.cost) return false;
+    if (!free) this.gold -= p.rubble.cost;
+    p.rubble = null;
+    p.rubbleLeft = 0;
+    this.events.push({ t: 'clearPlot', plot, free });
+    return true;
+  }
+
+  /** Toggle a player map switch ('fork' diverts spawn branch, 'gate' seals for `dur`s, 'belt' brakes belts). */
+  toggleSwitch(index: number): boolean {
+    const sw = this.switches[index];
+    if (!sw || sw.cdLeft > 0) return false;
+    if (sw.def.mode !== 'fork' && sw.activeT > 0) return false;
+    sw.state = sw.state === 0 ? 1 : 0;
+    if (sw.def.mode === 'fork') {
+      sw.cdLeft = sw.def.cd;
+    } else {
+      sw.activeT = sw.def.dur ?? 10;
+      sw.cdLeft = sw.def.cd;
+    }
+    this.threatDirty = true;
+    this.updateShifts();
+    this.events.push({ t: 'switchFlip', id: sw.def.id, label: sw.def.label, state: sw.state });
+    return true;
+  }
+
   upgradeCost(t: Tower): number | null {
     if (t.lv < 3) return this.costOf(t.kind, t.lv + 1);
-    if (t.split !== null && t.lv < 6) return Math.round(160 * (t.lv - 3) * (1 + this.mods.costMul));
+    if (t.split !== null && t.lv === 4 && t.lv < MAX_TOWER_LEVEL) return this.masteryCost(t.kind, t.split);
     return null;
   }
 
@@ -404,21 +600,24 @@ export class Battle {
 
   tower(id: number) { return this.towers.find(t => t.id === id); }
 
-  /** Send Wren to a point. She holds there and fights what comes. */
+  /** Pin Wren to a post. She holds there and engages foes inside her 90 px leash without dropping road block. */
   moveHero(x: number, y: number) {
     const h = this.hero;
-    if (h.dead) return;
-    h.tx = clamp(x, 20, 1260); h.ty = clamp(y, 50, 705);
+    if (h.dead || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    h.tx = clamp(x, 20, 1260); h.ty = clamp(y, 85, 705);
     h.anchorX = h.tx; h.anchorY = h.ty;
     h.focus = null;
   }
 
-  /** Tell Wren to fight one foe. */
+  /** Tell Wren to fight one foe (explicit tap or boss focus updates post anchor so she commits). */
   attackFoe(id: number) {
     const f = this.foes.find(x => x.id === id);
     if (!f || this.hero.dead) return;
     this.hero.focus = id;
-    this.hero.anchorX = f.x; this.hero.anchorY = f.y;
+    this.hero.tx = clamp(f.x, 20, 1260);
+    this.hero.ty = clamp(f.y, 85, 705);
+    this.hero.anchorX = this.hero.tx;
+    this.hero.anchorY = this.hero.ty;
   }
 
   canLearn(key: SkillKey): boolean {
@@ -426,7 +625,7 @@ export class Battle {
     if (h.points < 1 || r >= s.maxRank) return false;
     if (key === 'w' && !this.mods.skillW) return false;
     if (key === 'r' && !this.mods.skillR) return false;
-    return h.level >= s.needLevel(r + 1);
+    return h.level >= s.needLevel[r];
   }
 
   learn(key: SkillKey): boolean {
@@ -455,22 +654,29 @@ export class Battle {
     if (!this.skillReady('q')) return false;
     const h = this.hero, r = h.ranks.q;
     const dmg = SWEEP.dmg[r - 1] * (1 + this.mods.sweep) * this.heroDmgMul();
-    for (const f of this.foes) if (this.reachable(f, true) && ell(f.x - h.x, f.y - h.y) < SWEEP.radius) this.damage(f, dmg, 'hero', true);
+    for (const f of this.foes) if (this.reachable(f, true) && ell(f.x - h.x, f.y - h.y) < SWEEP.radius) {
+      this.damage(f, dmg, 'hero', true, false, false, undefined, 'skills');
+    }
     h.cd.q = SKILLS.q.cd[r - 1];
     h.swing = 0.35;
     this.events.push({ t: 'skill', key: 'q', x: h.x, y: h.y });
     return true;
   }
 
+  /** Lantern Snare: tightened 200 px reach (2x leash), roots non-bosses, and applies documented 2.0 s burn DoT! */
   castW(x: number, y: number): boolean {
     if (!this.skillReady('w')) return false;
     const h = this.hero, r = h.ranks.w;
     const dx = x - h.x, dy = y - h.y, dist = Math.hypot(dx, dy);
     if (dist > SNARE.range) { x = h.x + dx / dist * SNARE.range; y = h.y + dy / dist * SNARE.range; }
     const hold = SNARE.hold[r - 1] + this.mods.snare;
+    const burst = SNARE.dmg[r - 1] * this.heroDmgMul();
+    const burnDps = burst * SNARE.burnDpsMul;
     for (const f of this.foes) if (this.reachable(f, true) && !f.def.flying && ell(f.x - x, f.y - y) < SNARE.radius) {
       if (!f.def.traits?.boss) f.rootT = Math.max(f.rootT, hold);
-      this.damage(f, SNARE.dmg[r - 1] * this.heroDmgMul(), 'hero', true);
+      f.burnT = Math.max(f.burnT, SNARE.burnSec);
+      f.burnDps = Math.max(f.burnDps, burnDps);
+      this.damage(f, burst, 'hero', true, false, false, undefined, 'skills');
     }
     h.cd.w = SKILLS.w.cd[r - 1];
     this.events.push({ t: 'skill', key: 'w', x, y });
@@ -492,20 +698,26 @@ export class Battle {
     return !h.dead && this.gate.some(g => Math.hypot(g[0] - h.x, g[1] - h.y) < HERO.gateRadius);
   }
 
-  /** Wren can trade at the gate any time, or anywhere via gate courier before the first wave or once the field is clear. */
+  /** Courier buys away from the gate during active combat cost +20% surcharge; free at gate, prep, or cleared wave. */
+  itemCost(id: ItemId): number {
+    const base = ITEMS[id].cost;
+    const freeCourier = this.nearGate() || this.status === 'prep' || (this.nextIn !== null && this.foes.length === 0);
+    return freeCourier ? base : Math.round(base * (1 + COURIER_SURCHARGE));
+  }
+
   canShop(): boolean {
-    return !this.hero.dead && (this.nearGate() || this.status === 'prep' || (this.nextIn !== null && this.foes.length === 0));
+    return !this.hero.dead;
   }
 
   canBuy(id: ItemId): boolean {
     const it = ITEMS[id];
-    return this.canShop() && this.hero.items.length < ITEM_SLOTS && this.gold >= it.cost && this.mods.shopAfter >= it.after && !this.hero.items.includes(id);
+    return this.canShop() && this.hero.items.length < ITEM_SLOTS && this.gold >= this.itemCost(id) && this.mods.shopAfter >= it.after && !this.hero.items.includes(id);
   }
 
   buy(id: ItemId): boolean {
     if (!this.canBuy(id)) return false;
     const before = this.heroMaxHp();
-    this.gold -= ITEMS[id].cost;
+    this.gold -= this.itemCost(id);
     this.hero.items.push(id);
     this.hero.hp += this.heroMaxHp() - before;
     this.events.push({ t: 'buy', item: id });
@@ -538,65 +750,49 @@ export class Battle {
 
   /* ------------------------------------------------------------------ tower numbers */
 
-  /** Final numbers for a tower right now, after levels, splits, trees, beacons, night and Wren. */
-  stats(t: Tower) {
-    const def = TOWERS[t.kind], i = Math.min(t.lv, 3) - 1;
-    const waterBonus = this.mods.tidePearl && (this.plots[t.plot]?.nearWater ?? false) ? 0.15 : 0;
-    let dmg = def.dmg[i] * (1 + this.mods.towerDmg[t.kind] + this.mods.dmgAll);
-    let range = def.range[i] * (1 + this.mods.towerRange[t.kind] + this.mods.rangeAll + waterBonus) * (t.high ? 1.2 : 1);
-    let rate = def.rate[i];
-    let crit = 0, jumps = 2 + this.mods.jumps, splash = 60 * (1 + this.mods.blast), shells = 1;
-    if (t.split) {
-      const s = `${t.kind}:${t.split}`;
-      if (s === 'watch:a') { range *= 1.3; crit = 0.25; dmg *= 1.2; }
-      if (s === 'watch:b') { rate *= 0.42; dmg *= 0.75; }
-      if (s === 'cannon:a') { range *= 1.5; dmg *= 1.5; splash *= 1.3; }
-      if (s === 'cannon:b') { shells = 3; dmg *= 0.65; }
-      if (s === 'bell:a' || s === 'bell:b') { dmg *= 1.3; range *= 1.1; }
-      if (s === 'pylon:a') { jumps += 3; dmg *= 1.1; }
-      if (s === 'pylon:b') { jumps = 0; dmg *= 5; rate *= 1.3; }
-      if (s === 'roots:a' || s === 'roots:b') { dmg *= 1.3; }
-      if (t.kind === 'beacon') range *= 1.1;
-      if (t.lv >= 4 && t.kind !== 'beacon') {
-        const temper = t.lv === 5 ? 1.18 : t.lv >= 6 ? 1.3924 : 1;
-        dmg *= 1.25 * temper;
-      }
-      if (t.lv > 4 && (t.kind === 'beacon' || t.kind === 'bell')) {
-        range *= t.lv === 5 ? 1.06 : 1.1236;
-      }
-    }
-    // Beacons: more damage, and for the splits more speed or more range.
-    let rateMul = 1 + this.mods.rateAll;
-    if (t.kind !== 'beacon') {
-      let buff = 0, drum = 0, fire = 0;
-      for (const b of this.towers) {
-        if (b.kind !== 'beacon' || b.down) continue;
-        const bw = this.mods.tidePearl && (this.plots[b.plot]?.nearWater ?? false) ? 0.15 : 0;
-        const br = b.lv === 5 ? 1.06 : b.lv >= 6 ? 1.1236 : 1;
-        const bs = TOWERS.beacon.range[Math.min(b.lv, 3) - 1] * (b.split ? 1.1 : 1) * br * (1 + this.mods.rangeAll + bw) * (b.high ? 1.2 : 1);
-        if (ell(b.x - t.x, b.y - t.y) > bs) continue;
-        buff = Math.max(buff, BEACON_BUFF[Math.min(b.lv, 3) - 1] + (b.lv >= 4 ? 0.05 + (b.lv - 4) * 0.04 : 0));
-        if (b.split === 'a') drum = 0.2;
-        if (b.split === 'b') fire = 0.25;
-      }
-      dmg *= 1 + buff; rateMul += drum; range *= 1 + fire;
-      if (this.night && buff === 0 && !this.inLighthouse(t.x, t.y)) range *= 0.85;
-    }
-    const h = this.hero;
-    if (!h.dead && ell(h.x - t.x, h.y - t.y) < ATTUNE.radius) {
-      if (h.ranks.e > 0) rateMul += ATTUNE.rate[h.ranks.e - 1] + this.mods.attune;
-      const aura = sumItems(h.items, 'auraDmg');
-      if (aura > 0) dmg *= 1 + aura;
-      if (h.double > 0) dmg *= 2;
-    }
-    if (h.sunriseT > 0) rateMul *= 2;
-    if (this.stage.weather === 'rain' && def.element === 'fire') dmg *= 0.8;
-    return { dmg, range, rate: rate / rateMul, crit, jumps, splash, shells, hitsFlying: def.hitsFlying };
+  /** Final numbers for a tower right now, via the pure single source of truth `evalTowerStats()`. */
+  stats(t: Tower, lvOverride?: number, splitOverride?: 'a' | 'b' | null): TowerStats {
+    return evalTowerStats(
+      {
+        kind: t.kind,
+        lv: t.lv,
+        split: t.split,
+        high: t.high,
+        nearWater: this.plots[t.plot]?.nearWater ?? false,
+        x: t.x,
+        y: t.y,
+        down: t.down,
+      },
+      {
+        mods: this.mods,
+        beacons: this.towers.filter(b => b.kind === 'beacon').map(b => ({
+          kind: b.kind, lv: b.lv, split: b.split, high: b.high,
+          nearWater: this.plots[b.plot]?.nearWater ?? false, x: b.x, y: b.y, down: b.down,
+        })),
+        hero: {
+          dead: this.hero.dead, x: this.hero.x, y: this.hero.y,
+          rankE: this.hero.ranks.e, items: this.hero.items, double: this.hero.double, sunriseT: this.hero.sunriseT,
+        },
+        night: this.night,
+        weather: this.stage.weather,
+        inLighthouse: (x, y) => this.inLighthouse(x, y),
+        ell,
+      },
+      lvOverride,
+      splitOverride,
+    );
+  }
+
+  /** Highest-damage tower built so far, for Result Card MVP badge. */
+  mvpTower(): Tower | null {
+    let best: Tower | null = null;
+    for (const t of this.towers) if (!best || t.dmgDealt > best.dmgDealt) best = t;
+    return best && best.dmgDealt > 0 ? best : null;
   }
 
   /* ------------------------------------------------------------------ the loop */
 
-  /** Advance the battle. Large steps are split so fast-forward stays stable. */
+  /** Advance the battle. Large steps are split so fast-forward stays stable at 1/30 s. */
   step(dt: number) {
     if (this.paused || this.status === 'won' || this.status === 'lost') return;
     let left = dt * this.speed;
@@ -613,6 +809,7 @@ export class Battle {
   private tick(dt: number) {
     const running = this.status === 'running';
     if (running) this.clock += dt;
+    this.updateSwitches(dt);
     this.updateShifts();
     if (running) this.updateWave(dt);
     if (running) this.updateRunes(dt);
@@ -623,8 +820,8 @@ export class Battle {
     this.updateShots(dt);
     this.updateClouds(dt);
     this.foes = this.foes.filter(f => !f.dead);
-    if (running && this.wave >= this.totalWaves && this.queue.length === 0 && this.foes.length === 0) this.finish(true);
     if (this.lives <= 0) this.finish(false);
+    else if (running && this.wave >= this.totalWaves && this.queue.length === 0 && this.foes.length === 0) this.finish(true);
   }
 
   private finish(won: boolean) {
@@ -645,13 +842,12 @@ export class Battle {
     return share >= 0.9 ? 3 : share >= 0.5 ? 2 : 1;
   }
 
-  /* waves */
+  /* waves & dynamic map milestones */
 
   private startWave() {
     const n = ++this.wave, w = this.stage.waves[n - 1];
     this.waveT = 0;
     this.leakedThisWave = false;
-    // Early waves of a stage send a share of each group; the last wave sends all of it.
     const ramp = waveRamp(n, this.totalWaves);
     for (const g of w.groups) {
       const count = Math.max(1, Math.round(g.n * ramp));
@@ -661,26 +857,108 @@ export class Battle {
     this.nextIn = null;
     this.events.push({ t: 'wave', n, hint: w.hint });
     if (n > 1) this.gold += 15 + n * 3;
-    // Interest on banked gold.
-    if (n > 1 && this.mods.interest > 0) {
-      const g = Math.min(40, Math.floor(this.gold * this.mods.interest));
-      if (g > 0) { this.gold += g; this.events.push({ t: 'interest', gold: g }); }
-    }
-    // The Hollow adapts to the element that hurt it most.
     if (this.adaptsAt(n)) this.adapt();
     this.applyGears(n);
+
+    // Unlock scheduled roads & telegraph upcoming wave breaches (1 wave early).
+    for (const r of this.roads) {
+      if (!r.active && r.def.openAtWave !== undefined && n >= r.def.openAtWave) {
+        this.openRoad(r, r.def.closeAtWave === undefined || n < r.def.closeAtWave);
+      }
+      if (r.active && r.def.closeAtWave !== undefined && n >= r.def.closeAtWave) {
+        r.spawnOpen = false;
+      }
+      if (!r.active && r.def.openAtWave === n + 1) {
+        r.telegraph = true;
+        this.events.push({ t: 'riftWarn', road: r.def.id, wave: n + 1 });
+      }
+    }
+
+    // Unlock dry-bed / surfaced plots & portals scheduled for wave n.
     this.plots.forEach((p, i) => {
-      if (this.stage.plots[i].sinkAt === n && !p.sunk) {
-        p.sunk = true;
-        const t = this.towers.find(x => x.plot === i);
-        if (t) { this.gold += t.spent; this.towers = this.towers.filter(x => x !== t); this.threatDirty = true; }
-        this.events.push({ t: 'sink', plot: i });
+      const def = this.stage.plots[i];
+      if (!p.unlocked && (def.openAtWave ?? 1) <= n) p.unlocked = true;
+      if (def.sinkAt === n && !p.sunk) this.sinkPlot(i);
+    });
+    for (const pt of this.portals) {
+      if (!pt.active && (pt.def.openAtWave ?? 1) <= n) pt.active = true;
+    }
+
+    // Drain water flags even if stage has no explicit terraform entry.
+    let waterChanged = false;
+    this.stage.waters.forEach((wd, idx) => {
+      if (wd.drainAtWave === n && this.waters[idx] && !this.waters[idx].drained) {
+        this.waters[idx].drained = true;
+        waterChanged = true;
       }
     });
+    if (waterChanged) this.recomputePlotTraits();
+
+    // Apply wave-triggered Terraforms.
+    (this.stage.terraforms ?? []).forEach((tf, idx) => {
+      if (tf.atWave === n && !this.appliedTerraforms.has(idx)) {
+        this.appliedTerraforms.add(idx);
+        this.applyTerraform(tf);
+      }
+    });
+
     if (this.stage.night) {
-      const on = n % 2 === 0;
+      const on = this.oaths.includes('longNight') ? true : n % 2 === 0;
       if (on !== this.night) { this.night = on; this.events.push({ t: 'night', on }); this.threatDirty = true; }
     }
+  }
+
+  /** Open a road for good. A fork switch that was holding the new road shut flips onto it, so the road is really used. */
+  private openRoad(r: RoadRt, spawnOpen: boolean) {
+    r.active = true;
+    r.telegraph = false;
+    r.spawnOpen = spawnOpen;
+    for (const sw of this.switches) {
+      if (sw.def.mode !== 'fork') continue;
+      const shut = sw.state === 0 ? sw.def.closesA : sw.def.closesB;
+      if ((shut ?? []).includes(r.def.id)) sw.state = sw.state === 0 ? 1 : 0;
+    }
+    this.threatDirty = true;
+    this.updateShifts();
+    this.events.push({ t: 'riftOpen', road: r.def.id });
+  }
+
+  private sinkPlot(i: number) {
+    const p = this.plots[i];
+    if (!p || p.sunk) return;
+    p.sunk = true;
+    const t = this.towers.find(x => x.plot === i);
+    if (t) {
+      // A sinking plot refunds its tower in full, except under the Shifting Earth oath.
+      this.gold += this.oaths.includes('shiftingEarth') ? Math.round(t.spent * SHIFTING_EARTH_REFUND) : t.spent;
+      this.towers = this.towers.filter(x => x !== t);
+      this.threatDirty = true;
+    }
+    this.events.push({ t: 'sink', plot: i });
+  }
+
+  private applyTerraform(tf: TerraformDef) {
+    let traitRefresh = false;
+    if (tf.waters?.length) {
+      for (const w of this.waters) if (w.id && tf.waters.includes(w.id)) { w.drained = tf.kind === 'drain'; traitRefresh = true; }
+    }
+    for (const id of tf.openRoads ?? []) {
+      const r = this.roads.find(x => x.def.id === id);
+      if (r && !r.active) this.openRoad(r, true);
+      else if (r) r.spawnOpen = true;
+    }
+    for (const id of tf.closeRoads ?? []) {
+      const r = this.roads.find(x => x.def.id === id);
+      if (r) { r.spawnOpen = false; }
+    }
+    for (const i of tf.openPlots ?? []) {
+      if (this.plots[i]) { this.plots[i].unlocked = true; traitRefresh = true; }
+    }
+    for (const i of tf.sinkPlots ?? []) this.sinkPlot(i);
+    if (tf.highPoly) { this.activeHigh = tf.highPoly.map(p => [...p] as Vec); traitRefresh = true; }
+    if (traitRefresh) this.recomputePlotTraits();
+    this.threatDirty = true;
+    this.events.push({ t: 'terraform', label: tf.label });
   }
 
   private adapt() {
@@ -710,30 +988,34 @@ export class Battle {
     }
     if (this.queue.length === 0 && this.nextIn === null && this.wave < this.totalWaves) this.nextIn = WAVE_GAP;
     if (this.nextIn !== null) {
-      // When the field is clear, the next wave comes sooner.
-      if (this.foes.length === 0) this.nextIn = Math.min(this.nextIn, 8);
+      // Generous 12 s tactical respite when the field clears rather than 8 s scramble.
+      if (this.foes.length === 0) this.nextIn = Math.min(this.nextIn, 12);
       this.nextIn -= dt;
       if (this.nextIn <= 0) { this.nextIn = 0; this.startWave(); }
     }
   }
 
-  /** Spawn a foe at a rift. On a fork it takes the road with the least threat. */
+  /** Spawn a foe at a rift. On a fork it takes an open road weighted away from tower threat. */
   spawn(kind: EnemyKind, spawnId?: string, at?: { road: RoadRt; d: number }): Foe {
     const def = ENEMIES[kind];
     let road: RoadRt, d = 0;
     if (at) { road = at.road; d = at.d; } else {
-      const id = spawnId ?? [...this.spawns.keys()][Math.floor(this.rng() * this.spawns.size)];
-      road = this.pickRoad(this.spawns.get(id) ?? [...this.spawns.values()][0], def);
+      const activeSpawns = [...this.spawns.entries()].filter(([, rs]) => rs.some(r => r.active && r.spawnOpen)).map(([k]) => k);
+      const chosenId = (spawnId && this.spawns.get(spawnId)?.some(r => r.active && r.spawnOpen))
+        ? spawnId
+        : (activeSpawns[0] ?? [...this.spawns.keys()][0]);
+      const options = this.spawns.get(chosenId) ?? this.roads.filter(r => r.active);
+      road = this.pickRoad(options, def);
     }
     const isBoss = !!def.traits?.boss;
     const hp = def.hp * this.scale;
     const p = pointAt(road.path, d);
     const f: Foe = {
       id: this.ids++, kind, def, road, d, x: p.x, y: p.y, dir: p.dir, off: isBoss ? 0 : (this.rng() - 0.5) * road.def.w * 0.5,
-      hp, max: hp, speed: def.speed * (0.94 + this.rng() * 0.12), slow: 0, slowT: 0, rootT: 0, freezeT: 0, freezeImmune: 0,
+      hp, max: hp, speed: def.speed * (0.94 + this.rng() * 0.12), slow: 0, slowT: 0, rootT: 0, staggerT: 0, freezeT: 0, freezeImmune: 0,
       burnT: 0, burnDps: 0, vulnT: 0, blocked: false, hidden: false, shielded: false, under: false,
       underT: def.traits?.burrow ? def.traits.burrow[1] : def.traits?.dive?.every ?? 0,
-      abilityT: def.traits?.summon?.every ?? 2, phase: 0, burstT: 0, hitT: 0, dead: false,
+      abilityT: def.traits?.summon?.every ?? 2, phase: 0, burstT: 0, hitT: 0, dead: false, warpedMask: 0,
     };
     this.foes.push(f);
     if (isBoss) this.events.push({ t: 'boss', kind });
@@ -741,12 +1023,15 @@ export class Battle {
   }
 
   private pickRoad(options: RoadRt[], def: EnemyDef): RoadRt {
-    if (options.length === 1) return options[0];
+    const active = options.filter(r => r.active && r.spawnOpen);
+    const pool = active.length ? active : options.filter(r => r.active);
+    const cand = pool.length ? pool : options;
+    if (cand.length === 1) return cand[0];
     const sapper = !!def.traits?.sapper;
-    let open = options.filter(r => !r.closed && (sapper || !r.barrier || r.barrier.hp <= 0));
+    let open = cand.filter(r => !r.closed && (sapper || !r.barrier || r.barrier.hp <= 0));
     if (sapper) { const walled = open.filter(r => r.barrier && r.barrier.hp > 0); if (walled.length) return walled[0]; }
-    if (open.length === 0) open = options.filter(r => !r.barrier || r.barrier.hp <= 0);
-    if (open.length === 0) open = options;
+    if (open.length === 0) open = cand.filter(r => !r.barrier || r.barrier.hp <= 0);
+    if (open.length === 0) open = cand;
     if (open.length === 1) return open[0];
     if (this.threatDirty) this.computeThreat();
     const map = def.flying ? this.airThreat : this.threat;
@@ -783,6 +1068,23 @@ export class Battle {
     return Object.fromEntries(this.roads.map(r => [r.def.id, this.threat.get(r) ?? 0]));
   }
 
+  private updateSwitches(dt: number) {
+    const h = this.hero;
+    for (const sw of this.switches) {
+      sw.boosted = !h.dead && Math.hypot(h.x - sw.def.at[0], h.y - sw.def.at[1]) < 48;
+      if (sw.activeT > 0) {
+        sw.activeT = Math.max(0, sw.activeT - dt);
+        if (sw.activeT === 0 && sw.def.mode !== 'fork') {
+          sw.state = 0;
+          this.threatDirty = true;
+        }
+      }
+      if (sw.cdLeft > 0 && (sw.def.mode === 'fork' || sw.activeT <= 0)) {
+        sw.cdLeft = Math.max(0, sw.cdLeft - dt * (sw.boosted ? 2 : 1));
+      }
+    }
+  }
+
   private updateShifts() {
     const shifts = this.stage.shifts ?? [];
     const closed = new Set<string>();
@@ -792,6 +1094,14 @@ export class Battle {
       if (on !== this.shiftOn[i]) { this.shiftOn[i] = on; this.events.push({ t: 'shift', label: on ? s.label : 'The way is open again', on }); }
       if (on) s.closes.forEach(c => closed.add(c));
     });
+    for (const sw of this.switches) {
+      if (sw.def.mode === 'fork') {
+        const list = sw.state === 0 ? sw.def.closesA : sw.def.closesB;
+        for (const id of list ?? []) closed.add(id);
+      } else if (sw.def.mode === 'gate' && sw.activeT > 0) {
+        for (const id of sw.def.closesB ?? []) closed.add(id);
+      }
+    }
     for (const r of this.roads) r.closed = closed.has(r.def.id);
   }
 
@@ -803,17 +1113,23 @@ export class Battle {
     if (this.nextRune <= 0) {
       this.nextRune = RUNE_EVERY;
       const kind = RUNE_ORDER[Math.floor(this.rng() * RUNE_ORDER.length)];
-      this.rune = { kind, x: this.stage.rune[0], y: this.stage.rune[1] };
+      this.rune = { kind, x: this.stage.rune[0], y: this.stage.rune[1], ttl: RUNE_LIFETIME };
       this.events.push({ t: 'rune', kind, picked: false });
     }
     const h = this.hero, r = this.rune;
-    if (r && !h.dead && Math.hypot(r.x - h.x, r.y - h.y) < 40) {
-      this.rune = null;
-      if (r.kind === 'haste') h.haste = RUNES.haste.dur;
-      if (r.kind === 'double') h.double = RUNES.double.dur;
-      if (r.kind === 'regen') h.regenT = RUNES.regen.dur;
-      if (r.kind === 'bounty') { const g = 30 + this.wave * 6; this.gold += g; this.giveXp(40 + this.wave * 20); }
-      this.events.push({ t: 'rune', kind: r.kind, picked: true });
+    if (r) {
+      r.ttl -= dt;
+      if (!h.dead && Math.hypot(r.x - h.x, r.y - h.y) < 40) {
+        this.rune = null;
+        if (r.kind === 'haste') h.haste = RUNES.haste.dur;
+        if (r.kind === 'double') h.double = RUNES.double.dur;
+        if (r.kind === 'regen') h.regenT = RUNES.regen.dur;
+        if (r.kind === 'bounty') { const g = 30 + this.wave * 6; this.gold += g; this.giveXp(40 + this.wave * 20); }
+        if (this.mods.runeAttune) { h.sunriseT = Math.max(h.sunriseT, 3); }
+        this.events.push({ t: 'rune', kind: r.kind, picked: true });
+      } else if (r.ttl <= 0) {
+        this.rune = null;
+      }
     }
   }
 
@@ -825,7 +1141,7 @@ export class Battle {
       if (v.t > 0) continue;
       v.t = v.every;
       this.events.push({ t: 'vent', x: v.x, y: v.y });
-      for (const f of this.foes) if (!f.def.flying && !f.under && ell(f.x - v.x, f.y - v.y) < 56) this.damage(f, v.dmg * this.scale, 'env', false);
+      for (const f of this.foes) if (!f.def.flying && !f.under && ell(f.x - v.x, f.y - v.y) < 56) this.damage(f, v.dmg * this.scale, 'env', false, false, false, undefined, 'status');
     }
   }
 
@@ -842,19 +1158,25 @@ export class Battle {
     const beacons = this.towers.filter(t => t.kind === 'beacon' && !t.down);
     let blocking = 0;
     const sight = this.heroSight();
+
     for (const f of this.foes) {
       if (f.dead) continue;
       const tr = f.def.traits;
       f.slowT = Math.max(0, f.slowT - dt); if (f.slowT === 0) f.slow = 0;
       f.rootT = Math.max(0, f.rootT - dt);
+      f.staggerT = Math.max(0, f.staggerT - dt);
       f.freezeT = Math.max(0, f.freezeT - dt);
       f.freezeImmune = Math.max(0, f.freezeImmune - dt);
       f.vulnT = Math.max(0, f.vulnT - dt);
       f.burstT = Math.max(0, f.burstT - dt);
       f.hitT = Math.max(0, f.hitT - dt);
-      if (f.burnT > 0) { f.burnT -= dt; this.damage(f, f.burnDps * dt, 'fire', false, true); if (f.dead) continue; }
+      if (f.burnT > 0) {
+        f.burnT -= dt;
+        this.damage(f, f.burnDps * dt, 'fire', false, true, false, undefined, 'status');
+        if (f.dead) continue;
+        if (f.burnT <= 0) { f.burnT = 0; f.burnDps = 0; }
+      }
 
-      // Burrow and dive.
       if (tr?.burrow) {
         f.underT -= dt;
         if (f.underT <= 0) { f.under = !f.under; f.underT = f.under ? tr.burrow[0] : tr.burrow[1]; }
@@ -867,7 +1189,6 @@ export class Battle {
         }
         if (f.under) f.hp = Math.min(f.max, f.hp + f.max * 0.01 * dt);
       }
-      // Summons.
       if (tr?.summon) {
         f.abilityT -= dt;
         if (f.abilityT <= 0) {
@@ -875,7 +1196,6 @@ export class Battle {
           for (let i = 0; i < tr.summon.n; i++) this.spawn(tr.summon.kind, undefined, { road: f.road, d: Math.max(0, f.d - 20 - i * 18) });
         }
       }
-      // Healing.
       if (tr?.heal) {
         f.abilityT -= dt;
         if (f.abilityT <= 0) {
@@ -883,12 +1203,23 @@ export class Battle {
           for (const o of this.foes) if (!o.dead && ell(o.x - f.x, o.y - f.y) < 100) o.hp = Math.min(o.max, o.hp + o.max * tr.heal);
         }
       }
-      // Queen phases.
+
+      // Boss phase breaks (now actually awaken openOnPhase roads + atPhase terraforms!).
       if (tr?.phases && f.phase < tr.phases.length && f.hp / f.max < tr.phases[f.phase]) {
         f.phase++;
         f.burstT = 4;
         this.shiftShift += 20;
-        for (let i = 0; i < 6; i++) this.spawn('shade', undefined, { road: f.road, d: Math.max(0, f.d - 30 - i * 16) });
+        for (const r of this.roads) {
+          if (!r.active && r.def.openOnPhase !== undefined && f.phase >= r.def.openOnPhase) this.openRoad(r, true);
+        }
+        (this.stage.terraforms ?? []).forEach((tf, idx) => {
+          if (tf.atPhase === f.phase && !this.appliedTerraforms.has(idx)) {
+            this.appliedTerraforms.add(idx);
+            this.applyTerraform(tf);
+          }
+        });
+        const brood = tr.summon?.kind;
+        if (brood) for (let i = 0; i < 6; i++) this.spawn(brood, undefined, { road: f.road, d: Math.max(0, f.d - 30 - i * 16) });
         this.events.push({ t: 'phase', n: f.phase, x: f.x, y: f.y });
       }
 
@@ -901,22 +1232,24 @@ export class Battle {
         beacons.some(b => ell(b.x - f.x, b.y - f.y) < TOWERS.beacon.range[Math.min(b.lv, 3) - 1])
       );
 
-      // Wren holds ground foes that walk into her.
+      // Pin + Leash Hold: stepping inside <= 36 px of pinned anchor NEVER breaks Wren's `blocks: 2` guard!
       f.blocked = false;
-      if (!h.dead && !h.moving && !f.def.flying && !f.under && blocking < HERO.blocks && Math.hypot(h.x - f.x, h.y - f.y) < 30 + f.def.size * 10) {
+      const inLeash = Math.hypot(h.x - h.anchorX, h.y - h.anchorY) <= 36;
+      if (!h.dead && (!h.moving || inLeash) && !f.def.flying && !f.under && blocking < HERO.blocks && Math.hypot(h.x - f.x, h.y - f.y) < 30 + f.def.size * 10) {
         f.blocked = true; blocking++;
         const armor = Math.min(0.6, sumItems(h.items, 'armor'));
         h.hp -= f.def.dps * this.scale * 0.6 * (1 - armor) * dt;
       }
 
-      // Movement.
+      // Movement & portal jumps.
       let mul = f.slow > 0 ? 1 - f.slow : 1;
-      if (f.rootT > 0 || f.freezeT > 0 || f.blocked) mul = 0;
+      if (f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked) mul = 0;
       if (f.burstT > 0) mul *= 1.6;
-      for (const b of f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult;
+      const activeBrake = this.switches.find(sw => sw.def.mode === 'belt' && sw.activeT > 0 && sw.def.targetRoad === f.road.def.id);
+      if (activeBrake) mul *= activeBrake.def.beltMult ?? 0.55;
+      else for (const b of f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult;
       if (f.under && tr?.burrow) mul *= 1.4;
       let nd = f.d + f.speed * mul * dt;
-      // A closed ford or lava pass holds foes on this side until it opens.
       if (f.road.closed && f.road.closeAt !== null && f.d < f.road.closeAt - 30 && !f.def.flying) nd = Math.min(nd, f.road.closeAt - 40);
       const bar = f.road.barrier;
       if (bar && bar.hp > 0 && !f.def.flying && f.d < bar.d) {
@@ -927,6 +1260,31 @@ export class Battle {
         }
       }
       f.d = nd;
+
+      // Deterministic portal / chute warp.
+      if (!f.def.traits?.boss) {
+        for (let pi = 0; pi < this.portals.length; pi++) {
+          const pt = this.portals[pi];
+          if (!pt.active || !pt.toRoad.active) continue;
+          if ((pt.def.groundOnly ?? true) && f.def.flying) continue;
+          if (f.road !== pt.fromRoad || (f.warpedMask & (1 << pi))) continue;
+          if (f.d >= pt.fromD && f.d <= pt.fromD + 28) {
+            pt.count++;
+            if (pt.count % (pt.def.everyNth ?? 1) === 0) {
+              const oldX = f.x, oldY = f.y;
+              f.warpedMask |= (1 << pi);
+              f.road = pt.toRoad;
+              f.d = pt.toD;
+              const tp = pointAt(f.road.path, f.d);
+              f.x = tp.x; f.y = tp.y; f.dir = tp.dir;
+              this.events.push({ t: 'warp', fromX: oldX, fromY: oldY, toX: f.x, toY: f.y, kind: pt.def.kind });
+              break;
+            }
+            f.warpedMask |= (1 << pi);
+          }
+        }
+      }
+
       const p = pointAt(f.road.path, f.d);
       const nx = p.x + f.off * 0.3, ny = p.y + f.off * 0.3;
       if (Math.abs(nx - f.x) > 0.01) f.dir = Math.sign(nx - f.x);
@@ -937,7 +1295,17 @@ export class Battle {
 
   private leak(f: Foe) {
     f.dead = true;
-    if (this.mods.ironGate && !this.leakedThisWave && !f.def.traits?.boss) { this.leakedThisWave = true; return; }
+    if ((this.mods.ironGate || this.mods.gateShock) && !this.leakedThisWave && !f.def.traits?.boss) {
+      this.leakedThisWave = true;
+      if (this.mods.gateShock && this.gateShockUsedWave !== this.wave) {
+        this.gateShockUsedWave = this.wave;
+        this.events.push({ t: 'gateShock', x: f.x, y: f.y });
+        for (const o of this.foes) {
+          if (!o.dead && !o.def.traits?.boss && Math.hypot(o.x - f.x, o.y - f.y) < 160) o.rootT = Math.max(o.rootT, 2.5);
+        }
+      }
+      return;
+    }
     this.leakedThisWave = true;
     this.lives = Math.max(0, this.lives - f.def.leak);
     this.leaks += f.def.leak;
@@ -951,37 +1319,39 @@ export class Battle {
     return true;
   }
 
-  /** Deal damage after every rule: weakness, adaptation, shields, armor, plates. Returns damage done. */
-  damage(f: Foe, amount: number, el: DmgEl, byHero: boolean, quiet = false, crit = false): number {
+  /** Deal damage via pure `deliverDamage()` (with overkill clamp + attribution metrics). */
+  damage(
+    f: Foe,
+    amount: number,
+    el: DmgEl,
+    byHero: boolean,
+    quiet = false,
+    crit = false,
+    sourceTower?: Tower,
+    bucket?: AttributionBucket,
+    armorPierceExtra = 0,
+  ): number {
     if (!this.reachable(f, true) || amount <= 0) return 0;
-    let m = el === 'env' ? 1 : (f.def.takes?.[el] ?? 1);
-    if (el !== 'env' && el !== 'hero') m *= 1 - this.resist[el];
-    if (f.shielded) m *= 0.6;
-    if (f.vulnT > 0) m *= 1.25;
-    const chilled = f.slowT > 0 || f.freezeT > 0;
-    if (el === 'fire' && chilled && this.mods.shatter) m *= 1.5;
-    if (f.def.traits?.plated && !chilled) m *= f.def.traits.plated;
-    let dmg = amount * m;
-    const armor = f.def.traits?.armor;
-    if (armor && !quiet) dmg = Math.max(dmg * 0.15, dmg - armor * armorScale(this.stage.id) * (1 - this.mods.armorPierce));
-    if (dmg <= 0) return 0;
-    f.hp -= dmg;
-    f.hitT = 0.12;
-    if (el !== 'env' && el !== 'hero') this.dmgWindow[el] += dmg;
-    if (!quiet) this.events.push({ t: 'hit', x: f.x, y: f.y - f.def.bar * 0.6, dmg, crit, el });
-    if (f.hp <= 0) this.kill(f, byHero);
-    return dmg;
+    const { applied, clamped } = deliverDamage(
+      { stageId: this.stage.id, mods: this.mods, resist: this.resist, dmgWindow: this.dmgWindow, breakdown: this.breakdown },
+      f, amount, el, { byHero, quiet, armorPierceExtra, bucket },
+    );
+    if (applied <= 0) return 0;
+    if (sourceTower) sourceTower.dmgDealt += clamped;
+    if (!quiet) this.events.push({ t: 'hit', x: f.x, y: f.y - f.def.bar * 0.6, dmg: applied, crit, el });
+    if (f.hp <= 0) this.kill(f, byHero, sourceTower);
+    return applied;
   }
 
-  private kill(f: Foe, byHero: boolean) {
+  private kill(f: Foe, byHero: boolean, sourceTower?: Tower) {
     if (f.dead) return;
     f.dead = true;
     this.kills++;
+    if (sourceTower) sourceTower.kills++;
     const gold = Math.round(f.def.gold * goldScale(this.stage.id) * (byHero ? 1 + HERO.lastHit + this.mods.lastHit : 1));
     this.gold += gold;
     this.events.push({ t: 'kill', x: f.x, y: f.y, kind: f.kind, gold, hero: byHero });
     const h = this.hero;
-    // Full XP for kills near Wren, a share for kills anywhere else, so she grows wherever the fight is.
     if (!h.dead) this.giveXp(f.def.hp * 0.45 * this.scale * (Math.hypot(h.x - f.x, h.y - f.y) < HERO.xpRadius ? 1 : HERO.xpFar));
     const sp = f.def.traits?.splitInto;
     if (sp) for (let i = 0; i < sp.n; i++) {
@@ -1006,11 +1376,24 @@ export class Battle {
 
   /* hero */
 
+  private heroInheritedRound(): Rounds | null {
+    if (!this.mods.roundInherit) return null;
+    const h = this.hero;
+    let best: Tower | undefined, bestD = ATTUNE.radius;
+    for (const t of this.towers) {
+      if (!t.round || t.down) continue;
+      const d = ell(t.x - h.x, t.y - h.y);
+      if (d < bestD) { bestD = d; best = t; }
+    }
+    return best?.round ?? null;
+  }
+
   private updateHero(dt: number) {
     const h = this.hero;
     for (const k of ['q', 'w', 'r'] as SkillKey[]) h.cd[k] = Math.max(0, h.cd[k] - dt);
     h.haste = Math.max(0, h.haste - dt); h.double = Math.max(0, h.double - dt); h.regenT = Math.max(0, h.regenT - dt);
     h.sunriseT = Math.max(0, h.sunriseT - dt); h.swing = Math.max(0, h.swing - dt);
+
     if (h.dead) {
       h.respawnT -= dt;
       if (h.respawnT <= 0) {
@@ -1021,6 +1404,7 @@ export class Battle {
       }
       return;
     }
+
     const max = this.heroMaxHp();
     let regen = HERO.regen + sumItems(h.items, 'regen');
     if (this.nearGate()) regen += HERO.gateRegen;
@@ -1031,13 +1415,25 @@ export class Battle {
         h.revived = true; h.items = h.items.filter(i => i !== 'seconddawn'); h.hp = max;
         this.events.push({ t: 'revive' });
       } else {
-        h.dead = true; h.hp = 0; h.respawnT = HERO.respawn(h.level); h.focus = null; h.moving = false;
+        h.dead = true; h.hp = 0; h.respawnT = heroRespawn(h.level); h.focus = null; h.moving = false;
         this.events.push({ t: 'heroDown' });
         return;
       }
     }
 
-    // Pick a fight: her focus, then a foe she holds, then the nearest within reach of her post.
+    // Wren clears an adjacent rubble plot free of charge when standing stationary beside it!
+    for (let pi = 0; pi < this.plots.length; pi++) {
+      const p = this.plots[pi];
+      if (!p.unlocked || p.sunk || !p.rubble || !p.rubble.holdSec) continue;
+      if (this.status === 'running' && !h.moving && Math.hypot(p.x - h.x, p.y - h.y) <= 48) {
+        p.rubbleLeft -= dt;
+        if (p.rubbleLeft <= 0) this.clearPlot(pi, true);
+      } else {
+        p.rubbleLeft = p.rubble.holdSec;
+      }
+    }
+
+    // Engage targets within pinned leash (`HERO.leash = 90`), or focus target.
     let target: Foe | undefined;
     if (h.focus !== null) target = this.foes.find(f => f.id === h.focus && this.reachable(f, true));
     if (!target) {
@@ -1046,17 +1442,23 @@ export class Battle {
       for (const f of this.foes) {
         if (!this.reachable(f, true)) continue;
         const dPost = Math.hypot(f.x - h.anchorX, f.y - h.anchorY);
-        if (dPost > HERO.aggro) continue;
+        if (dPost > HERO.leash) continue;
         const score = Math.hypot(f.x - h.x, f.y - h.y) - (f.blocked ? 200 : 0);
         if (score < best) { best = score; target = f; }
       }
     }
-    // Walk: to her post, or a little way out to meet a foe.
+
     let gx = h.tx, gy = h.ty;
     if (target) {
       const dist = Math.hypot(target.x - h.x, target.y - h.y);
       const reach = HERO.reach + target.def.size * 6;
-      if (dist > reach) { gx = target.x; gy = target.y + 4; } else { gx = h.x; gy = h.y; }
+      if (dist > reach) {
+        // Stay clamped inside pin leash unless pursuing an explicit focus.
+        const toTarget = Math.hypot(target.x - h.anchorX, target.y - h.anchorY);
+        if (h.focus !== null || toTarget <= HERO.leash) { gx = target.x; gy = target.y + 4; }
+      } else {
+        gx = h.x; gy = h.y;
+      }
     }
     const dx = gx - h.x, dy = gy - h.y, dist = Math.hypot(dx, dy), stepLen = this.heroSpeed() * dt;
     h.moving = dist > 3;
@@ -1073,14 +1475,18 @@ export class Battle {
       h.swing = 0.25;
       h.face = Math.sign(target.x - h.x) || h.face;
       const dmg = this.heroDmg();
-      this.damage(target, dmg, 'hero', true);
+      this.damage(target, dmg, 'hero', true, false, false, undefined, 'hero');
+      const inherited = this.heroInheritedRound();
+      if (inherited && !target.dead) this.applyRound(inherited, target, dmg);
       if (sumItems(h.items, 'sunder') > 0 && !target.dead) {
         target.burnT = Math.max(target.burnT, 2.5);
         target.burnDps = Math.max(target.burnDps, dmg * 0.2);
         target.vulnT = Math.max(target.vulnT, 2.5);
       }
       const cleave = sumItems(h.items, 'cleave');
-      if (cleave > 0) for (const o of this.foes) if (o !== target && this.reachable(o, true) && ell(o.x - target.x, o.y - target.y) < 70) this.damage(o, dmg * cleave, 'hero', true, true);
+      if (cleave > 0) for (const o of this.foes) if (o !== target && this.reachable(o, true) && ell(o.x - target.x, o.y - target.y) < 70) {
+        this.damage(o, dmg * cleave, 'hero', true, true, false, undefined, 'hero');
+      }
       this.events.push({ t: 'heroHit', x: target.x, y: target.y - 18 });
     }
   }
@@ -1126,13 +1532,23 @@ export class Battle {
     }
   }
 
-  private attack(t: Tower, target: Foe, s: ReturnType<Battle['stats']>) {
+  private attack(t: Tower, target: Foe, s: TowerStats) {
     const el = TOWERS[t.kind].element;
+    t.shotCount++;
     switch (t.kind) {
       case 'watch': {
-        const crit = s.crit > 0 && this.rng() < s.crit;
-        const dist = Math.hypot(target.x - t.x, target.y - t.y);
-        this.shots.push({ id: this.ids++, kind: 'bolt', tower: t.id, x0: t.x, y0: t.y - 110 * (t.split ? 1.08 : 1), tx: target.x, ty: target.y, foe: target.id, t: 0, dur: Math.max(0.12, dist / 950), dmg: s.dmg * (crit ? 3 : 1), el, splash: 0, round: t.round, crit });
+        const bolts = t.lv >= MAX_TOWER_LEVEL && t.split === 'b' && t.shotCount % 4 === 0 ? 2 : 1;
+        for (let b = 0; b < bolts; b++) {
+          const crit = s.crit > 0 && this.rng() < s.crit;
+          const dist = Math.hypot(target.x - t.x, target.y - t.y);
+          this.shots.push({
+            id: this.ids++, kind: 'bolt', tower: t.id,
+            x0: t.x + b * 6, y0: t.y - 110 * (t.split ? 1.08 : 1),
+            tx: target.x, ty: target.y, foe: target.id,
+            t: -b * 0.05, dur: Math.max(0.12, dist / 950),
+            dmg: s.dmg * (crit ? 3 : 1), el, splash: 0, round: t.round, crit,
+          });
+        }
         this.events.push({ t: 'shot', tower: t.id, kind: 'bolt' });
         break;
       }
@@ -1144,20 +1560,24 @@ export class Battle {
         for (let i = 0; i < s.shells; i++) {
           const off = s.shells > 1 ? (i - 1) * 54 : 0;
           const p = pointAt(target.road.path, target.d + lead + off);
-          this.shots.push({ id: this.ids++, kind: 'shell', tower: t.id, x0: t.x, y0: t.y - 44, tx: p.x, ty: p.y, foe: target.id, t: -i * 0.08, dur, dmg: s.dmg, el, splash: s.splash, round: t.round, crit: false });
+          this.shots.push({
+            id: this.ids++, kind: 'shell', tower: t.id, x0: t.x, y0: t.y - 44, tx: p.x, ty: p.y,
+            foe: target.id, t: -i * 0.08, dur, dmg: s.dmg, el, splash: s.splash, round: t.round, crit: false,
+          });
         }
         this.events.push({ t: 'shot', tower: t.id, kind: 'shell' });
         break;
       }
       case 'bell': {
         const slow = Math.min(0.75, 0.4 + this.mods.slow);
+        const freezeDur = t.lv >= MAX_TOWER_LEVEL && t.split === 'a' ? 1.3 : 0.9;
         for (const f of this.foes) {
           if (!this.targetable(t, f, s.range, true)) continue;
           f.slow = Math.max(f.slow, f.def.traits?.boss ? slow * 0.5 : slow);
           f.slowT = Math.max(f.slowT, 1.6);
-          if (t.split === 'a' && f.freezeImmune <= 0 && !f.def.traits?.boss) { f.freezeT = 0.9; f.freezeImmune = 2.6; }
+          if (t.split === 'a' && f.freezeImmune <= 0 && !f.def.traits?.boss) { f.freezeT = freezeDur; f.freezeImmune = 2.6; }
           if (t.split === 'b') f.vulnT = 2;
-          this.damage(f, s.dmg, el, false, true);
+          this.damage(f, s.dmg, el, false, true, false, t, 'towers');
         }
         this.events.push({ t: 'pulse', tower: t.id, x: t.x, y: t.y, r: s.range });
         break;
@@ -1168,13 +1588,14 @@ export class Battle {
         const held = target.rootT > 0 || target.freezeT > 0;
         let cur: Foe | undefined = target;
         let dmg = t.split === 'b' && held ? s.dmg * 1.35 : s.dmg;
+        const pierceExtra = t.lv >= MAX_TOWER_LEVEL && t.split === 'b' && !target.def.traits?.boss ? 0.3 : 0;
         let jumps = t.split === 'b' ? 0 : s.jumps + (this.mods.overload && held ? 2 : 0);
         const reach = this.stage.weather === 'rain' ? 220 : 120;
         while (cur) {
           hit.add(cur.id);
           pts.push([cur.x, cur.y - 14]);
-          this.damage(cur, dmg, el, false);
-          if (cur === target) this.applyRound(t.round, cur, dmg);
+          this.damage(cur, dmg, el, false, false, false, t, 'towers', pierceExtra);
+          if (cur === target) this.applyRound(t.round, cur, dmg, t);
           if (jumps-- <= 0) break;
           dmg *= 0.75;
           let next: Foe | undefined, bd = reach;
@@ -1190,29 +1611,36 @@ export class Battle {
       }
       case 'roots': {
         const hold = 1.2 + this.mods.hold;
+        const catchR = t.lv >= MAX_TOWER_LEVEL && t.split === 'a' ? 90 : 70;
         const caught = t.split === 'a'
-          ? this.foes.filter(f => this.reachable(f) && !f.def.flying && Math.hypot(f.x - target.x, f.y - target.y) < 70)
+          ? this.foes.filter(f => this.reachable(f) && !f.def.flying && Math.hypot(f.x - target.x, f.y - target.y) < catchR)
           : [target];
         for (const f of caught) {
           if (!f.def.traits?.boss) f.rootT = Math.max(f.rootT, hold);
-          this.damage(f, s.dmg, el, false);
-          this.applyRound(t.round, f, s.dmg);
+          this.damage(f, s.dmg, el, false, false, false, t, 'towers');
+          this.applyRound(t.round, f, s.dmg, t);
         }
-        if (t.split === 'b') this.clouds.push({ x: target.x, y: target.y, r: 64, dps: s.dmg * 0.9, t: 3 });
+        if (t.split === 'b') {
+          const cloudDur = t.lv >= MAX_TOWER_LEVEL ? 4 : 3;
+          this.clouds.push({ x: target.x, y: target.y, r: 64, dps: s.dmg * 0.9, t: cloudDur });
+        }
         this.events.push({ t: 'root', x: target.x, y: target.y });
         break;
       }
     }
   }
 
-  private applyRound(round: Rounds | null, f: Foe, dmg: number) {
+  private applyRound(round: Rounds | null, f: Foe, dmg: number, sourceTower?: Tower) {
     if (!round || f.dead) return;
     if (round === 'ember') { f.burnT = 2; f.burnDps = Math.max(f.burnDps, dmg * 0.25); }
     if (round === 'frost') { f.slow = Math.max(f.slow, 0.2); f.slowT = Math.max(f.slowT, 1); }
     if (round === 'storm' && this.rng() < 0.18) {
       let next: Foe | undefined, bd = 100;
       for (const o of this.foes) { if (o === f || !this.reachable(o)) continue; const d = Math.hypot(o.x - f.x, o.y - f.y); if (d < bd) { bd = d; next = o; } }
-      if (next) { this.damage(next, dmg * 0.5, 'storm', false); this.events.push({ t: 'arc', pts: [[f.x, f.y - 14], [next.x, next.y - 14]] }); }
+      if (next) {
+        this.damage(next, dmg * 0.5, 'storm', false, false, false, sourceTower, 'towers');
+        this.events.push({ t: 'arc', pts: [[f.x, f.y - 14], [next.x, next.y - 14]] });
+      }
     }
   }
 
@@ -1236,8 +1664,15 @@ export class Battle {
       }
       if (s.t < s.dur) continue;
       s.t = -99;
+      const src = this.tower(s.tower);
       if (s.kind === 'bolt') {
-        if (f && this.reachable(f)) { this.damage(f, s.dmg, s.el, false, false, s.crit); this.applyRound(s.round, f, s.dmg); }
+        if (f && this.reachable(f)) {
+          if (s.crit && src && src.lv >= MAX_TOWER_LEVEL && src.split === 'a' && !f.def.traits?.boss) {
+            f.staggerT = Math.max(f.staggerT, 0.35);
+          }
+          this.damage(f, s.dmg, s.el, false, false, s.crit, src, 'towers');
+          this.applyRound(s.round, f, s.dmg, src);
+        }
       } else {
         this.events.push({ t: 'boom', x: s.tx, y: s.ty, r: s.splash });
         for (const o of this.foes) {
@@ -1245,8 +1680,8 @@ export class Battle {
           const d = ell(o.x - s.tx, o.y - s.ty);
           if (d > s.splash) continue;
           const dmg = s.dmg * (d < s.splash * 0.4 ? 1 : 0.6);
-          this.damage(o, dmg, s.el, false);
-          this.applyRound(s.round, o, dmg);
+          this.damage(o, dmg, s.el, false, false, false, src, 'towers');
+          this.applyRound(s.round, o, dmg, src);
         }
       }
     }
@@ -1256,7 +1691,9 @@ export class Battle {
   private updateClouds(dt: number) {
     for (const c of this.clouds) {
       c.t -= dt;
-      for (const f of this.foes) if (!f.dead && !f.def.flying && ell(f.x - c.x, f.y - c.y) < c.r) this.damage(f, c.dps * dt, 'nature', false, true);
+      for (const f of this.foes) if (!f.dead && !f.def.flying && ell(f.x - c.x, f.y - c.y) < c.r) {
+        this.damage(f, c.dps * dt, 'nature', false, true, false, undefined, 'status');
+      }
     }
     this.clouds = this.clouds.filter(c => c.t > 0);
   }

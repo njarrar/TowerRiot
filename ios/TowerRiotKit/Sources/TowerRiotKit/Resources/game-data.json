@@ -1,4 +1,5 @@
 {
+ "maxTowerLevel": 5,
  "towers": [
   {
    "kind": "watch",
@@ -31,13 +32,26 @@
      "id": "a",
      "name": "Longbow spire",
      "desc": "+30% range. 25% of bolts crit for triple damage.",
-     "cost": 140
+     "cost": 140,
+     "masteryCost": 220,
+     "masteryName": "Keenwind spire",
+     "masteryDesc": "+24% damage, +10% crit chance, and crits stagger non-boss foes for 0.35 s.",
+     "dmgMul": 1.5,
+     "rangeMul": 1.3,
+     "rateMul": 1,
+     "crit": 0.25
     },
     {
      "id": "b",
      "name": "Repeater",
      "desc": "Fires more than twice as fast for 70% damage per bolt.",
-     "cost": 140
+     "cost": 140,
+     "masteryCost": 220,
+     "masteryName": "Twin drum repeater",
+     "masteryDesc": "+24% damage, and every 4th bolt fires a free twin bolt.",
+     "dmgMul": 0.7,
+     "rangeMul": 1,
+     "rateMul": 0.42
     }
    ]
   },
@@ -72,13 +86,27 @@
      "id": "a",
      "name": "Siege mortar",
      "desc": "+50% range, +50% damage, faster shells and wider blast.",
-     "cost": 180
+     "cost": 180,
+     "masteryCost": 260,
+     "masteryName": "Grand siege mortar",
+     "masteryDesc": "+24% damage and +18% blast radius.",
+     "dmgMul": 1.875,
+     "rangeMul": 1.5,
+     "rateMul": 1,
+     "splashMul": 1.3
     },
     {
      "id": "b",
      "name": "Scatter gun",
-     "desc": "Three staggered shells spread along the road, 65% damage each.",
-     "cost": 180
+     "desc": "Three staggered shells spread along the road.",
+     "cost": 180,
+     "masteryCost": 260,
+     "masteryName": "Tri-barrel salvo",
+     "masteryDesc": "+24% damage and +10% blast radius.",
+     "dmgMul": 0.8125,
+     "rangeMul": 1,
+     "rateMul": 1,
+     "shells": 3
     }
    ]
   },
@@ -113,13 +141,25 @@
      "id": "a",
      "name": "Glacier",
      "desc": "Every pulse freezes foes solid for 1 second.",
-     "cost": 160
+     "cost": 160,
+     "masteryCost": 220,
+     "masteryName": "Permafrost bell",
+     "masteryDesc": "+24% pulse damage, +8% pulse range and +0.4 s longer freeze.",
+     "dmgMul": 1.625,
+     "rangeMul": 1.1,
+     "rateMul": 1
     },
     {
      "id": "b",
      "name": "Chime",
      "desc": "Slowed foes take 25% more damage from everything.",
-     "cost": 160
+     "cost": 160,
+     "masteryCost": 220,
+     "masteryName": "Harmonic resonance",
+     "masteryDesc": "+24% pulse damage and +8% pulse range.",
+     "dmgMul": 1.625,
+     "rangeMul": 1.1,
+     "rateMul": 1
     }
    ]
   },
@@ -154,13 +194,27 @@
      "id": "a",
      "name": "Tesla crown",
      "desc": "Lightning jumps to 3 more foes.",
-     "cost": 200
+     "cost": 200,
+     "masteryCost": 280,
+     "masteryName": "Arc-overlord crown",
+     "masteryDesc": "+24% damage and +1 extra chain jump.",
+     "dmgMul": 1.375,
+     "rangeMul": 1,
+     "rateMul": 1,
+     "jumpsDelta": 3
     },
     {
      "id": "b",
      "name": "Rail",
      "desc": "One huge bolt for 5x damage (+35% vs held or frozen foes). No jumps.",
-     "cost": 200
+     "cost": 200,
+     "masteryCost": 280,
+     "masteryName": "Breach lance",
+     "masteryDesc": "+24% damage, and ignores 30% armor on non-boss targets.",
+     "dmgMul": 6.25,
+     "rangeMul": 1,
+     "rateMul": 1.3,
+     "jumpsOverride": 0
     }
    ]
   },
@@ -195,13 +249,25 @@
      "id": "a",
      "name": "Bramble",
      "desc": "Roots catch every foe within a small area.",
-     "cost": 150
+     "cost": 150,
+     "masteryCost": 210,
+     "masteryName": "Heartwood bramble",
+     "masteryDesc": "+24% damage and +20 px catch radius.",
+     "dmgMul": 1.625,
+     "rangeMul": 1,
+     "rateMul": 1
     },
     {
      "id": "b",
      "name": "Spore pod",
      "desc": "Leaves a poison cloud that hurts foes standing in it.",
-     "cost": 150
+     "cost": 150,
+     "masteryCost": 210,
+     "masteryName": "Blooming canopy",
+     "masteryDesc": "+24% cloud damage and +1 s cloud duration.",
+     "dmgMul": 1.625,
+     "rangeMul": 1,
+     "rateMul": 1
     }
    ]
   },
@@ -236,13 +302,25 @@
      "id": "a",
      "name": "War drum",
      "desc": "Nearby towers also attack 20% faster.",
-     "cost": 160
+     "cost": 160,
+     "masteryCost": 220,
+     "masteryName": "Sovereign drum",
+     "masteryDesc": "+8% aura range, +6% aura damage, +8% drum speed.",
+     "dmgMul": 1,
+     "rangeMul": 1.1,
+     "rateMul": 1
     },
     {
      "id": "b",
      "name": "Watchfire",
      "desc": "Nearby towers also gain 25% range.",
-     "cost": 160
+     "cost": 160,
+     "masteryCost": 220,
+     "masteryName": "Blazing lens",
+     "masteryDesc": "+8% aura range, +6% aura damage, +10% range boost.",
+     "dmgMul": 1,
+     "rangeMul": 1.1,
+     "rateMul": 1
     }
    ]
   }
@@ -462,6 +540,9 @@
    "size": 3,
    "traits": {
     "boss": true,
+    "phases": [
+     0.5
+    ],
     "summon": {
      "kind": "grub",
      "n": 2,
@@ -485,6 +566,9 @@
    },
    "traits": {
     "boss": true,
+    "phases": [
+     0.5
+    ],
     "dive": {
      "every": 9,
      "dur": 3
@@ -504,6 +588,9 @@
    "size": 3.4,
    "traits": {
     "boss": true,
+    "phases": [
+     0.5
+    ],
     "plated": 0.35
    },
    "blurb": "Brass plates turn most damage. Chill it and the plates crack."
@@ -542,7 +629,8 @@
   "dmgPerLevel": 3.5,
   "atkRate": 0.8,
   "reach": 62,
-  "aggro": 120,
+  "leash": 90,
+  "aggro": 90,
   "speed": 130,
   "regen": 3,
   "gateRegen": 40,
@@ -550,9 +638,10 @@
   "blocks": 2,
   "sight": 140,
   "xpRadius": 420,
-  "xpFar": 0.3,
+  "xpFar": 0.15,
   "lastHit": 0.5,
-  "respawnBase": 4
+  "respawnBase": 4,
+  "respawnPerLevel": 1
  },
  "skills": [
   {
@@ -576,7 +665,7 @@
   {
    "key": "w",
    "name": "Lantern Snare",
-   "desc": "Throws a lantern. Foes where it lands are held in place and burned.",
+   "desc": "Throws a lantern within leash range. Foes inside are rooted and burned for 2 s.",
    "maxRank": 4,
    "cd": [
     16,
@@ -649,7 +738,9 @@
    130
   ],
   "radius": 85,
-  "range": 340
+  "range": 200,
+  "burnSec": 2,
+  "burnDpsMul": 0.35
  },
  "attune": {
   "rate": [
@@ -704,24 +795,24 @@
   {
    "id": "cleave",
    "name": "Cleaving spear",
-   "cost": 260,
-   "after": 11,
+   "cost": 240,
+   "after": 4,
    "cleave": 0.5,
    "desc": "Each strike also hits foes beside the target for half damage."
   },
   {
    "id": "lantern",
    "name": "Brass lantern",
-   "cost": 120,
-   "after": 13,
+   "cost": 110,
+   "after": 6,
    "sight": 100,
    "desc": "Wren lights hidden foes 100 px further away."
   },
   {
    "id": "dawnspear",
    "name": "Spear of dawn",
-   "cost": 380,
-   "after": 14,
+   "cost": 340,
+   "after": 9,
    "dmg": 30,
    "atkSpeed": 0.25,
    "desc": "+30 damage and 25% faster strikes."
@@ -729,8 +820,8 @@
   {
    "id": "emberspear",
    "name": "Ember spear",
-   "cost": 310,
-   "after": 16,
+   "cost": 300,
+   "after": 11,
    "dmg": 22,
    "sunder": 0.25,
    "desc": "+22 damage. Strikes burn foes and sunder armor (+25% damage taken)."
@@ -738,8 +829,8 @@
   {
    "id": "dawnmantle",
    "name": "Dawn mantle",
-   "cost": 340,
-   "after": 17,
+   "cost": 330,
+   "after": 13,
    "hp": 220,
    "armor": 0.15,
    "regen": 6,
@@ -749,14 +840,15 @@
   {
    "id": "seconddawn",
    "name": "Second dawn",
-   "cost": 420,
-   "after": 18,
+   "cost": 390,
+   "after": 15,
    "revive": true,
    "desc": "The first time Wren falls, she stands right back up. Used up."
   }
  ],
  "itemSlots": 4,
  "sellItem": 0.5,
+ "courierSurcharge": 0.2,
  "runes": [
   {
    "kind": "haste",
@@ -789,39 +881,42 @@
  ],
  "runeFirst": 30,
  "runeEvery": 60,
+ "runeLifetime": 22,
+ "runeWarnSec": 5,
  "trees": [
   {
    "id": "towerworks",
    "name": "Towerworks",
-   "blurb": "Stronger towers.",
+   "blurb": "Stronger foundations, wider arcs and cheaper iron.",
    "after": 0,
    "nodes": [
     {
      "id": "tw-bolts",
      "name": "Sharp bolts",
-     "desc": "Watch towers deal 15% more damage.",
-     "cost": 2,
+     "desc": "Watch towers deal 18% more damage.",
+     "cost": 3,
      "effect": {
       "k": "towerDmg",
       "tower": "watch",
-      "v": 0.15
+      "v": 0.18
      }
     },
     {
      "id": "tw-iron",
      "name": "Hot iron",
-     "desc": "Cannon blasts are 20% wider.",
-     "cost": 2,
+     "desc": "Cannon blasts are 22% wider.",
+     "cost": 3,
      "effect": {
       "k": "blast",
-      "v": 0.2
+      "v": 0.22
      }
     },
     {
      "id": "tw-chill",
      "name": "Deep chill",
-     "desc": "Frost bells slow 15% more.",
-     "cost": 3,
+     "desc": "Frost bells slow 15% stronger.",
+     "cost": 4,
+     "req": "tw-bolts",
      "effect": {
       "k": "slow",
       "v": 0.15
@@ -831,7 +926,7 @@
      "id": "tw-arcs",
      "name": "Long arcs",
      "desc": "Lightning jumps to one more foe.",
-     "cost": 3,
+     "cost": 4,
      "req": "tw-iron",
      "effect": {
       "k": "jumps",
@@ -841,20 +936,20 @@
     {
      "id": "tw-roots",
      "name": "Old roots",
-     "desc": "Roots hold foes 0.4 s longer.",
-     "cost": 3,
+     "desc": "Roots hold foes 0.5 s longer.",
+     "cost": 5,
      "req": "tw-chill",
      "effect": {
       "k": "hold",
-      "v": 0.4
+      "v": 0.5
      }
     },
     {
      "id": "tw-mason",
      "name": "Masonry",
-     "desc": "Every tower costs 10% less.",
-     "cost": 4,
-     "req": "tw-bolts",
+     "desc": "Every tower build and upgrade costs 10% less.",
+     "cost": 6,
+     "req": "tw-arcs",
      "effect": {
       "k": "costMul",
       "v": -0.1
@@ -864,9 +959,9 @@
      "id": "tw-arch",
      "name": "Grand architect",
      "desc": "Capstone: every tower deals 18% more damage.",
-     "cost": 8,
+     "cost": 10,
      "req": "tw-mason",
-     "after": 19,
+     "after": 14,
      "excl": "tw-reach",
      "effect": {
       "k": "dmgAll",
@@ -877,9 +972,9 @@
      "id": "tw-reach",
      "name": "High sightlines",
      "desc": "Capstone: every tower gains 14% range.",
-     "cost": 8,
+     "cost": 10,
      "req": "tw-roots",
-     "after": 19,
+     "after": 14,
      "excl": "tw-arch",
      "effect": {
       "k": "rangeAll",
@@ -891,14 +986,14 @@
   {
    "id": "armory",
    "name": "Armory",
-   "blurb": "Rounds you load into towers.",
-   "after": 7,
+   "blurb": "Elemental rounds loaded into towers and shared with Wren.",
+   "after": 4,
    "nodes": [
     {
      "id": "ar-ember",
      "name": "Ember rounds",
-     "desc": "Load a tower with ember rounds: hits burn for two seconds.",
-     "cost": 2,
+     "desc": "Load a tower with ember rounds: hits burn for 2 s.",
+     "cost": 3,
      "effect": {
       "k": "round",
       "round": "ember"
@@ -908,7 +1003,7 @@
      "id": "ar-frost",
      "name": "Frost rounds",
      "desc": "Load a tower with frost rounds: hits chill the foe.",
-     "cost": 2,
+     "cost": 3,
      "effect": {
       "k": "round",
       "round": "frost"
@@ -917,8 +1012,8 @@
     {
      "id": "ar-storm",
      "name": "Storm rounds",
-     "desc": "Load a tower with storm rounds: hits can jump to a second foe.",
-     "cost": 2,
+     "desc": "Load a tower with storm rounds: hits can chain to a nearby foe.",
+     "cost": 3,
      "effect": {
       "k": "round",
       "round": "storm"
@@ -928,7 +1023,7 @@
      "id": "ar-shatter",
      "name": "Shatter",
      "desc": "Chilled foes take 50% more fire damage.",
-     "cost": 3,
+     "cost": 4,
      "req": "ar-frost",
      "effect": {
       "k": "shatter"
@@ -937,31 +1032,30 @@
     {
      "id": "ar-overload",
      "name": "Overload",
-     "desc": "Lightning on a held or frozen foe jumps two more times (Rail deals +35% damage).",
-     "cost": 3,
+     "desc": "Lightning on rooted or frozen foes jumps +2 times (Rail +35%).",
+     "cost": 4,
      "req": "ar-storm",
      "effect": {
       "k": "overload"
      }
     },
     {
-     "id": "ar-quick",
-     "name": "Quick load",
-     "desc": "Every tower attacks 8% faster.",
-     "cost": 5,
+     "id": "ar-inherit",
+     "name": "Borrowed edge",
+     "desc": "Cross-tree: Wren inherits the loaded round of the nearest loaded tower.",
+     "cost": 6,
      "req": "ar-ember",
      "effect": {
-      "k": "rateAll",
-      "v": 0.08
+      "k": "roundInherit"
      }
     },
     {
      "id": "ar-pierce",
      "name": "Breach cores",
      "desc": "Capstone: every tower ignores 50% of foe armor.",
-     "cost": 8,
-     "req": "ar-quick",
-     "after": 19,
+     "cost": 10,
+     "req": "ar-inherit",
+     "after": 14,
      "excl": "ar-tempest",
      "effect": {
       "k": "armorPierce",
@@ -971,10 +1065,10 @@
     {
      "id": "ar-tempest",
      "name": "Chain conductor",
-     "desc": "Capstone: Storm lightning jumps to two more foes.",
-     "cost": 8,
+     "desc": "Capstone: Storm lightning jumps to +2 more foes and all towers attack 8% faster.",
+     "cost": 10,
      "req": "ar-overload",
-     "after": 19,
+     "after": 14,
      "excl": "ar-pierce",
      "effect": {
       "k": "jumps",
@@ -986,34 +1080,34 @@
   {
    "id": "wren",
    "name": "Wren",
-   "blurb": "Talents for the hero.",
-   "after": 2,
+   "blurb": "Spear craft, field control and Keep synergies.",
+   "after": 1,
    "nodes": [
     {
      "id": "wr-spear",
      "name": "Spearwork",
-     "desc": "Spear Sweep deals 25% more damage.",
-     "cost": 2,
+     "desc": "Spear Sweep deals 30% more damage.",
+     "cost": 3,
      "effect": {
       "k": "sweep",
-      "v": 0.25
+      "v": 0.3
      }
     },
     {
      "id": "wr-hunt",
      "name": "Bounty hunter",
-     "desc": "Last hits give 25% more gold on top.",
-     "cost": 2,
+     "desc": "Last hits pay 30% extra bonus gold.",
+     "cost": 3,
      "effect": {
       "k": "lastHit",
-      "v": 0.25
+      "v": 0.3
      }
     },
     {
      "id": "wr-snare",
      "name": "Long snare",
      "desc": "Lantern Snare holds 0.5 s longer.",
-     "cost": 3,
+     "cost": 4,
      "req": "wr-spear",
      "effect": {
       "k": "snare",
@@ -1023,8 +1117,8 @@
     {
      "id": "wr-attune",
      "name": "Bright attune",
-     "desc": "Attune gives 10% more attack speed.",
-     "cost": 3,
+     "desc": "Attune gives towers +10% faster attack speed.",
+     "cost": 4,
      "req": "wr-hunt",
      "effect": {
       "k": "attune",
@@ -1034,8 +1128,8 @@
     {
      "id": "wr-veteran",
      "name": "Veteran",
-     "desc": "Wren starts every stage at level 3.",
-     "cost": 4,
+     "desc": "Wren starts every battle at level 3.",
+     "cost": 6,
      "req": "wr-snare",
      "effect": {
       "k": "heroLevel",
@@ -1043,23 +1137,22 @@
      }
     },
     {
-     "id": "wr-dawn",
-     "name": "Long dawn",
-     "desc": "Sunrise lasts 2 s longer.",
-     "cost": 3,
+     "id": "wr-shatter",
+     "name": "Kindled steel",
+     "desc": "Cross-tree: Spear Sweep and Lantern Burn shatter chilled foes (+50%).",
+     "cost": 5,
      "req": "wr-attune",
      "effect": {
-      "k": "sunrise",
-      "v": 2
+      "k": "burnShatter"
      }
     },
     {
      "id": "wr-champion",
      "name": "Dawn champion",
-     "desc": "Capstone: Wren starts two levels higher.",
-     "cost": 8,
+     "desc": "Capstone: Wren starts every stage 2 levels higher.",
+     "cost": 10,
      "req": "wr-veteran",
-     "after": 19,
+     "after": 14,
      "excl": "wr-beacon",
      "effect": {
       "k": "heroLevel",
@@ -1069,10 +1162,10 @@
     {
      "id": "wr-beacon",
      "name": "Keeper's vow",
-     "desc": "Capstone: Attune gives nearby towers 18% more attack speed.",
-     "cost": 8,
-     "req": "wr-dawn",
-     "after": 19,
+     "desc": "Capstone: Attune gives +18% attack speed and Sunrise lasts +2 s.",
+     "cost": 10,
+     "req": "wr-shatter",
+     "after": 14,
      "excl": "wr-champion",
      "effect": {
       "k": "attune",
@@ -1084,8 +1177,8 @@
   {
    "id": "bulwark",
    "name": "Bulwark",
-   "blurb": "The Keep and its purse.",
-   "after": 12,
+   "blurb": "Keep defenses, tactical field timing and recovery.",
+   "after": 7,
    "nodes": [
     {
      "id": "bw-walls",
@@ -1109,9 +1202,9 @@
     },
     {
      "id": "bw-salvage",
-     "name": "Salvage",
+     "name": "Field salvage",
      "desc": "Selling a tower returns 85% instead of 70%.",
-     "cost": 2,
+     "cost": 4,
      "req": "bw-chest",
      "effect": {
       "k": "sell",
@@ -1121,8 +1214,8 @@
     {
      "id": "bw-early",
      "name": "Early bell",
-     "desc": "Calling a wave early pays 50% more.",
-     "cost": 1,
+     "desc": "Calling a wave early pays 50% more gold.",
+     "cost": 3,
      "req": "bw-walls",
      "effect": {
       "k": "early",
@@ -1132,44 +1225,42 @@
     {
      "id": "bw-gate",
      "name": "Iron gate",
-     "desc": "The first foe to reach the gate each wave costs no lives.",
-     "cost": 4,
+     "desc": "The first non-boss leak each wave costs no lives.",
+     "cost": 5,
      "req": "bw-early",
      "effect": {
       "k": "ironGate"
      }
     },
     {
-     "id": "bw-interest",
-     "name": "Interest",
-     "desc": "Earn 5% of banked gold after each wave, up to 40.",
-     "cost": 4,
+     "id": "bw-rune",
+     "name": "Runic echo",
+     "desc": "Cross-tree: Claiming a Rune grants +3 s Attune surge everywhere.",
+     "cost": 5,
      "req": "bw-salvage",
      "effect": {
-      "k": "interest",
-      "v": 0.05
+      "k": "runeAttune"
      }
     },
     {
      "id": "bw-citadel",
-     "name": "Living bastion",
-     "desc": "Capstone: +10 more lives every stage.",
-     "cost": 8,
+     "name": "Bastion bell",
+     "desc": "Capstone: Keep Gate emits a shockwave pushing/stunning nearby foes on first leak + +8 lives.",
+     "cost": 10,
      "req": "bw-gate",
-     "after": 19,
+     "after": 14,
      "excl": "bw-mint",
      "effect": {
-      "k": "lives",
-      "v": 10
+      "k": "gateShock"
      }
     },
     {
      "id": "bw-mint",
-     "name": "Royal mint",
+     "name": "Royal coffers",
      "desc": "Capstone: +180 starting gold every stage.",
-     "cost": 8,
-     "req": "bw-interest",
-     "after": 19,
+     "cost": 10,
+     "req": "bw-rune",
+     "after": 14,
      "excl": "bw-citadel",
      "effect": {
       "k": "gold",
@@ -1206,7 +1297,7 @@
    "id": 1,
    "name": "Lantern Road",
    "region": 0,
-   "twist": "One road, one gate. Learn to build, upgrade and send Wren where she is needed.",
+   "twist": "Drag Wren onto the road to hold the crossing. Rebuild the ruined bend plot with gold or Wren field work.",
    "newFoe": "Grub",
    "unlocks": "Frost bell & Wren's Lantern Snare (W)",
    "startGold": 240,
@@ -1223,73 +1314,74 @@
      "ctrl": [
       [
        -40,
-       300
+       185
       ],
       [
-       140,
-       300
+       200,
+       195
       ],
       [
        300,
-       470
+       330
       ],
       [
-       470,
-       470
+       210,
+       515
       ],
       [
-       570,
-       260
+       340,
+       595
       ],
       [
-       700,
-       250
+       485,
+       455
       ],
       [
-       800,
-       260
+       630,
+       355
       ],
       [
-       900,
-       420
+       810,
+       245
       ],
       [
-       1060,
-       450
+       1010,
+       235
       ],
       [
-       1222,
-       440
+       1055,
+       415
+      ],
+      [
+       1150,
+       565
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 70,
+     "id": "brook",
+     "w": 64,
      "ctrl": [
       [
-       702,
+       860,
        -40
       ],
       [
-       692,
-       120
+       760,
+       140
       ],
       [
-       706,
-       250
+       630,
+       355
       ],
       [
-       684,
-       420
+       500,
+       560
       ],
       [
-       716,
-       580
-      ],
-      [
-       700,
+       410,
        770
       ]
      ]
@@ -1298,75 +1390,97 @@
    "plots": [
     {
      "at": [
-      190,
+      140,
+      290
+     ]
+    },
+    {
+     "at": [
+      140,
       440
      ]
     },
     {
      "at": [
-      380,
-      370
+      335,
+      455
+     ],
+     "rubble": {
+      "kind": "ruin",
+      "cost": 30,
+      "holdSec": 3
+     }
+    },
+    {
+     "at": [
+      410,
+      295
      ]
     },
     {
      "at": [
-      400,
-      570
+      635,
+      495
      ]
     },
     {
      "at": [
-      574,
-      394
+      760,
+      395
      ]
     },
     {
      "at": [
-      600,
-      150
-     ]
-    },
-    {
-     "at": [
-      806,
-      386
+      925,
+      365
      ]
     },
     {
      "at": [
       960,
-      330
+      495
      ]
     },
     {
      "at": [
-      980,
-      550
+      1175,
+      325
      ]
     },
     {
      "at": [
-      1120,
-      340
+      895,
+      130
      ]
     }
    ],
    "bridges": [
     [
-     703,
-     253,
-     0.02,
-     60
+     630,
+     355,
+     -0.55,
+     64
     ]
    ],
    "rune": [
-    480,
-    640
+    755,
+    540
    ],
    "heroStart": [
-    1060,
-    380
+    1030,
+    490
    ],
+   "alt": {
+    "name": "Uphill March",
+    "twist": "The Hollow marches backward from the Keep end toward the western woods.",
+    "reverseRoads": [
+     "main"
+    ],
+    "heroStart": [
+     260,
+     260
+    ]
+   },
    "waves": [
     {
      "hint": "Grubs crawl in",
@@ -1391,70 +1505,46 @@
      ]
     },
     {
-     "hint": "Skitters, fast and frail",
+     "hint": "Two waves close behind",
      "groups": [
       {
        "kind": "grub",
-       "n": 8,
-       "gap": 0.9,
-       "delay": 0
-      },
-      {
-       "kind": "skitter",
-       "n": 6,
-       "gap": 0.5,
-       "delay": 6
-      }
-     ]
-    },
-    {
-     "hint": "A skitter swarm",
-     "groups": [
-      {
-       "kind": "skitter",
-       "n": 16,
-       "gap": 0.55,
+       "n": 14,
+       "gap": 0.85,
        "delay": 0
       }
      ]
     },
     {
-     "hint": "The road fills up",
+     "hint": "A thicker pack",
      "groups": [
-      {
-       "kind": "grub",
-       "n": 16,
-       "gap": 0.7,
-       "delay": 0
-      },
-      {
-       "kind": "skitter",
-       "n": 10,
-       "gap": 0.5,
-       "delay": 8
-      }
-     ]
-    },
-    {
-     "hint": "A Shellback leads them",
-     "groups": [
-      {
-       "kind": "shell",
-       "n": 1,
-       "gap": 2.2,
-       "delay": 0
-      },
       {
        "kind": "grub",
        "n": 18,
-       "gap": 0.6,
-       "delay": 3
-      },
+       "gap": 0.7,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Heavy trail",
+     "groups": [
       {
-       "kind": "skitter",
-       "n": 12,
-       "gap": 0.5,
-       "delay": 10
+       "kind": "grub",
+       "n": 22,
+       "gap": 0.65,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Bulwark march",
+     "groups": [
+      {
+       "kind": "grub",
+       "n": 26,
+       "gap": 0.55,
+       "delay": 0
       }
      ]
     }
@@ -1464,7 +1554,7 @@
    "id": 2,
    "name": "Fork in the Moss",
    "region": 0,
-   "twist": "The road splits around a pond. Foes take the side with fewer towers.",
+   "twist": "The roads cross in a central pinwheel. At Wave 5 the moss pond drains and a third north rift breaches.",
    "newFoe": "Skitter",
    "unlocks": "Root garden & Wren talent tree",
    "startGold": 280,
@@ -1482,31 +1572,43 @@
      "ctrl": [
       [
        -40,
-       370
-      ],
-      [
-       200,
-       370
-      ],
-      [
-       330,
        220
       ],
       [
-       600,
-       170
+       210,
+       220
       ],
       [
-       840,
-       240
+       420,
+       125
       ],
       [
-       960,
-       370
+       740,
+       140
       ],
       [
-       1222,
-       380
+       860,
+       270
+      ],
+      [
+       660,
+       385
+      ],
+      [
+       520,
+       520
+      ],
+      [
+       760,
+       610
+      ],
+      [
+       1050,
+       560
+      ],
+      [
+       1165,
+       430
       ]
      ]
     },
@@ -1517,54 +1619,106 @@
      "ctrl": [
       [
        -40,
-       370
+       220
+      ],
+      [
+       210,
+       220
       ],
       [
        200,
-       370
+       440
       ],
       [
-       330,
-       540
+       350,
+       560
       ],
       [
-       620,
-       590
+       540,
+       450
       ],
       [
-       850,
-       500
+       660,
+       385
       ],
       [
-       960,
-       370
+       880,
+       360
       ],
       [
-       1222,
-       380
+       1080,
+       390
+      ],
+      [
+       1165,
+       430
+      ]
+     ]
+    },
+    {
+     "id": "bog",
+     "spawn": "n",
+     "w": 42,
+     "openAtWave": 5,
+     "ctrl": [
+      [
+       640,
+       -40
+      ],
+      [
+       640,
+       185
+      ],
+      [
+       660,
+       385
+      ],
+      [
+       880,
+       360
+      ],
+      [
+       1080,
+       390
+      ],
+      [
+       1165,
+       430
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 76,
+     "id": "pond",
+     "w": 56,
+     "drainAtWave": 5,
      "ctrl": [
       [
-       440,
-       380
+       430,
+       305
       ],
       [
-       560,
-       370
+       535,
+       300
       ],
       [
-       690,
-       390
+       630,
+       290
+      ]
+     ]
+    },
+    {
+     "id": "pool_e",
+     "w": 52,
+     "ctrl": [
+      [
+       830,
+       495
       ],
       [
-       760,
-       410
+       930,
+       485
       ]
      ]
     }
@@ -1572,100 +1726,153 @@
    "plots": [
     {
      "at": [
-      150,
+      110,
+      330
+     ]
+    },
+    {
+     "at": [
+      320,
+      430
+     ]
+    },
+    {
+     "at": [
+      295,
+      295
+     ]
+    },
+    {
+     "at": [
+      560,
+      215
+     ]
+    },
+    {
+     "at": [
+      535,
+      365
+     ]
+    },
+    {
+     "at": [
+      715,
       480
      ]
     },
     {
      "at": [
-      300,
-      380
+      735,
+      225
      ]
     },
     {
      "at": [
-      470,
-      270
+      445,
+      610
      ]
     },
     {
      "at": [
-      470,
-      490
-     ]
-    },
-    {
-     "at": [
-      640,
-      270
-     ]
-    },
-    {
-     "at": [
-      660,
-      490
-     ]
-    },
-    {
-     "at": [
-      760,
-      110
-     ]
-    },
-    {
-     "at": [
-      760,
-      660
-     ]
-    },
-    {
-     "at": [
-      868,
-      382
-     ]
-    },
-    {
-     "at": [
-      1080,
-      290
-     ]
-    },
-    {
-     "at": [
-      1080,
+      1045,
       480
      ]
+    },
+    {
+     "at": [
+      885,
+      130
+     ]
+    },
+    {
+     "at": [
+      960,
+      265
+     ]
+    },
+    {
+     "at": [
+      925,
+      655
+     ]
+    },
+    {
+     "at": [
+      510,
+      285
+     ],
+     "openAtWave": 5
     }
    ],
    "bridges": [],
    "rune": [
-    600,
-    300
+    435,
+    385
    ],
    "heroStart": [
-    1040,
-    380
+    980,
+    415
    ],
+   "terraforms": [
+    {
+     "atWave": 5,
+     "kind": "drain",
+     "label": "The moss pond drains! A northern breach tears open!",
+     "waters": [
+      "pond"
+     ],
+     "openRoads": [
+      "bog"
+     ],
+     "openPlots": [
+      12
+     ]
+    }
+   ],
+   "alt": {
+    "name": "Dusk on the Bog",
+    "twist": "Night falls on even waves, the north breach awakens on Wave 2, and inner bends start ruined.",
+    "night": true,
+    "openAtWave": {
+     "bog": 2
+    },
+    "rubblePlots": [
+     {
+      "plot": 4,
+      "kind": "ruin",
+      "cost": 45,
+      "holdSec": 4
+     },
+     {
+      "plot": 5,
+      "kind": "ruin",
+      "cost": 45,
+      "holdSec": 4
+     }
+    ]
+   },
    "waves": [
     {
-     "hint": "Grubs test both roads",
+     "hint": "Grubs test the X-crossing",
      "groups": [
       {
        "kind": "grub",
        "n": 10,
        "gap": 1.1,
-       "delay": 0
+       "delay": 0,
+       "spawn": "w"
       }
      ]
     },
     {
-     "hint": "Skitters split up",
+     "hint": "Skitters sprint the curves",
      "groups": [
       {
        "kind": "skitter",
        "n": 12,
        "gap": 0.7,
-       "delay": 0
+       "delay": 0,
+       "spawn": "w"
       }
      ]
     },
@@ -1676,92 +1883,110 @@
        "kind": "grub",
        "n": 12,
        "gap": 0.9,
-       "delay": 0
+       "delay": 0,
+       "spawn": "w"
       },
       {
        "kind": "skitter",
        "n": 8,
        "gap": 0.6,
-       "delay": 5
+       "delay": 5,
+       "spawn": "w"
       }
      ]
     },
     {
-     "hint": "They find your weak side",
+     "hint": "Twin lane pressure",
      "groups": [
       {
        "kind": "skitter",
        "n": 20,
        "gap": 0.45,
-       "delay": 0
+       "delay": 0,
+       "spawn": "w"
       }
      ]
     },
     {
-     "hint": "Heavy grubs",
+     "hint": "The pond drains: north breach!",
      "groups": [
       {
        "kind": "grub",
-       "n": 24,
-       "gap": 0.55,
-       "delay": 0
-      }
-     ]
-    },
-    {
-     "hint": "Shellbacks",
-     "groups": [
-      {
-       "kind": "shell",
-       "n": 3,
-       "gap": 3,
-       "delay": 0
+       "n": 16,
+       "gap": 0.6,
+       "delay": 0,
+       "spawn": "w"
       },
       {
        "kind": "grub",
-       "n": 12,
+       "n": 10,
        "gap": 0.8,
-       "delay": 4
+       "delay": 0,
+       "spawn": "n"
       }
      ]
     },
     {
-     "hint": "Swarm",
+     "hint": "Fast packs from north and west",
      "groups": [
       {
        "kind": "skitter",
-       "n": 24,
-       "gap": 0.35,
-       "delay": 0
+       "n": 14,
+       "gap": 0.5,
+       "delay": 0,
+       "spawn": "n"
       },
       {
        "kind": "grub",
        "n": 14,
        "gap": 0.7,
-       "delay": 6
+       "delay": 4,
+       "spawn": "w"
       }
      ]
     },
     {
-     "hint": "Everything at once",
+     "hint": "Swarm across the pinwheel",
      "groups": [
       {
-       "kind": "shell",
-       "n": 4,
-       "gap": 2.4,
-       "delay": 0
+       "kind": "skitter",
+       "n": 22,
+       "gap": 0.35,
+       "delay": 0,
+       "spawn": "w"
       },
+      {
+       "kind": "skitter",
+       "n": 12,
+       "gap": 0.5,
+       "delay": 4,
+       "spawn": "n"
+      }
+     ]
+    },
+    {
+     "hint": "Everything converges",
+     "groups": [
       {
        "kind": "skitter",
        "n": 20,
        "gap": 0.4,
-       "delay": 3
+       "delay": 0,
+       "spawn": "w"
       },
       {
        "kind": "grub",
-       "n": 20,
+       "n": 18,
        "gap": 0.5,
-       "delay": 8
+       "delay": 4,
+       "spawn": "n"
+      },
+      {
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 8,
+       "spawn": "w"
       }
      ]
     }
@@ -1771,7 +1996,7 @@
    "id": 3,
    "name": "Switchback Hill",
    "region": 0,
-   "twist": "The road winds down the hill three times. A tower in the middle covers two passes.",
+   "twist": "The road plunges north-to-south down terraced cliffs. Clear spine boulders or brace for the Wave 5 scree chute.",
    "newFoe": "Shellback",
    "unlocks": "Beacon tower",
    "startGold": 300,
@@ -1789,202 +2014,243 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
+       360,
+       -40
+      ],
+      [
+       360,
+       110
+      ],
+      [
+       540,
        130
       ],
       [
-       300,
-       128
+       890,
+       145
       ],
       [
-       700,
-       132
+       960,
+       240
       ],
       [
-       1000,
-       150
-      ],
-      [
-       1110,
-       230
-      ],
-      [
-       1050,
+       870,
        330
       ],
       [
-       880,
-       345
-      ],
-      [
        520,
-       340
+       335
       ],
       [
-       260,
+       330,
        360
       ],
       [
-       190,
-       450
+       310,
+       465
       ],
       [
-       270,
-       545
+       460,
+       530
       ],
       [
-       560,
-       570
+       790,
+       535
       ],
       [
-       900,
-       575
+       860,
+       610
       ],
       [
-       1222,
-       560
+       660,
+       640
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 34,
+     "w": 44,
      "ctrl": [
       [
-       1300,
-       300
+       150,
+       -40
       ],
       [
-       1200,
-       380
+       155,
+       290
       ],
       [
-       1190,
-       470
+       160,
+       770
+      ]
+     ]
+    },
+    {
+     "w": 44,
+     "ctrl": [
+      [
+       1120,
+       -40
       ],
       [
-       1300,
-       520
+       1125,
+       260
+      ],
+      [
+       1110,
+       770
       ]
      ]
     }
    ],
    "high": [
     [
-     0,
+     240,
      0
     ],
     [
-     1280,
+     1040,
      0
     ],
     [
-     1280,
-     210
+     1040,
+     270
     ],
     [
-     1160,
-     240
+     800,
+     285
     ],
     [
-     1000,
-     230
+     460,
+     285
     ],
     [
-     700,
-     220
+     240,
+     270
     ],
     [
-     300,
-     225
-    ],
-    [
-     0,
-     230
-    ],
-    [
-     0,
+     240,
      0
     ]
    ],
    "plots": [
     {
      "at": [
-      200,
-      240
+      275,
+      130
      ]
     },
     {
      "at": [
-      480,
-      236
+      470,
+      232
      ]
     },
     {
      "at": [
-      780,
-      240
+      645,
+      232
      ]
     },
     {
      "at": [
-      1170,
-      120
+      820,
+      232
+     ],
+     "rubble": {
+      "kind": "boulder",
+      "cost": 50,
+      "holdSec": 4
+     }
+    },
+    {
+     "at": [
+      1005,
+      135
      ]
     },
     {
      "at": [
-      380,
-      450
+      425,
+      435
      ]
     },
     {
      "at": [
-      620,
-      455
+      600,
+      435
+     ],
+     "rubble": {
+      "kind": "boulder",
+      "cost": 50,
+      "holdSec": 4
+     }
+    },
+    {
+     "at": [
+      775,
+      435
      ]
     },
     {
      "at": [
-      860,
-      455
+      960,
+      420
      ]
     },
     {
      "at": [
-      1100,
-      450
+      245,
+      515
      ]
     },
     {
      "at": [
-      100,
-      350
+      505,
+      625
      ]
     },
     {
      "at": [
-      700,
-      660
-     ]
-    },
-    {
-     "at": [
-      1030,
-      660
+      950,
+      610
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    600,
-    455
+    965,
+    315
    ],
    "heroStart": [
-    1000,
-    470
+    640,
+    520
    ],
+   "portals": [
+    {
+     "id": "scree_chute",
+     "kind": "chute",
+     "fromRoad": "main",
+     "fromAt": 0.3,
+     "toRoad": "main",
+     "toAt": 0.72,
+     "openAtWave": 5,
+     "everyNth": 3,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Uphill Climb",
+    "twist": "Foes climb upward from the southern basin toward the cliff summit.",
+    "reverseRoads": [
+     "main"
+    ],
+    "heroStart": [
+     640,
+     260
+    ]
+   },
    "waves": [
     {
      "hint": "Grubs down the hill",
@@ -2037,7 +2303,7 @@
      ]
     },
     {
-     "hint": "Shells and swarms",
+     "hint": "Scree chute opens!",
      "groups": [
       {
        "kind": "shell",
@@ -2110,7 +2376,7 @@
    "id": 4,
    "name": "Firefly Night",
    "region": 0,
-   "twist": "Night falls on even waves. Shades slip past anything that cannot see them, so light the road.",
+   "twist": "Opposite pincers meet in the dark. Unlit shrines hide plots until cleared, and an eastern breach wakes at Wave 5.",
    "newFoe": "Shade",
    "unlocks": "Swamp boss stage",
    "startGold": 340,
@@ -2130,40 +2396,32 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
-       160
+       1150,
+       -40
       ],
       [
-       220,
-       170
+       1120,
+       130
+      ],
+      [
+       920,
+       165
+      ],
+      [
+       760,
+       260
+      ],
+      [
+       640,
+       350
       ],
       [
        420,
-       260
+       315
       ],
       [
-       560,
-       360
-      ],
-      [
-       700,
-       360
-      ],
-      [
-       820,
-       280
-      ],
-      [
-       980,
-       260
-      ],
-      [
-       1100,
-       360
-      ],
-      [
-       1222,
-       380
+       145,
+       230
       ]
      ]
     },
@@ -2174,62 +2432,82 @@
      "ctrl": [
       [
        -40,
-       580
+       600
       ],
       [
-       200,
-       560
+       280,
+       605
       ],
       [
-       400,
-       470
+       580,
+       575
       ],
       [
-       560,
-       360
+       760,
+       495
       ],
       [
-       700,
-       360
+       640,
+       350
       ],
       [
-       820,
-       280
+       420,
+       315
+      ],
+      [
+       145,
+       230
+      ]
+     ]
+    },
+    {
+     "id": "east_breach",
+     "spawn": "s",
+     "w": 42,
+     "openAtWave": 5,
+     "ctrl": [
+      [
+       1320,
+       460
       ],
       [
        980,
-       260
+       420
       ],
       [
-       1100,
-       360
+       760,
+       495
       ],
       [
-       1222,
-       380
+       640,
+       350
+      ],
+      [
+       420,
+       315
+      ],
+      [
+       145,
+       230
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 60,
+     "w": 54,
      "ctrl": [
       [
-       690,
-       600
+       980,
+       520
       ],
       [
-       800,
-       612
-      ],
-      [
-       900,
+       1060,
        580
       ],
       [
-       960,
-       540
+       1140,
+       630
       ]
      ]
     }
@@ -2237,95 +2515,120 @@
    "plots": [
     {
      "at": [
-      160,
+      250,
+      145
+     ]
+    },
+    {
+     "at": [
+      255,
+      365
+     ]
+    },
+    {
+     "at": [
+      480,
+      215
+     ]
+    },
+    {
+     "at": [
+      510,
+      430
+     ]
+    },
+    {
+     "at": [
+      645,
+      225
+     ],
+     "rubble": {
+      "kind": "ruin",
+      "cost": 45,
+      "holdSec": 4
+     }
+    },
+    {
+     "at": [
+      815,
+      130
+     ]
+    },
+    {
+     "at": [
+      860,
+      350
+     ]
+    },
+    {
+     "at": [
+      980,
       260
      ]
     },
     {
      "at": [
-      160,
+      135,
+      495
+     ]
+    },
+    {
+     "at": [
+      435,
+      655
+     ]
+    },
+    {
+     "at": [
+      860,
+      575
+     ]
+    },
+    {
+     "at": [
+      630,
       480
-     ]
-    },
-    {
-     "at": [
-      300,
-      370
-     ]
-    },
-    {
-     "at": [
-      440,
-      370
-     ]
-    },
-    {
-     "at": [
-      640,
-      250
-     ]
-    },
-    {
-     "at": [
-      640,
-      470
-     ]
-    },
-    {
-     "at": [
-      820,
-      400
-     ]
-    },
-    {
-     "at": [
-      900,
-      160
-     ]
-    },
-    {
-     "at": [
-      1000,
-      380
-     ]
-    },
-    {
-     "at": [
-      1130,
-      250
-     ]
-    },
-    {
-     "at": [
-      1120,
-      490
-     ]
-    },
-    {
-     "at": [
-      380,
-      110
-     ]
-    },
-    {
-     "at": [
-      380,
-      630
-     ]
+     ],
+     "rubble": {
+      "kind": "ruin",
+      "cost": 45,
+      "holdSec": 4
+     }
     }
    ],
    "bridges": [],
    "rune": [
-    560,
-    600
+    980,
+    385
    ],
    "heroStart": [
-    960,
-    400
+    380,
+    310
    ],
+   "alt": {
+    "name": "Long Dusk",
+    "twist": "The eastern breach opens on Wave 2 and fallen shrines bury two more plots.",
+    "openAtWave": {
+     "east_breach": 2
+    },
+    "rubblePlots": [
+     {
+      "plot": 3,
+      "kind": "ruin",
+      "cost": 50,
+      "holdSec": 4
+     },
+     {
+      "plot": 6,
+      "kind": "ruin",
+      "cost": 50,
+      "holdSec": 4
+     }
+    ]
+   },
    "waves": [
     {
-     "hint": "Two rifts open",
+     "hint": "Two opposite rifts",
      "groups": [
       {
        "kind": "grub",
@@ -2344,7 +2647,7 @@
      ]
     },
     {
-     "hint": "Night: Shades walk",
+     "hint": "Night: Shades slip in",
      "groups": [
       {
        "kind": "shade",
@@ -2363,7 +2666,7 @@
      ]
     },
     {
-     "hint": "Shellbacks in the morning",
+     "hint": "Shellbacks at dawn",
      "groups": [
       {
        "kind": "shell",
@@ -2389,7 +2692,7 @@
      ]
     },
     {
-     "hint": "Night: a Shade pack",
+     "hint": "Night: Shade pack",
      "groups": [
       {
        "kind": "shade",
@@ -2408,7 +2711,7 @@
      ]
     },
     {
-     "hint": "Morning rush",
+     "hint": "Eastern reeds tear open",
      "groups": [
       {
        "kind": "skitter",
@@ -2510,7 +2813,7 @@
    "id": 5,
    "name": "The Mire King",
    "region": 0,
-   "twist": "Boss. The road spirals into the swamp and the swamp swallows a plot every other wave.",
+   "twist": "Boss. The swamp swallows outer plots while draining its moat at Wave 5; when the King wakes, an inner causeway opens.",
    "newFoe": "The Mire King",
    "unlocks": "Storm pylon & Relic: Mire crown (+10% tower damage)",
    "startGold": 420,
@@ -2529,116 +2832,125 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
-       620
+       1320,
+       510
       ],
       [
-       200,
-       640
+       1130,
+       515
       ],
       [
-       600,
-       655
+       1120,
+       220
       ],
       [
-       1000,
-       640
-      ],
-      [
-       1170,
-       520
-      ],
-      [
-       1190,
-       300
-      ],
-      [
-       1090,
-       140
-      ],
-      [
-       800,
-       92
-      ],
-      [
-       400,
+       920,
        100
       ],
       [
-       210,
-       200
+       500,
+       100
       ],
       [
        190,
-       380
+       195
       ],
       [
-       300,
-       480
+       150,
+       415
       ],
       [
-       600,
-       512
+       270,
+       560
       ],
       [
-       880,
-       482
+       640,
+       570
       ],
       [
-       980,
-       370
+       925,
+       515
       ],
       [
-       890,
-       262
+       910,
+       355
       ],
       [
-       700,
-       250
+       760,
+       290
       ],
       [
-       600,
-       330
+       640,
+       350
+      ]
+     ]
+    },
+    {
+     "id": "inner",
+     "spawn": "w",
+     "w": 40,
+     "openOnPhase": 1,
+     "ctrl": [
+      [
+       1320,
+       510
       ],
       [
-       700,
-       380
+       1130,
+       515
+      ],
+      [
+       1120,
+       220
+      ],
+      [
+       910,
+       355
+      ],
+      [
+       760,
+       290
+      ],
+      [
+       640,
+       350
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 40,
+     "id": "moat",
+     "w": 58,
+     "drainAtWave": 5,
      "ctrl": [
       [
-       420,
+       560,
+       240
+      ],
+      [
+       405,
+       275
+      ],
+      [
+       375,
+       395
+      ],
+      [
+       485,
+       500
+      ],
+      [
+       735,
+       495
+      ],
+      [
+       820,
        380
       ],
       [
-       480,
-       370
-      ],
-      [
-       520,
-       410
-      ]
-     ]
-    },
-    {
-     "w": 36,
-     "ctrl": [
-      [
-       1040,
-       280
-      ],
-      [
-       1080,
-       360
-      ],
-      [
-       1060,
-       420
+       800,
+       255
       ]
      ]
     }
@@ -2646,89 +2958,133 @@
    "plots": [
     {
      "at": [
-      400,
-      575
+      540,
+      385
      ]
     },
     {
      "at": [
-      800,
-      578
-     ]
-    },
-    {
-     "at": [
-      1068,
-      554
-     ]
-    },
-    {
-     "at": [
-      1126,
-      355
+      665,
+      415
      ],
      "sinkAt": 8
     },
     {
      "at": [
-      600,
-      175
+      375,
+      195
      ]
     },
     {
      "at": [
-      900,
-      178
+      585,
+      168
      ]
     },
     {
      "at": [
-      300,
-      300
-     ],
-     "sinkAt": 4
+      795,
+      180
+     ]
     },
     {
      "at": [
-      423,
-      428
+      1015,
+      360
      ],
      "sinkAt": 6
     },
     {
      "at": [
-      780,
-      400
+      1015,
+      595
      ]
     },
     {
      "at": [
-      520,
-      250
+      640,
+      645
      ]
     },
     {
      "at": [
-      80,
-      480
-     ]
-    },
-    {
-     "at": [
-      1230,
+      435,
       640
      ]
+    },
+    {
+     "at": [
+      245,
+      370
+     ],
+     "sinkAt": 4
+    },
+    {
+     "at": [
+      85,
+      290
+     ]
+    },
+    {
+     "at": [
+      1200,
+      390
+     ]
+    },
+    {
+     "at": [
+      1210,
+      600
+     ]
+    },
+    {
+     "at": [
+      470,
+      470
+     ],
+     "openAtWave": 5
     }
    ],
    "bridges": [],
    "rune": [
-    340,
-    180
+    530,
+    305
    ],
    "heroStart": [
-    800,
-    420
+    740,
+    355
    ],
+   "terraforms": [
+    {
+     "atWave": 5,
+     "kind": "drain",
+     "label": "The crescent moat drains, uncovering a dry island mound!",
+     "waters": [
+      "moat"
+     ],
+     "openPlots": [
+      13
+     ]
+    },
+    {
+     "atPhase": 1,
+     "kind": "quakelow",
+     "label": "The Mire King smashes an inner causeway straight to the Keep!",
+     "openRoads": [
+      "inner"
+     ]
+    }
+   ],
+   "alt": {
+    "name": "Sunken Crown",
+    "twist": "Night falls on even waves and sinkholes swallow two more plots at Wave 5.",
+    "hpMul": 1.2,
+    "night": true,
+    "sinkPlots": [
+     0,
+     3
+    ]
+   },
    "waves": [
     {
      "hint": "The swamp stirs",
@@ -2787,7 +3143,7 @@
      ]
     },
     {
-     "hint": "A heavy tide",
+     "hint": "The moat drains!",
      "groups": [
       {
        "kind": "shell",
@@ -2855,7 +3211,7 @@
    "id": 6,
    "name": "Low Tide",
    "region": 1,
-   "twist": "Two rifts, one bridge. The tide floods the south ford and the Hollow takes the long way round.",
+   "twist": "Two tidal islands feeding west. Pull the Harbor Boom to seal the north bridge, or watch the Wave 6 cliff detour open.",
    "newFoe": "Moth",
    "unlocks": "Sapper & Shipwreck Cove",
    "startGold": 420,
@@ -2868,402 +3224,295 @@
     "roots",
     "beacon"
    ],
+   "high": [
+    [
+     0,
+     235
+    ],
+    [
+     310,
+     250
+    ],
+    [
+     340,
+     460
+    ],
+    [
+     260,
+     500
+    ],
+    [
+     0,
+     500
+    ],
+    [
+     0,
+     235
+    ]
+   ],
    "roads": [
     {
      "id": "north",
      "spawn": "n",
-     "w": 52,
+     "w": 50,
      "ctrl": [
       [
-       -40,
-       150
+       1120,
+       -40
       ],
       [
-       130,
-       158
+       1090,
+       125
       ],
       [
-       260,
-       214
+       840,
+       130
       ],
       [
-       390,
-       206
+       640,
+       185
       ],
       [
-       478,
-       292
+       580,
+       295
       ],
       [
-       548,
-       362
+       410,
+       360
       ],
       [
-       620,
-       364
-      ],
-      [
-       700,
-       366
-      ],
-      [
-       790,
-       330
-      ],
-      [
-       880,
-       252
-      ],
-      [
-       1000,
-       244
-      ],
-      [
-       1075,
-       322
-      ],
-      [
-       1085,
-       448
-      ],
-      [
-       1150,
-       512
-      ],
-      [
-       1222,
-       520
+       135,
+       360
       ]
      ]
     },
     {
      "id": "south",
      "spawn": "s",
-     "w": 52,
+     "w": 50,
      "ctrl": [
       [
-       -40,
-       612
+       1120,
+       760
       ],
       [
-       140,
-       610
+       1010,
+       585
       ],
       [
-       246,
-       546
+       830,
+       565
       ],
       [
-       330,
-       500
+       640,
+       480
       ],
       [
-       432,
-       440
+       410,
+       360
       ],
       [
-       548,
-       362
-      ],
-      [
-       620,
-       364
-      ],
-      [
-       700,
-       366
-      ],
-      [
-       790,
-       330
-      ],
-      [
-       880,
-       252
-      ],
-      [
-       1000,
-       244
-      ],
-      [
-       1075,
-       322
-      ],
-      [
-       1085,
-       448
-      ],
-      [
-       1150,
-       512
-      ],
-      [
-       1222,
-       520
+       135,
+       360
       ]
      ]
     },
     {
      "id": "detour",
      "spawn": "s",
-     "w": 30,
+     "w": 34,
+     "openAtWave": 6,
      "ctrl": [
       [
-       -40,
-       612
+       1120,
+       760
       ],
       [
-       140,
-       610
+       1010,
+       585
       ],
       [
-       246,
-       546
+       1140,
+       440
       ],
       [
-       206,
-       420
+       1110,
+       260
       ],
       [
-       252,
-       300
+       840,
+       130
       ],
       [
-       262,
-       216
+       640,
+       185
       ],
       [
-       390,
-       206
+       580,
+       295
       ],
       [
-       478,
-       292
+       410,
+       360
       ],
       [
-       548,
-       362
-      ],
-      [
-       620,
-       364
-      ],
-      [
-       700,
-       366
-      ],
-      [
-       790,
-       330
-      ],
-      [
-       880,
-       252
-      ],
-      [
-       1000,
-       244
-      ],
-      [
-       1075,
-       322
-      ],
-      [
-       1085,
-       448
-      ],
-      [
-       1150,
-       512
-      ],
-      [
-       1222,
-       520
+       135,
+       360
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 78,
+     "w": 64,
      "ctrl": [
       [
-       702,
+       720,
        -40
       ],
       [
-       668,
-       110
+       675,
+       100
       ],
       [
-       690,
-       250
+       625,
+       210
       ],
       [
-       670,
-       365
+       510,
+       265
       ],
       [
-       640,
-       500
+       340,
+       235
       ],
       [
-       662,
-       620
+       140,
+       165
       ],
       [
-       640,
-       770
+       -40,
+       130
       ]
      ]
     },
     {
-     "w": 30,
+     "w": 66,
      "ctrl": [
       [
-       284,
-       770
+       1320,
+       690
       ],
       [
-       304,
-       640
+       1000,
+       675
       ],
       [
-       330,
-       500
+       830,
+       565
       ],
       [
-       440,
-       556
+       660,
+       625
       ],
       [
-       560,
-       566
+       420,
+       610
       ],
       [
-       646,
-       516
+       220,
+       540
+      ],
+      [
+       -40,
+       570
       ]
      ]
     }
    ],
-   "high": [
-    [
-     790,
-     0
-    ],
-    [
-     1280,
-     0
-    ],
-    [
-     1280,
-     150
-    ],
-    [
-     1150,
-     170
-    ],
-    [
-     990,
-     160
-    ],
-    [
-     880,
-     128
-    ],
-    [
-     800,
-     86
-    ],
-    [
-     790,
-     0
-    ]
-   ],
    "plots": [
     {
      "at": [
-      380,
-      330
+      250,
+      290
      ]
     },
     {
      "at": [
-      575,
-      470
+      255,
+      435
      ]
     },
     {
      "at": [
-      800,
-      480
+      460,
+      495
      ]
     },
     {
      "at": [
-      955,
-      352
+      505,
+      175
+     ]
+    },
+    {
+     "at": [
+      770,
+      235
+     ]
+    },
+    {
+     "at": [
+      710,
+      360
+     ]
+    },
+    {
+     "at": [
+      985,
+      355
      ]
     },
     {
      "at": [
       965,
-      110
+      230
      ]
     },
     {
      "at": [
-      1012,
-      560
+      940,
+      495
      ]
     },
     {
      "at": [
-      140,
-      480
+      1220,
+      350
      ]
     },
     {
      "at": [
-      120,
-      300
-     ]
-    },
-    {
-     "at": [
-      590,
-      245
-     ]
-    },
-    {
-     "at": [
-      880,
-      390
-     ]
-    },
-    {
-     "at": [
-      380,
-      90
+      1215,
+      175
      ]
     }
    ],
    "bridges": [
     [
-     668,
-     365,
-     0.02499479361892016,
-     64
+     640,
+     185,
+     2.07,
+     62
     ]
    ],
    "rune": [
-    480,
-    640
+    720,
+    445
    ],
    "heroStart": [
-    1000,
-    440
+    310,
+    360
    ],
    "shifts": [
     {
@@ -3275,16 +3524,47 @@
      "start": 18,
      "dur": 16,
      "at": [
-      330,
-      500
+      830,
+      565
      ],
-     "r": 48,
+     "r": 52,
      "label": "The tide floods the south ford"
     }
    ],
+   "switches": [
+    {
+     "id": "boom",
+     "label": "North Boom",
+     "at": [
+      640,
+      185
+     ],
+     "mode": "gate",
+     "closesB": [
+      "north"
+     ],
+     "dur": 11,
+     "cd": 20
+    }
+   ],
+   "alt": {
+    "name": "Rip Tide",
+    "twist": "The cliff detour wakes on Wave 2 and tidal sandbars bury inner plots under coastal ruins.",
+    "openAtWave": {
+     "detour": 2
+    },
+    "rubblePlots": [
+     {
+      "plot": 4,
+      "kind": "ruin",
+      "cost": 60,
+      "holdSec": 5
+     }
+    ]
+   },
    "waves": [
     {
-     "hint": "Two rifts open",
+     "hint": "Two island rifts open",
      "groups": [
       {
        "kind": "grub",
@@ -3303,7 +3583,7 @@
      ]
     },
     {
-     "hint": "Skitters on both roads",
+     "hint": "Skitters cross the shoals",
      "groups": [
       {
        "kind": "skitter",
@@ -3322,7 +3602,7 @@
      ]
     },
     {
-     "hint": "Moths over the river",
+     "hint": "Moths over the straits",
      "groups": [
       {
        "kind": "moth",
@@ -3360,15 +3640,8 @@
      ]
     },
     {
-     "hint": "A Mender walks with them",
+     "hint": "Rising swells",
      "groups": [
-      {
-       "kind": "mender",
-       "n": 2,
-       "gap": 6,
-       "delay": 0,
-       "spawn": "n"
-      },
       {
        "kind": "grub",
        "n": 16,
@@ -3386,7 +3659,7 @@
      ]
     },
     {
-     "hint": "Skitter swarm",
+     "hint": "Detour cliff breaches!",
      "groups": [
       {
        "kind": "skitter",
@@ -3405,28 +3678,21 @@
      ]
     },
     {
-     "hint": "A Warden shields the pack",
+     "hint": "Heavy tide march",
      "groups": [
       {
-       "kind": "warden",
-       "n": 1,
-       "gap": 6,
+       "kind": "shell",
+       "n": 6,
+       "gap": 2.2,
+       "delay": 0,
+       "spawn": "n"
+      },
+      {
+       "kind": "skitter",
+       "n": 16,
+       "gap": 0.45,
        "delay": 0,
        "spawn": "s"
-      },
-      {
-       "kind": "grub",
-       "n": 18,
-       "gap": 0.6,
-       "delay": 1.5,
-       "spawn": "s"
-      },
-      {
-       "kind": "moth",
-       "n": 10,
-       "gap": 0.8,
-       "delay": 4,
-       "spawn": "n"
       }
      ]
     },
@@ -3450,45 +3716,12 @@
      ]
     },
     {
-     "hint": "Shellback column",
+     "hint": "Full estuary assault",
      "groups": [
       {
        "kind": "shell",
-       "n": 6,
-       "gap": 2.2,
-       "delay": 0,
-       "spawn": "n"
-      },
-      {
-       "kind": "mender",
-       "n": 2,
-       "gap": 8,
-       "delay": 2,
-       "spawn": "n"
-      },
-      {
-       "kind": "skitter",
-       "n": 16,
-       "gap": 0.5,
-       "delay": 0,
-       "spawn": "s"
-      }
-     ]
-    },
-    {
-     "hint": "Elite wave",
-     "groups": [
-      {
-       "kind": "warden",
-       "n": 2,
-       "gap": 10,
-       "delay": 0,
-       "spawn": "n"
-      },
-      {
-       "kind": "shell",
-       "n": 5,
-       "gap": 2.5,
+       "n": 8,
+       "gap": 2,
        "delay": 0,
        "spawn": "s"
       },
@@ -3496,21 +3729,14 @@
        "kind": "grub",
        "n": 24,
        "gap": 0.5,
-       "delay": 4,
+       "delay": 2,
        "spawn": "n"
       },
       {
        "kind": "moth",
        "n": 14,
-       "gap": 0.7,
+       "gap": 0.6,
        "delay": 6,
-       "spawn": "s"
-      },
-      {
-       "kind": "mender",
-       "n": 3,
-       "gap": 4,
-       "delay": 8,
        "spawn": "s"
       }
      ]
@@ -3521,7 +3747,7 @@
    "id": 7,
    "name": "Shipwreck Cove",
    "region": 1,
-   "twist": "A wreck blocks the short beach road. Sappers chew through it, and then the Hollow has a shortcut.",
+   "twist": "Salvage cove wrecks for plots, trigger the Shoal Boom gate, and defend when Wave 5 ebb tide drains the harbor reef.",
    "newFoe": "Sapper",
    "unlocks": "Armory tree & Wren's Sunrise (R)",
    "startGold": 440,
@@ -3534,6 +3760,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.02,
    "roads": [
     {
      "id": "cliff",
@@ -3541,36 +3768,40 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
-       420
+       1320,
+       520
       ],
       [
-       160,
-       405
+       1120,
+       510
       ],
       [
-       300,
-       260
+       1080,
+       280
       ],
       [
-       520,
-       160
+       920,
+       155
       ],
       [
-       800,
-       150
+       640,
+       145
       ],
       [
-       1000,
-       225
+       340,
+       165
       ],
       [
-       1100,
-       360
+       240,
+       300
       ],
       [
-       1222,
-       420
+       250,
+       520
+      ],
+      [
+       130,
+       565
       ]
      ]
     },
@@ -3580,55 +3811,89 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
-       420
+       1320,
+       520
       ],
       [
-       160,
-       435
+       1120,
+       510
       ],
       [
-       320,
-       555
+       910,
+       440
       ],
       [
-       640,
-       588
+       635,
+       325
       ],
       [
-       900,
-       560
+       430,
+       440
       ],
       [
-       1100,
+       250,
+       520
+      ],
+      [
+       130,
+       565
+      ]
+     ]
+    },
+    {
+     "id": "reef",
+     "spawn": "w",
+     "w": 40,
+     "openAtWave": 5,
+     "ctrl": [
+      [
+       1320,
+       520
+      ],
+      [
+       1120,
+       510
+      ],
+      [
+       925,
        470
       ],
       [
-       1222,
-       420
+       740,
+       610
+      ],
+      [
+       530,
+       610
+      ],
+      [
+       250,
+       520
+      ],
+      [
+       130,
+       565
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 170,
+     "id": "cove",
+     "w": 96,
+     "drainAtWave": 5,
      "ctrl": [
       [
-       -60,
-       790
+       635,
+       770
       ],
       [
-       400,
-       760
+       635,
+       580
       ],
       [
-       800,
-       775
-      ],
-      [
-       1340,
-       750
+       635,
+       445
       ]
      ]
     }
@@ -3636,96 +3901,162 @@
    "plots": [
     {
      "at": [
-      300,
-      400
-     ]
-    },
-    {
-     "at": [
-      480,
-      300
-     ]
-    },
-    {
-     "at": [
-      650,
-      280
-     ]
-    },
-    {
-     "at": [
-      830,
+      440,
       290
+     ],
+     "rubble": {
+      "kind": "ruin",
+      "cost": 65,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      640,
+      225
      ]
+    },
+    {
+     "at": [
+      835,
+      290
+     ],
+     "rubble": {
+      "kind": "ruin",
+      "cost": 65,
+      "holdSec": 5
+     }
     },
     {
      "at": [
       980,
+      295
+     ]
+    },
+    {
+     "at": [
+      1005,
+      575
+     ]
+    },
+    {
+     "at": [
+      765,
+      470
+     ]
+    },
+    {
+     "at": [
+      465,
+      510
+     ]
+    },
+    {
+     "at": [
+      360,
+      415
+     ]
+    },
+    {
+     "at": [
+      135,
+      415
+     ]
+    },
+    {
+     "at": [
+      160,
+      175
+     ]
+    },
+    {
+     "at": [
+      1185,
       360
      ]
     },
     {
      "at": [
-      700,
-      450
+      325,
+      650
      ]
     },
     {
      "at": [
-      480,
-      450
-     ]
-    },
-    {
-     "at": [
-      140,
-      290
-     ]
-    },
-    {
-     "at": [
-      140,
-      560
-     ]
-    },
-    {
-     "at": [
-      1150,
-      240
-     ]
-    },
-    {
-     "at": [
-      1170,
-      560
-     ]
-    },
-    {
-     "at": [
-      820,
-      60
-     ]
+      635,
+      495
+     ],
+     "openAtWave": 5
     }
    ],
    "bridges": [],
    "rune": [
-    640,
-    380
+    810,
+    620
    ],
    "heroStart": [
-    1000,
-    440
+    310,
+    500
    ],
    "barriers": [
     {
      "road": "beach",
-     "at": 0.45,
+     "at": 0.44,
      "hp": 500
     }
    ],
+   "switches": [
+    {
+     "id": "cove_boom",
+     "label": "Shoal Boom",
+     "at": [
+      635,
+      325
+     ],
+     "mode": "gate",
+     "closesB": [
+      "beach"
+     ],
+     "dur": 11,
+     "cd": 20
+    }
+   ],
+   "terraforms": [
+    {
+     "atWave": 5,
+     "kind": "drain",
+     "label": "Ebb tide exposes the outer reef road and sandbar!",
+     "waters": [
+      "cove"
+     ],
+     "openRoads": [
+      "reef"
+     ],
+     "openPlots": [
+      12
+     ]
+    }
+   ],
+   "alt": {
+    "name": "Westward Landing",
+    "twist": "Every landing reverses: waves come ashore at the west cove and march east, and the outer reef opens on Wave 2.",
+    "hpMul": 1.57,
+    "reverseRoads": [
+     "cliff",
+     "beach",
+     "reef"
+    ],
+    "openAtWave": {
+     "reef": 2
+    },
+    "heroStart": [
+     980,
+     500
+    ]
+   },
    "waves": [
     {
-     "hint": "The cliff road",
+     "hint": "The high headland",
      "groups": [
       {
        "kind": "grub",
@@ -3736,7 +4067,7 @@
      ]
     },
     {
-     "hint": "Sappers on the beach",
+     "hint": "Sappers rush the wreck",
      "groups": [
       {
        "kind": "sapper",
@@ -3787,7 +4118,7 @@
      ]
     },
     {
-     "hint": "Splitting tide",
+     "hint": "Ebb tide exposes the reef!",
      "groups": [
       {
        "kind": "shell",
@@ -3804,24 +4135,24 @@
      ]
     },
     {
-     "hint": "Wardens wade in",
+     "hint": "Sappers and shells",
      "groups": [
       {
-       "kind": "warden",
-       "n": 1,
-       "gap": 6,
-       "delay": 0
-      },
-      {
        "kind": "grub",
-       "n": 16,
+       "n": 18,
        "gap": 0.6,
-       "delay": 1
+       "delay": 0
       },
       {
        "kind": "sapper",
        "n": 3,
-       "gap": 3,
+       "gap": 2.5,
+       "delay": 2
+      },
+      {
+       "kind": "shell",
+       "n": 4,
+       "gap": 2,
        "delay": 4
       }
      ]
@@ -3838,7 +4169,7 @@
      ]
     },
     {
-     "hint": "Shells and sappers",
+     "hint": "Harbor push",
      "groups": [
       {
        "kind": "shell",
@@ -3864,16 +4195,10 @@
      "hint": "The storm fleet",
      "groups": [
       {
-       "kind": "warden",
-       "n": 2,
-       "gap": 8,
-       "delay": 0
-      },
-      {
        "kind": "shell",
        "n": 6,
-       "gap": 2,
-       "delay": 2
+       "gap": 1.8,
+       "delay": 0
       },
       {
        "kind": "moth",
@@ -3882,14 +4207,14 @@
        "delay": 4
       },
       {
-       "kind": "mender",
-       "n": 2,
-       "gap": 6,
+       "kind": "sapper",
+       "n": 4,
+       "gap": 2.5,
        "delay": 6
       },
       {
        "kind": "grub",
-       "n": 20,
+       "n": 22,
        "gap": 0.5,
        "delay": 10
       }
@@ -3901,7 +4226,7 @@
    "id": 8,
    "name": "Lighthouse Rock",
    "region": 1,
-   "twist": "Two roads wrap the rock. Towers on the rock see further, and the lighthouse shows every Shade in its beam.",
+   "twist": "360° sea-stack siege onto the central Lighthouse island. Clear citadel ruins before Wave 6 wakes the sea-cave tunnel.",
    "newFoe": "Splitter",
    "unlocks": "Tower splits at level 4",
    "startGold": 560,
@@ -3918,34 +4243,89 @@
     640,
     360
    ],
+   "hpMul": 1.98,
+   "high": [
+    [
+     420,
+     225
+    ],
+    [
+     540,
+     195
+    ],
+    [
+     740,
+     195
+    ],
+    [
+     860,
+     225
+    ],
+    [
+     885,
+     360
+    ],
+    [
+     860,
+     495
+    ],
+    [
+     740,
+     525
+    ],
+    [
+     540,
+     525
+    ],
+    [
+     420,
+     495
+    ],
+    [
+     395,
+     360
+    ],
+    [
+     420,
+     225
+    ]
+   ],
    "roads": [
     {
      "id": "north",
      "spawn": "n",
-     "w": 50,
+     "w": 48,
      "ctrl": [
       [
        -40,
-       200
+       150
       ],
       [
-       300,
-       140
+       220,
+       145
+      ],
+      [
+       520,
+       130
+      ],
+      [
+       840,
+       150
+      ],
+      [
+       1030,
+       260
+      ],
+      [
+       990,
+       405
+      ],
+      [
+       820,
+       445
       ],
       [
        640,
-       128
-      ],
-      [
-       980,
-       180
-      ],
-      [
-       1100,
-       330
-      ],
-      [
-       1222,
        360
       ]
      ]
@@ -3953,30 +4333,38 @@
     {
      "id": "south",
      "spawn": "s",
-     "w": 50,
+     "w": 48,
      "ctrl": [
       [
-       -40,
-       560
+       1320,
+       580
       ],
       [
-       300,
-       615
+       1060,
+       585
+      ],
+      [
+       760,
+       595
+      ],
+      [
+       440,
+       575
+      ],
+      [
+       250,
+       465
+      ],
+      [
+       290,
+       315
+      ],
+      [
+       460,
+       285
       ],
       [
        640,
-       625
-      ],
-      [
-       980,
-       560
-      ],
-      [
-       1100,
-       400
-      ],
-      [
-       1222,
        360
       ]
      ]
@@ -3984,159 +4372,164 @@
    ],
    "waters": [
     {
-     "w": 90,
+     "w": 64,
      "ctrl": [
       [
        -40,
-       -10
+       410
       ],
       [
-       400,
-       10
+       80,
+       435
       ],
       [
-       900,
-       -5
+       140,
+       560
+      ],
+      [
+       170,
+       770
+      ]
+     ]
+    },
+    {
+     "w": 64,
+     "ctrl": [
+      [
+       1110,
+       -40
+      ],
+      [
+       1140,
+       150
+      ],
+      [
+       1200,
+       280
       ],
       [
        1320,
-       20
+       310
       ]
      ]
     }
    ],
-   "high": [
-    [
-     470,
-     300
-    ],
-    [
-     520,
-     240
-    ],
-    [
-     640,
-     225
-    ],
-    [
-     770,
-     245
-    ],
-    [
-     820,
-     320
-    ],
-    [
-     810,
-     440
-    ],
-    [
-     740,
-     505
-    ],
-    [
-     610,
-     515
-    ],
-    [
-     500,
-     470
-    ],
-    [
-     460,
-     380
-    ],
-    [
-     470,
-     300
-    ]
-   ],
    "plots": [
     {
      "at": [
-      555,
-      270
+      545,
+      245
+     ],
+     "rubble": {
+      "kind": "ruin",
+      "cost": 70,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      735,
+      245
      ]
     },
     {
      "at": [
-      725,
-      275
-     ]
-    },
-    {
-     "at": [
-      565,
-      470
-     ]
-    },
-    {
-     "at": [
-      720,
-      465
-     ]
-    },
-    {
-     "at": [
-      180,
-      275
-     ]
-    },
-    {
-     "at": [
-      430,
-      235
-     ]
-    },
-    {
-     "at": [
-      430,
-      520
-     ]
-    },
-    {
-     "at": [
-      1010,
-      370
-     ]
-    },
-    {
-     "at": [
-      900,
-      260
-     ]
-    },
-    {
-     "at": [
-      900,
+      545,
       480
      ]
     },
     {
      "at": [
-      300,
+      735,
+      480
+     ],
+     "rubble": {
+      "kind": "ruin",
+      "cost": 70,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      260,
+      225
+     ]
+    },
+    {
+     "at": [
+      390,
+      200
+     ]
+    },
+    {
+     "at": [
+      890,
+      520
+     ]
+    },
+    {
+     "at": [
+      1020,
+      495
+     ]
+    },
+    {
+     "at": [
+      130,
       260
      ]
     },
     {
      "at": [
-      300,
-      500
+      1150,
+      460
+     ]
+    },
+    {
+     "at": [
+      355,
+      650
+     ]
+    },
+    {
+     "at": [
+      955,
+      125
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    1000,
-    640
+    960,
+    320
    ],
    "heroStart": [
-    960,
-    370
+    560,
+    360
    ],
+   "portals": [
+    {
+     "id": "seacave",
+     "kind": "tunnel",
+     "fromRoad": "south",
+     "fromAt": 0.25,
+     "toRoad": "north",
+     "toAt": 0.65,
+     "openAtWave": 6,
+     "everyNth": 3,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Blackout Beacon",
+    "twist": "Night settles on even waves and the sea-cave tunnel opens on Wave 2.",
+    "hpMul": 1.1,
+    "night": true,
+    "portalOpenAtWave": 2
+   },
    "waves": [
     {
-     "hint": "Both roads wake",
+     "hint": "Both shores wake",
      "groups": [
       {
        "kind": "grub",
@@ -4200,7 +4593,7 @@
      ]
     },
     {
-     "hint": "Moths and Menders",
+     "hint": "Moths off the rocks",
      "groups": [
       {
        "kind": "moth",
@@ -4210,17 +4603,10 @@
        "spawn": "n"
       },
       {
-       "kind": "mender",
-       "n": 2,
-       "gap": 5,
-       "delay": 0,
-       "spawn": "s"
-      },
-      {
-       "kind": "grub",
+       "kind": "skitter",
        "n": 12,
-       "gap": 0.9,
-       "delay": 1,
+       "gap": 0.5,
+       "delay": 0,
        "spawn": "s"
       }
      ]
@@ -4245,34 +4631,20 @@
      ]
     },
     {
-     "hint": "Wardens",
+     "hint": "Sea-cave awakens!",
      "groups": [
       {
-       "kind": "warden",
-       "n": 1,
-       "gap": 6,
+       "kind": "splitter",
+       "n": 12,
+       "gap": 1.1,
        "delay": 0,
        "spawn": "n"
       },
       {
-       "kind": "warden",
-       "n": 1,
-       "gap": 6,
-       "delay": 3,
-       "spawn": "s"
-      },
-      {
        "kind": "grub",
-       "n": 14,
+       "n": 16,
        "gap": 0.6,
        "delay": 1,
-       "spawn": "n"
-      },
-      {
-       "kind": "grub",
-       "n": 14,
-       "gap": 0.6,
-       "delay": 4,
        "spawn": "s"
       }
      ]
@@ -4319,16 +4691,16 @@
      "hint": "The breakers",
      "groups": [
       {
-       "kind": "warden",
-       "n": 2,
-       "gap": 8,
+       "kind": "splitter",
+       "n": 8,
+       "gap": 1.1,
        "delay": 0,
        "spawn": "n"
       },
       {
        "kind": "splitter",
        "n": 8,
-       "gap": 1.2,
+       "gap": 1.1,
        "delay": 0,
        "spawn": "s"
       },
@@ -4353,37 +4725,30 @@
      "groups": [
       {
        "kind": "splitter",
-       "n": 8,
-       "gap": 1.1,
+       "n": 10,
+       "gap": 1,
        "delay": 0,
        "spawn": "n"
       },
       {
        "kind": "splitter",
-       "n": 8,
-       "gap": 1.1,
+       "n": 10,
+       "gap": 1,
        "delay": 0,
        "spawn": "s"
-      },
-      {
-       "kind": "mender",
-       "n": 2,
-       "gap": 4,
-       "delay": 4,
-       "spawn": "n"
       },
       {
        "kind": "skitter",
        "n": 16,
        "gap": 0.35,
-       "delay": 8,
+       "delay": 6,
        "spawn": "s"
       },
       {
        "kind": "moth",
        "n": 10,
        "gap": 0.6,
-       "delay": 12,
+       "delay": 10,
        "spawn": "n"
       }
      ]
@@ -4394,7 +4759,7 @@
    "id": 9,
    "name": "Storm Shelf",
    "region": 1,
-   "twist": "Rain soaks everything. Lightning jumps twice as far and fire burns weaker. The road crosses itself on a stone viaduct.",
+   "twist": "Monsoon rain weakens fire and doubles lightning arc reach. Pull the Viaduct Gate on the figure-8 overpass or watch the Wave 6 cutoff.",
    "newFoe": "Warden",
    "unlocks": "Tidewyrm boss stage",
    "startGold": 480,
@@ -4408,6 +4773,7 @@
     "beacon"
    ],
    "weather": "rain",
+   "hpMul": 1.86,
    "roads": [
     {
      "id": "main",
@@ -4416,59 +4782,103 @@
      "ctrl": [
       [
        -40,
-       180
+       125
       ],
       [
-       260,
-       190
+       320,
+       130
       ],
       [
-       460,
-       300
-      ],
-      [
-       640,
-       392
-      ],
-      [
-       820,
-       480
-      ],
-      [
-       1000,
-       545
-      ],
-      [
-       1130,
-       440
-      ],
-      [
-       1140,
-       280
-      ],
-      [
-       1010,
-       200
-      ],
-      [
-       820,
-       300
+       495,
+       240
       ],
       [
        640,
-       392
+       360
       ],
       [
-       460,
-       486
+       795,
+       475
       ],
       [
-       280,
-       560
+       990,
+       500
       ],
       [
-       140,
-       600
+       1110,
+       360
+      ],
+      [
+       990,
+       215
+      ],
+      [
+       795,
+       240
+      ],
+      [
+       640,
+       360
+      ],
+      [
+       495,
+       475
+      ],
+      [
+       350,
+       590
+      ],
+      [
+       640,
+       625
+      ],
+      [
+       940,
+       625
+      ],
+      [
+       1165,
+       610
+      ]
+     ]
+    },
+    {
+     "id": "cutoff",
+     "spawn": "w",
+     "w": 40,
+     "openAtWave": 6,
+     "ctrl": [
+      [
+       -40,
+       125
+      ],
+      [
+       320,
+       130
+      ],
+      [
+       495,
+       240
+      ],
+      [
+       315,
+       375
+      ],
+      [
+       350,
+       590
+      ],
+      [
+       640,
+       625
+      ],
+      [
+       940,
+       625
+      ],
+      [
+       1165,
+       610
       ]
      ]
     }
@@ -4478,95 +4888,127 @@
     {
      "at": [
       640,
-      260
+      225
      ]
     },
     {
      "at": [
       640,
-      530
+      495
      ]
     },
     {
      "at": [
-      470,
-      395
+      485,
+      360
      ]
     },
     {
      "at": [
-      810,
-      395
+      795,
+      360
      ]
     },
     {
      "at": [
-      1010,
-      370
+      970,
+      360
      ]
     },
     {
      "at": [
-      300,
-      320
+      240,
+      255
      ]
     },
     {
      "at": [
-      300,
-      420
+      210,
+      495
      ]
     },
     {
      "at": [
-      960,
-      640
+      530,
+      140
      ]
     },
     {
      "at": [
-      190,
-      470
+      895,
+      130
      ]
     },
     {
      "at": [
-      820,
-      160
+      1195,
+      245
      ]
     },
     {
      "at": [
-      460,
-      160
+      1195,
+      475
      ]
     },
     {
      "at": [
-      1220,
-      370
+      230,
+      575
      ]
     }
    ],
    "bridges": [
     [
      640,
-     392,
-     0.48,
-     46
+     360,
+     0.64,
+     52
     ]
    ],
    "rune": [
-    980,
-    380
+    930,
+    585
    ],
    "heroStart": [
-    600,
-    390
+    640,
+    450
    ],
+   "switches": [
+    {
+     "id": "viaduct",
+     "label": "Viaduct Gate",
+     "at": [
+      640,
+      360
+     ],
+     "mode": "gate",
+     "closesB": [
+      "main"
+     ],
+     "dur": 10,
+     "cd": 19
+    }
+   ],
+   "alt": {
+    "name": "Backwash Squall",
+    "twist": "The storm climbs in reverse from the south-east shelf to the north-west summit, and the flash-flood cutoff opens on Wave 3.",
+    "hpMul": 0.64,
+    "reverseRoads": [
+     "main",
+     "cutoff"
+    ],
+    "openAtWave": {
+     "cutoff": 3
+    },
+    "heroStart": [
+     640,
+     260
+    ]
+   },
    "waves": [
     {
-     "hint": "Rain on the shelf",
+     "hint": "Rain on the viaduct",
      "groups": [
       {
        "kind": "grub",
@@ -4633,7 +5075,7 @@
      ]
     },
     {
-     "hint": "Two Wardens",
+     "hint": "Flash flood cutoff!",
      "groups": [
       {
        "kind": "warden",
@@ -4650,19 +5092,19 @@
      ]
     },
     {
-     "hint": "Menders and shells",
+     "hint": "Armor in the downpour",
      "groups": [
       {
-       "kind": "mender",
-       "n": 3,
-       "gap": 4,
+       "kind": "shell",
+       "n": 10,
+       "gap": 1.7,
        "delay": 0
       },
       {
-       "kind": "shell",
-       "n": 8,
-       "gap": 1.8,
-       "delay": 1
+       "kind": "grub",
+       "n": 16,
+       "gap": 0.6,
+       "delay": 4
       }
      ]
     },
@@ -4720,12 +5162,6 @@
        "n": 20,
        "gap": 0.5,
        "delay": 6
-      },
-      {
-       "kind": "mender",
-       "n": 4,
-       "gap": 4,
-       "delay": 8
       }
      ]
     }
@@ -4735,7 +5171,7 @@
    "id": 10,
    "name": "The Tidewyrm",
    "region": 1,
-   "twist": "Boss. Two bridges, two tides. Each bridge floods in turn, and the Wyrm dives under to heal.",
+   "twist": "Boss. Two east bridges alternate under rising tides. At Wave 5 the eastern strait drains into a central shoal; at 50% HP the Tidewyrm seals the north pass.",
    "newFoe": "The Tidewyrm",
    "unlocks": "Relic: Tide pearl (+15% tower range near water)",
    "startGold": 640,
@@ -4748,6 +5184,37 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.78,
+   "high": [
+    [
+     555,
+     245
+    ],
+    [
+     755,
+     245
+    ],
+    [
+     775,
+     360
+    ],
+    [
+     755,
+     475
+    ],
+    [
+     555,
+     475
+    ],
+    [
+     535,
+     360
+    ],
+    [
+     555,
+     245
+    ]
+   ],
    "roads": [
     {
      "id": "north",
@@ -4755,32 +5222,48 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
+       1320,
+       220
+      ],
+      [
+       1110,
+       220
+      ],
+      [
+       990,
+       175
+      ],
+      [
+       868,
+       175
+      ],
+      [
+       685,
+       165
+      ],
+      [
+       610,
+       265
+      ],
+      [
+       565,
        360
       ],
       [
-       140,
+       415,
        360
       ],
       [
-       300,
-       230
+       260,
+       345
       ],
       [
-       560,
-       185
+       250,
+       505
       ],
       [
-       740,
-       190
-      ],
-      [
-       1000,
-       250
-      ],
-      [
-       1222,
-       360
+       135,
+       495
       ]
      ]
     },
@@ -4790,58 +5273,150 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
+       1320,
+       220
+      ],
+      [
+       1110,
+       220
+      ],
+      [
+       1115,
+       480
+      ],
+      [
+       995,
+       545
+      ],
+      [
+       875,
+       535
+      ],
+      [
+       685,
+       565
+      ],
+      [
+       610,
+       460
+      ],
+      [
+       565,
        360
       ],
       [
-       140,
+       415,
        360
       ],
       [
-       300,
-       500
+       260,
+       345
       ],
       [
-       560,
-       540
+       250,
+       505
       ],
       [
-       740,
-       532
+       135,
+       495
+      ]
+     ]
+    },
+    {
+     "id": "shoal",
+     "spawn": "w",
+     "w": 42,
+     "openAtWave": 5,
+     "ctrl": [
+      [
+       1320,
+       220
       ],
       [
-       1000,
-       470
+       1110,
+       220
       ],
       [
-       1222,
+       1095,
        360
+      ],
+      [
+       870,
+       360
+      ],
+      [
+       565,
+       360
+      ],
+      [
+       415,
+       360
+      ],
+      [
+       260,
+       345
+      ],
+      [
+       250,
+       505
+      ],
+      [
+       135,
+       495
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 92,
+     "id": "east_strait",
+     "w": 70,
+     "drainAtWave": 5,
      "ctrl": [
       [
-       652,
+       900,
        -40
       ],
       [
-       632,
-       190
+       870,
+       175
       ],
       [
-       650,
-       360
+       840,
+       370
       ],
       [
-       632,
-       540
+       880,
+       560
       ],
       [
-       652,
+       920,
+       770
+      ]
+     ]
+    },
+    {
+     "id": "west_strait",
+     "w": 70,
+     "ctrl": [
+      [
+       420,
+       -40
+      ],
+      [
+       440,
+       185
+      ],
+      [
+       405,
+       385
+      ],
+      [
+       435,
+       575
+      ],
+      [
+       410,
        770
       ]
      ]
@@ -4850,97 +5425,110 @@
    "plots": [
     {
      "at": [
-      280,
-      360
+      665,
+      275
      ]
     },
     {
      "at": [
-      440,
-      310
+      665,
+      445
      ]
     },
     {
      "at": [
-      440,
-      90
+      745,
+      290
      ]
     },
     {
      "at": [
-      440,
-      640
+      525,
+      200
      ]
     },
     {
      "at": [
-      860,
-      360
+      525,
+      520
      ]
     },
     {
      "at": [
-      860,
-      100
+      960,
+      435
      ]
     },
     {
      "at": [
-      860,
-      620
+      975,
+      275
      ]
     },
     {
      "at": [
-      1060,
-      360
+      1035,
+      445
      ]
     },
     {
      "at": [
-      545,
-      310
+      1225,
+      345
      ]
     },
     {
      "at": [
-      765,
-      310
-     ]
-    },
-    {
-     "at": [
-      160,
-      235
+      295,
+      225
      ]
     },
     {
      "at": [
       160,
-      600
+      360
      ]
+    },
+    {
+     "at": [
+      335,
+      560
+     ]
+    },
+    {
+     "at": [
+      815,
+      435
+     ],
+     "openAtWave": 5
     }
    ],
    "bridges": [
     [
-     636,
-     188,
-     0.03,
-     64
+     868,
+     175,
+     -0.04,
+     58
     ],
     [
-     636,
-     538,
-     -0.03,
-     64
+     875,
+     535,
+     0.04,
+     58
+    ],
+    [
+     415,
+     360,
+     -0.05,
+     58
     ]
    ],
    "rune": [
-    1100,
-    640
+    755,
+    650
    ],
    "heroStart": [
-    940,
+    520,
     360
    ],
    "shifts": [
@@ -4953,11 +5541,11 @@
      "start": 10,
      "dur": 18,
      "at": [
-      636,
-      188
+      868,
+      175
      ],
-     "r": 60,
-     "label": "High tide on the north bridge"
+     "r": 58,
+     "label": "High tide on the north-east bridge"
     },
     {
      "kind": "tide",
@@ -4968,16 +5556,60 @@
      "start": 35,
      "dur": 18,
      "at": [
-      636,
-      538
+      875,
+      535
      ],
-     "r": 60,
-     "label": "High tide on the south bridge"
+     "r": 58,
+     "label": "High tide on the south-east bridge"
     }
    ],
+   "terraforms": [
+    {
+     "atWave": 5,
+     "kind": "drain",
+     "label": "Ebb tide exposes the center coral shoal!",
+     "waters": [
+      "east_strait"
+     ],
+     "openRoads": [
+      "shoal"
+     ],
+     "openPlots": [
+      12
+     ]
+    },
+    {
+     "atPhase": 1,
+     "kind": "flood",
+     "label": "The Tidewyrm drowns the north pass. Everything comes by the south bridge and the shoal!",
+     "closeRoads": [
+      "north"
+     ]
+    }
+   ],
+   "alt": {
+    "name": "King Tide",
+    "twist": "Tides surge every 40 seconds instead of 50, and driftwood ruins block the coral island plots.",
+    "hpMul": 1.05,
+    "shiftEveryMul": 0.8,
+    "rubblePlots": [
+     {
+      "plot": 0,
+      "kind": "ruin",
+      "cost": 75,
+      "holdSec": 5
+     },
+     {
+      "plot": 1,
+      "kind": "ruin",
+      "cost": 75,
+      "holdSec": 5
+     }
+    ]
+   },
    "waves": [
     {
-     "hint": "The water rises",
+     "hint": "The straits rise",
      "groups": [
       {
        "kind": "grub",
@@ -5016,7 +5648,7 @@
      ]
     },
     {
-     "hint": "Shells",
+     "hint": "Armored shells",
      "groups": [
       {
        "kind": "shell",
@@ -5027,19 +5659,19 @@
      ]
     },
     {
-     "hint": "Menders",
+     "hint": "The central shoal drains!",
      "groups": [
       {
-       "kind": "mender",
-       "n": 4,
-       "gap": 3,
+       "kind": "splitter",
+       "n": 10,
+       "gap": 1,
        "delay": 0
       },
       {
        "kind": "grub",
        "n": 20,
        "gap": 0.5,
-       "delay": 1
+       "delay": 2
       }
      ]
     },
@@ -5106,7 +5738,7 @@
    "id": 11,
    "name": "Conveyor Hall",
    "region": 2,
-   "twist": "Iron belts carry foes faster. Slow them before the belts, hit them after.",
+   "twist": "Three vertical drop-shafts with fast belts. Pull the Foundry Brake to slow the center belt, or clear jammed cranes.",
    "newFoe": "Mender",
    "unlocks": "Shop item: Cleaving spear",
    "startGold": 520,
@@ -5119,6 +5751,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.95,
    "roads": [
     {
      "id": "main",
@@ -5126,52 +5759,48 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
-       140
+       355,
+       -40
       ],
       [
-       420,
-       150
+       355,
+       220
       ],
       [
-       440,
-       330
+       355,
+       550
       ],
       [
-       220,
-       360
-      ],
-      [
-       200,
-       560
+       495,
+       610
       ],
       [
        640,
-       580
+       550
       ],
       [
-       660,
-       330
+       640,
+       350
       ],
       [
-       880,
-       150
+       640,
+       155
       ],
       [
-       1100,
-       160
+       782,
+       110
       ],
       [
-       1120,
-       400
+       925,
+       155
       ],
       [
-       900,
-       560
+       925,
+       380
       ],
       [
-       1222,
-       610
+       925,
+       620
       ]
      ]
     }
@@ -5180,103 +5809,154 @@
    "plots": [
     {
      "at": [
-      300,
-      255
+      235,
+      195
      ]
     },
     {
      "at": [
-      570,
-      240
+      235,
+      375
      ]
     },
     {
      "at": [
-      100,
-      460
+      235,
+      555
      ]
     },
     {
      "at": [
-      330,
-      460
+      497,
+      200
      ]
     },
     {
      "at": [
-      540,
-      450
+      497,
+      350
+     ],
+     "rubble": {
+      "kind": "crane",
+      "cost": 70,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      497,
+      500
      ]
     },
     {
      "at": [
-      780,
-      380
+      783,
+      220
      ]
     },
     {
      "at": [
-      1000,
-      290
+      783,
+      370
+     ],
+     "rubble": {
+      "kind": "crane",
+      "cost": 70,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      783,
+      520
      ]
     },
     {
      "at": [
-      780,
-      630
+      1045,
+      210
      ]
     },
     {
      "at": [
-      993,
-      430
+      1045,
+      390
      ]
     },
     {
      "at": [
-      1200,
-      470
-     ]
-    },
-    {
-     "at": [
-      760,
-      60
-     ]
-    },
-    {
-     "at": [
-      1240,
-      230
+      1045,
+      560
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    100,
-    640
+    235,
+    650
    ],
    "heroStart": [
-    960,
-    420
+    640,
+    410
    ],
    "belts": [
     {
      "road": "main",
-     "from": 0.16,
-     "to": 0.32,
-     "mult": 1.7
+     "from": 0.08,
+     "to": 0.24,
+     "mult": 1.75
     },
     {
      "road": "main",
-     "from": 0.58,
-     "to": 0.74,
-     "mult": 1.7
+     "from": 0.74,
+     "to": 0.9,
+     "mult": 1.75
     }
    ],
+   "switches": [
+    {
+     "id": "brake",
+     "label": "Conveyor Brake",
+     "at": [
+      640,
+      350
+     ],
+     "mode": "belt",
+     "targetRoad": "main",
+     "beltMult": 0.55,
+     "dur": 11,
+     "cd": 18
+    }
+   ],
+   "portals": [
+    {
+     "id": "chute_e",
+     "kind": "chute",
+     "fromRoad": "main",
+     "fromAt": 0.28,
+     "toRoad": "main",
+     "toAt": 0.72,
+     "openAtWave": 5,
+     "everyNth": 4,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Express Shift",
+    "twist": "Conveyors reverse from south-east to north-west and the overhead transfer chute opens on Wave 2.",
+    "hpMul": 0.62,
+    "reverseRoads": [
+     "main"
+    ],
+    "heroStart": [
+     355,
+     280
+    ],
+    "portalOpenAtWave": 2
+   },
    "waves": [
     {
-     "hint": "Grubs on the belt",
+     "hint": "Grubs down the drop-shaft",
      "groups": [
       {
        "kind": "grub",
@@ -5287,7 +5967,7 @@
      ]
     },
     {
-     "hint": "Menders keep them going",
+     "hint": "Menders enter the forge",
      "groups": [
       {
        "kind": "mender",
@@ -5326,7 +6006,7 @@
      ]
     },
     {
-     "hint": "Splitters",
+     "hint": "Overhead chute active!",
      "groups": [
       {
        "kind": "splitter",
@@ -5428,7 +6108,7 @@
    "id": 12,
    "name": "Gear Garden",
    "region": 2,
-   "twist": "The garden turns. Gear plots rise on alternate waves: gold plots on odd waves, iron plots on even ones.",
+   "twist": "Dual interlocking cogwheels with A/B gears. Flip the Pinion Clutch at center to redirect spurs once Wave 5 unlocks.",
    "newFoe": "Burrower",
    "unlocks": "Bulwark tree",
    "startGold": 560,
@@ -5441,82 +6121,135 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.76,
    "roads": [
     {
      "id": "main",
      "spawn": "w",
-     "w": 50,
+     "w": 48,
      "ctrl": [
       [
        -40,
-       600
+       370
       ],
       [
        180,
-       590
+       375
       ],
       [
-       300,
-       440
+       225,
+       535
       ],
       [
-       320,
-       250
+       410,
+       600
       ],
       [
-       460,
-       130
+       590,
+       520
       ],
       [
-       700,
+       640,
+       360
+      ],
+      [
+       690,
+       200
+      ],
+      [
+       870,
        120
       ],
       [
-       860,
-       240
+       1055,
+       185
       ],
       [
-       880,
-       440
+       1095,
+       355
       ],
       [
-       1000,
-       600
+       1035,
+       525
       ],
       [
-       1222,
-       600
+       1165,
+       580
       ]
      ]
     },
     {
      "id": "top",
      "spawn": "n",
-     "w": 46,
+     "w": 44,
      "ctrl": [
       [
-       1000,
+       640,
        -40
       ],
       [
-       1010,
-       120
+       640,
+       130
       ],
       [
-       1100,
-       300
+       640,
+       360
       ],
       [
-       1060,
-       470
+       690,
+       520
       ],
       [
-       1000,
-       600
+       870,
+       590
       ],
       [
-       1222,
-       600
+       1035,
+       525
+      ],
+      [
+       1165,
+       580
+      ]
+     ]
+    },
+    {
+     "id": "spur",
+     "spawn": "w",
+     "w": 40,
+     "openAtWave": 5,
+     "ctrl": [
+      [
+       -40,
+       370
+      ],
+      [
+       260,
+       210
+      ],
+      [
+       490,
+       210
+      ],
+      [
+       640,
+       360
+      ],
+      [
+       690,
+       520
+      ],
+      [
+       870,
+       590
+      ],
+      [
+       1035,
+       525
+      ],
+      [
+       1165,
+       580
       ]
      ]
     }
@@ -5525,100 +6258,127 @@
    "plots": [
     {
      "at": [
-      160,
-      450
+      335,
+      455
      ],
      "gear": "a"
     },
     {
      "at": [
-      470,
-      290
+      790,
+      275
      ],
      "gear": "a"
     },
     {
      "at": [
-      720,
-      300
+      950,
+      445
      ],
      "gear": "a"
     },
     {
      "at": [
-      960,
-      470
+      1195,
+      255
      ],
      "gear": "a"
     },
     {
      "at": [
-      460,
-      470
+      485,
+      455
      ],
      "gear": "b"
     },
     {
      "at": [
-      760,
-      370
+      950,
+      275
+     ],
+     "gear": "b"
+    },
+    {
+     "at": [
+      790,
+      445
      ],
      "gear": "b"
     },
     {
      "at": [
       740,
-      460
+      650
      ],
      "gear": "b"
     },
     {
      "at": [
-      1180,
-      420
-     ],
-     "gear": "b"
-    },
-    {
-     "at": [
-      180,
-      250
+      295,
+      325
      ]
     },
     {
      "at": [
-      600,
-      250
+      135,
+      195
      ]
     },
     {
      "at": [
-      960,
-      280
+      120,
+      470
      ]
     },
     {
      "at": [
-      1140,
-      120
+      515,
+      140
      ]
     },
     {
      "at": [
-      370,
-      570
+      535,
+      650
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    600,
-    520
+    870,
+    355
    ],
    "heroStart": [
-    960,
-    560
+    640,
+    360
    ],
+   "switches": [
+    {
+     "id": "clutch",
+     "label": "Pinion Clutch",
+     "at": [
+      640,
+      360
+     ],
+     "mode": "fork",
+     "closesA": [
+      "spur"
+     ],
+     "closesB": [
+      "main"
+     ],
+     "cd": 16
+    }
+   ],
+   "alt": {
+    "name": "Inverted Gears",
+    "twist": "A and B gear cycles swap waves and the west gear spur engages at Wave 2.",
+    "hpMul": 1.08,
+    "swapGears": true,
+    "openAtWave": {
+     "spur": 2
+    }
+   },
    "waves": [
     {
      "hint": "The garden wakes",
@@ -5690,7 +6450,7 @@
      ]
     },
     {
-     "hint": "Under the roots",
+     "hint": "West spur engages!",
      "groups": [
       {
        "kind": "burrower",
@@ -5837,7 +6597,7 @@
    "id": 13,
    "name": "Steam Vents",
    "region": 2,
-   "twist": "Two halls run side by side. Vents blast foes on the road, and Wren standing on a vent makes it fire twice as often.",
+   "twist": "Two central rifts split outward to opposing West and East gates! Stand Wren on steam vents for 2x blast tempo.",
    "newFoe": "Ash moth",
    "unlocks": "Shop item: Brass lantern",
    "startGold": 580,
@@ -5850,6 +6610,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 1.18,
    "roads": [
     {
      "id": "upper",
@@ -5857,32 +6618,36 @@
      "w": 48,
      "ctrl": [
       [
-       -40,
+       590,
+       -40
+      ],
+      [
+       585,
        160
       ],
       [
-       300,
+       390,
        170
       ],
       [
-       520,
-       300
+       315,
+       290
       ],
       [
-       760,
-       300
+       515,
+       385
       ],
       [
-       960,
-       180
+       375,
+       520
       ],
       [
-       1100,
-       250
+       190,
+       500
       ],
       [
-       1222,
-       360
+       115,
+       365
       ]
      ]
     },
@@ -5892,32 +6657,68 @@
      "w": 48,
      "ctrl": [
       [
-       -40,
+       690,
+       760
+      ],
+      [
+       695,
        560
       ],
       [
-       300,
-       560
+       890,
+       550
       ],
       [
-       520,
-       420
+       965,
+       430
       ],
       [
-       760,
-       420
+       765,
+       335
       ],
       [
-       960,
-       540
+       905,
+       200
       ],
       [
-       1100,
-       460
+       1090,
+       220
       ],
       [
-       1222,
-       360
+       1165,
+       355
+      ]
+     ]
+    },
+    {
+     "id": "pipe",
+     "spawn": "a",
+     "w": 40,
+     "openAtWave": 6,
+     "ctrl": [
+      [
+       590,
+       -40
+      ],
+      [
+       585,
+       160
+      ],
+      [
+       515,
+       385
+      ],
+      [
+       375,
+       520
+      ],
+      [
+       190,
+       500
+      ],
+      [
+       115,
+       365
       ]
      ]
     }
@@ -5926,118 +6727,145 @@
    "plots": [
     {
      "at": [
-      732,
-      360
+      645,
+      290
      ]
     },
     {
      "at": [
-      400,
-      360
+      635,
+      435
      ]
     },
     {
      "at": [
-      880,
-      360
+      460,
+      260
      ]
     },
     {
      "at": [
-      300,
-      270
+      275,
+      405
      ]
     },
     {
      "at": [
-      300,
-      460
+      485,
+      585
      ]
     },
     {
      "at": [
-      560,
-      190
+      250,
+      180
      ]
     },
     {
      "at": [
-      560,
-      530
+      115,
+      565
      ]
     },
     {
      "at": [
-      780,
-      190
+      120,
+      235
      ]
     },
     {
      "at": [
-      780,
-      530
+      820,
+      465
      ]
     },
     {
      "at": [
-      1000,
-      360
+      1005,
+      315
      ]
     },
     {
      "at": [
-      160,
-      270
+      795,
+      135
      ]
     },
     {
      "at": [
-      1100,
-      120
+      1030,
+      540
      ]
     },
     {
      "at": [
-      1100,
-      600
+      1165,
+      155
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    160,
-    640
+    500,
+    495
    ],
    "heroStart": [
-    960,
+    640,
     360
    ],
    "vents": [
     {
      "road": "upper",
-     "at": 0.45,
+     "at": 0.48,
      "every": 7,
      "dmg": 60
     },
     {
      "road": "lower",
-     "at": 0.45,
+     "at": 0.48,
      "every": 7,
      "dmg": 60
     },
     {
      "road": "upper",
-     "at": 0.78,
+     "at": 0.8,
      "every": 9,
      "dmg": 80
     },
     {
      "road": "lower",
-     "at": 0.78,
+     "at": 0.8,
      "every": 9,
      "dmg": 80
     }
    ],
+   "switches": [
+    {
+     "id": "valve",
+     "label": "Manifold Valve",
+     "at": [
+      585,
+      160
+     ],
+     "mode": "fork",
+     "closesA": [
+      "pipe"
+     ],
+     "closesB": [
+      "upper"
+     ],
+     "cd": 16
+    }
+   ],
+   "alt": {
+    "name": "Overpressure Boiler",
+    "twist": "The centre exhaust pipe opens on Wave 2 and the Hollow adapts every 2 waves.",
+    "hpMul": 0.96,
+    "openAtWave": {
+     "pipe": 2
+    },
+    "adaptEvery": 2
+   },
    "waves": [
     {
      "hint": "Steam rising",
@@ -6149,7 +6977,7 @@
      ]
     },
     {
-     "hint": "Ash cloud",
+     "hint": "Center exhaust opens!",
      "groups": [
       {
        "kind": "ashmoth",
@@ -6272,7 +7100,7 @@
    "id": 14,
    "name": "Assembly Line",
    "region": 2,
-   "twist": "Three lines feed one gate. Iron Shellbacks come off the line armored, so small hits barely scratch them.",
+   "twist": "Tri-bay diagonal lanes feed the NW Crucible. Use rail switches to force long loops; clear cranes & brace for Wave 5 drop chutes.",
    "newFoe": "Iron Shellback",
    "unlocks": "Shop item: Spear of dawn",
    "startGold": 620,
@@ -6285,6 +7113,7 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 0.88,
    "roads": [
     {
      "id": "top",
@@ -6292,36 +7121,28 @@
      "w": 46,
      "ctrl": [
       [
-       380,
+       980,
        -40
       ],
       [
-       400,
-       140
-      ],
-      [
-       560,
-       280
-      ],
-      [
-       800,
-       360
-      ],
-      [
        960,
-       360
+       130
       ],
       [
-       1060,
-       240
+       740,
+       175
       ],
       [
-       1180,
-       300
+       540,
+       260
       ],
       [
-       1222,
-       360
+       330,
+       225
+      ],
+      [
+       150,
+       175
       ]
      ]
     },
@@ -6331,36 +7152,63 @@
      "w": 46,
      "ctrl": [
       [
-       -40,
+       1320,
        360
       ],
       [
-       300,
+       1020,
        360
       ],
       [
-       560,
+       740,
        360
       ],
       [
-       800,
+       540,
+       260
+      ],
+      [
+       330,
+       225
+      ],
+      [
+       150,
+       175
+      ]
+     ]
+    },
+    {
+     "id": "mid_loop",
+     "spawn": "m",
+     "w": 40,
+     "ctrl": [
+      [
+       1320,
        360
       ],
       [
-       960,
+       1020,
        360
       ],
       [
-       1060,
-       240
+       900,
+       560
       ],
       [
-       1180,
-       300
+       640,
+       520
       ],
       [
-       1222,
-       360
+       540,
+       260
+      ],
+      [
+       330,
+       225
+      ],
+      [
+       150,
+       175
       ]
      ]
     },
@@ -6370,36 +7218,24 @@
      "w": 46,
      "ctrl": [
       [
-       380,
+       640,
        760
       ],
       [
-       400,
-       580
+       620,
+       570
       ],
       [
-       560,
-       440
+       435,
+       465
       ],
       [
-       800,
-       360
+       330,
+       225
       ],
       [
-       960,
-       360
-      ],
-      [
-       1060,
-       240
-      ],
-      [
-       1180,
-       300
-      ],
-      [
-       1222,
-       360
+       150,
+       175
       ]
      ]
     }
@@ -6408,95 +7244,159 @@
    "plots": [
     {
      "at": [
-      240,
-      250
+      210,
+      305
      ]
     },
     {
      "at": [
-      240,
-      470
+      420,
+      130
      ]
     },
     {
      "at": [
-      440,
-      270
+      470,
+      355
      ]
     },
     {
      "at": [
-      440,
-      450
+      685,
+      260
+     ],
+     "rubble": {
+      "kind": "crane",
+      "cost": 80,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      875,
+      255
      ]
     },
     {
      "at": [
-      680,
-      250
+      750,
+      445
+     ],
+     "rubble": {
+      "kind": "crane",
+      "cost": 80,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      1045,
+      465
      ]
     },
     {
      "at": [
-      680,
-      470
+      1135,
+      260
      ]
     },
     {
      "at": [
-      880,
-      270
+      1100,
+      120
      ]
     },
     {
      "at": [
-      880,
-      450
+      765,
+      635
      ]
     },
     {
      "at": [
-      1060,
-      380
+      470,
+      610
      ]
     },
     {
      "at": [
-      1160,
-      160
-     ]
-    },
-    {
-     "at": [
-      520,
-      140
-     ]
-    },
-    {
-     "at": [
-      520,
-      580
-     ]
-    },
-    {
-     "at": [
-      1060,
-      470
+      305,
+      455
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    140,
-    140
+    1070,
+    560
    ],
    "heroStart": [
-    960,
-    420
+    365,
+    290
    ],
+   "switches": [
+    {
+     "id": "rail_m",
+     "label": "Mid Rail Switch",
+     "at": [
+      1020,
+      360
+     ],
+     "mode": "fork",
+     "closesA": [
+      "mid_loop"
+     ],
+     "closesB": [
+      "mid"
+     ],
+     "cd": 16
+    },
+    {
+     "id": "brake",
+     "label": "Crucible Brake",
+     "at": [
+      540,
+      260
+     ],
+     "mode": "gate",
+     "closesB": [
+      "top"
+     ],
+     "dur": 10,
+     "cd": 18
+    }
+   ],
+   "portals": [
+    {
+     "id": "drop",
+     "kind": "chute",
+     "fromRoad": "bot",
+     "fromAt": 0.42,
+     "toRoad": "mid",
+     "toAt": 0.68,
+     "openAtWave": 5,
+     "everyNth": 3,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Reverse Dispatch",
+    "twist": "The foundry reverses: foes pour from NW out toward N, E and S docks.",
+    "hpMul": 1.06,
+    "reverseRoads": [
+     "top",
+     "mid",
+     "mid_loop",
+     "bot"
+    ],
+    "heroStart": [
+     760,
+     260
+    ]
+   },
    "waves": [
     {
-     "hint": "Three lines start",
+     "hint": "Three bays start",
      "groups": [
       {
        "kind": "grub",
@@ -6586,7 +7486,7 @@
      ]
     },
     {
-     "hint": "Menders",
+     "hint": "Drop chute opens!",
      "groups": [
       {
        "kind": "mender",
@@ -6721,7 +7621,7 @@
    "id": 15,
    "name": "The Brass Colossus",
    "region": 2,
-   "twist": "Boss. Brass plates turn most damage away. Chill the Colossus with frost and the plates crack.",
+   "twist": "Boss. 320° siege ring around the elevated Hex Anvil Dais. Chill the Colossus to shatter brass plates; when he rages, he smashes open the center.",
    "newFoe": "The Brass Colossus",
    "unlocks": "Relic: Brass heart (+1 Wren skill point)",
    "startGold": 680,
@@ -6734,6 +7634,37 @@
     "roots",
     "beacon"
    ],
+   "hpMul": 0.78,
+   "high": [
+    [
+     325,
+     225
+    ],
+    [
+     955,
+     225
+    ],
+    [
+     1015,
+     360
+    ],
+    [
+     955,
+     495
+    ],
+    [
+     325,
+     495
+    ],
+    [
+     265,
+     360
+    ],
+    [
+     325,
+     225
+    ]
+   ],
    "roads": [
     {
      "id": "main",
@@ -6741,171 +7672,214 @@
      "w": 54,
      "ctrl": [
       [
-       -40,
+       1135,
+       760
+      ],
+      [
+       1135,
+       540
+      ],
+      [
+       1135,
+       215
+      ],
+      [
+       960,
        120
       ],
       [
-       500,
+       640,
+       115
+      ],
+      [
+       320,
        120
       ],
       [
-       900,
-       125
+       150,
+       215
       ],
       [
-       1120,
-       250
+       150,
+       490
       ],
       [
-       1130,
-       470
+       265,
+       610
       ],
       [
-       900,
-       600
+       640,
+       620
       ],
       [
-       500,
+       845,
        605
+      ]
+     ]
+    },
+    {
+     "id": "mid_cut",
+     "spawn": "w",
+     "w": 42,
+     "openOnPhase": 1,
+     "ctrl": [
+      [
+       1135,
+       760
       ],
       [
-       200,
-       580
+       1135,
+       540
       ],
       [
-       130,
-       460
+       745,
+       360
       ],
       [
-       86,
-       440
+       495,
+       360
+      ],
+      [
+       150,
+       490
+      ],
+      [
+       265,
+       610
+      ],
+      [
+       640,
+       620
+      ],
+      [
+       845,
+       605
       ]
      ]
     }
    ],
    "waters": [],
-   "high": [
-    [
-     320,
-     260
-    ],
-    [
-     900,
-     250
-    ],
-    [
-     960,
-     360
-    ],
-    [
-     900,
-     470
-    ],
-    [
-     320,
-     470
-    ],
-    [
-     260,
-     360
-    ],
-    [
-     320,
-     260
-    ]
-   ],
    "plots": [
     {
      "at": [
-      400,
-      278
+      405,
+      265
      ]
     },
     {
      "at": [
-      620,
-      278
+      640,
+      265
      ]
     },
     {
      "at": [
-      840,
-      278
+      875,
+      265
      ]
     },
     {
      "at": [
-      400,
-      448
-     ]
-    },
-    {
-     "at": [
-      620,
-      448
-     ]
-    },
-    {
-     "at": [
-      840,
-      448
-     ]
-    },
-    {
-     "at": [
-      1000,
+      315,
       360
      ]
     },
     {
      "at": [
-      300,
+      965,
+      360
+     ],
+     "rubble": {
+      "kind": "crane",
+      "cost": 85,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      470,
+      455
+     ]
+    },
+    {
+     "at": [
+      640,
+      455
+     ],
+     "rubble": {
+      "kind": "crane",
+      "cost": 85,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      875,
+      455
+     ]
+    },
+    {
+     "at": [
+      1225,
       360
      ]
     },
     {
      "at": [
-      700,
-      220
+      1220,
+      145
      ]
     },
     {
      "at": [
-      700,
-      510
+      85,
+      145
      ]
     },
     {
      "at": [
-      1240,
-      360
+      80,
+      390
      ]
     },
     {
      "at": [
-      200,
-      220
-     ]
-    },
-    {
-     "at": [
-      1000,
-      660
+      1010,
+      625
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    1240,
-    120
+    640,
+    360
    ],
    "heroStart": [
-    220,
-    440
+    300,
+    560
    ],
+   "terraforms": [
+    {
+     "atPhase": 1,
+     "kind": "quakelow",
+     "label": "The Colossus smashes straight through the central Anvil Dais!",
+     "openRoads": [
+      "mid_cut"
+     ]
+    }
+   ],
+   "alt": {
+    "name": "Cold Iron Blackout",
+    "twist": "Night falls on even waves and the central cut breaches early on Wave 3.",
+    "hpMul": 1.19,
+    "night": true,
+    "openAtWave": {
+     "mid_cut": 3
+    }
+   },
    "waves": [
     {
-     "hint": "The foundry floor",
+     "hint": "The anvil perimeter",
      "groups": [
       {
        "kind": "grub",
@@ -7018,10 +7992,10 @@
    "name": "Ember Pass",
    "region": 3,
    "lava": true,
-   "twist": "Three roads through the pass. Lava closes one of them at a time, so the fight moves.",
+   "twist": "Diagonal caldera bridges cycling under magma shifts. Seal the center Obsidian Gate or anticipate the Wave 6 ash portal.",
    "newFoe": "Burrower swarm",
    "unlocks": "Shop item: Ember spear",
-   "startGold": 680,
+   "startGold": 960,
    "lives": 20,
    "towers": [
     "watch",
@@ -7031,7 +8005,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.25,
+   "hpMul": 0.9,
    "roads": [
     {
      "id": "top",
@@ -7039,32 +8013,32 @@
      "w": 46,
      "ctrl": [
       [
-       -40,
-       360
+       190,
+       760
+      ],
+      [
+       175,
+       520
       ],
       [
        160,
-       360
+       290
       ],
       [
-       300,
-       180
-      ],
-      [
-       640,
+       380,
        130
       ],
       [
-       980,
-       180
+       660,
+       130
       ],
       [
-       1100,
-       330
+       950,
+       165
       ],
       [
-       1222,
-       360
+       1125,
+       175
       ]
      ]
     },
@@ -7074,32 +8048,32 @@
      "w": 46,
      "ctrl": [
       [
-       -40,
-       360
+       190,
+       760
       ],
       [
-       160,
-       360
+       240,
+       570
       ],
       [
-       400,
-       380
+       450,
+       490
       ],
       [
        640,
-       345
-      ],
-      [
-       880,
-       380
-      ],
-      [
-       1100,
-       355
-      ],
-      [
-       1222,
        360
+      ],
+      [
+       830,
+       230
+      ],
+      [
+       1000,
+       195
+      ],
+      [
+       1125,
+       175
       ]
      ]
     },
@@ -7109,68 +8083,59 @@
      "w": 46,
      "ctrl": [
       [
-       -40,
-       360
+       190,
+       760
       ],
       [
-       160,
-       360
+       420,
+       650
       ],
       [
-       300,
-       540
+       720,
+       625
       ],
       [
-       640,
-       600
+       895,
+       580
       ],
       [
-       980,
-       540
+       1055,
+       430
       ],
       [
-       1100,
-       390
+       1080,
+       260
       ],
       [
-       1222,
-       360
+       1125,
+       175
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 36,
+     "w": 60,
      "ctrl": [
       [
-       640,
+       220,
        -40
       ],
       [
-       660,
-       60
+       380,
+       130
       ],
-      [
-       630,
-       110
-      ]
-     ]
-    },
-    {
-     "w": 36,
-     "ctrl": [
       [
        640,
+       360
+      ],
+      [
+       895,
+       580
+      ],
+      [
+       1080,
        770
-      ],
-      [
-       620,
-       680
-      ],
-      [
-       650,
-       630
       ]
      ]
     }
@@ -7178,91 +8143,120 @@
    "plots": [
     {
      "at": [
-      420,
-      270
+      265,
+      395
      ]
     },
     {
      "at": [
-      640,
-      240
+      385,
+      290
+     ],
+     "rubble": {
+      "kind": "slag",
+      "cost": 80,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      540,
+      520
      ]
     },
     {
      "at": [
-      860,
-      270
+      315,
+      600
      ]
     },
     {
      "at": [
-      420,
-      470
+      80,
+      410
      ]
     },
     {
      "at": [
-      640,
-      470
+      185,
+      175
      ]
     },
     {
      "at": [
-      860,
-      470
+      585,
+      215
      ]
     },
     {
      "at": [
-      160,
-      220
+      820,
+      355
      ]
     },
     {
      "at": [
-      160,
-      500
+      945,
+      365
      ]
     },
     {
      "at": [
-      1000,
-      270
+      875,
+      445
+     ],
+     "rubble": {
+      "kind": "slag",
+      "cost": 80,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      1185,
+      325
      ]
     },
     {
      "at": [
-      1000,
-      460
+      430,
+      560
      ]
     },
     {
      "at": [
-      300,
-      70
-     ]
-    },
-    {
-     "at": [
-      1180,
-      220
-     ]
-    },
-    {
-     "at": [
-      1180,
-      500
+      1155,
+      535
      ]
     }
    ],
-   "bridges": [],
+   "bridges": [
+    [
+     380,
+     130,
+     0,
+     56
+    ],
+    [
+     640,
+     360,
+     -0.6,
+     56
+    ],
+    [
+     895,
+     580,
+     -0.65,
+     56
+    ]
+   ],
    "rune": [
-    100,
-    640
+    690,
+    520
    ],
    "heroStart": [
-    1080,
-    360
+    900,
+    280
    ],
    "shifts": [
     {
@@ -7274,11 +8268,11 @@
      "start": 0,
      "dur": 18,
      "at": [
-      640,
+      380,
       130
      ],
      "r": 56,
-     "label": "Lava floods the high pass"
+     "label": "Lava floods the north-west bridge"
     },
     {
      "kind": "lava",
@@ -7290,10 +8284,10 @@
      "dur": 18,
      "at": [
       640,
-      345
+      360
      ],
      "r": 56,
-     "label": "Lava floods the middle road"
+     "label": "Lava floods the central arch"
     },
     {
      "kind": "lava",
@@ -7304,13 +8298,57 @@
      "start": 36,
      "dur": 18,
      "at": [
-      640,
-      600
+      895,
+      580
      ],
      "r": 56,
-     "label": "Lava floods the low road"
+     "label": "Lava floods the south-east gorge"
     }
    ],
+   "switches": [
+    {
+     "id": "ob_gate",
+     "label": "Obsidian Gate",
+     "at": [
+      640,
+      360
+     ],
+     "mode": "gate",
+     "closesB": [
+      "mid"
+     ],
+     "dur": 10,
+     "cd": 19
+    }
+   ],
+   "portals": [
+    {
+     "id": "ash_tube",
+     "kind": "rift",
+     "fromRoad": "top",
+     "fromAt": 0.4,
+     "toRoad": "mid",
+     "toAt": 0.58,
+     "openAtWave": 6,
+     "everyNth": 4,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Triple Eruption",
+    "twist": "Night settles through ash clouds and NE summit descends toward SW.",
+    "hpMul": 0.95,
+    "night": true,
+    "reverseRoads": [
+     "top",
+     "mid",
+     "bot"
+    ],
+    "heroStart": [
+     420,
+     520
+    ]
+   },
    "waves": [
     {
      "hint": "Ash on the wind",
@@ -7368,7 +8406,7 @@
      ]
     },
     {
-     "hint": "Wardens and menders",
+     "hint": "Ash portal tears open!",
      "groups": [
       {
        "kind": "warden",
@@ -7454,7 +8492,7 @@
    "name": "Avalanche Ridge",
    "region": 3,
    "lava": true,
-   "twist": "The ridge gives range to towers on it, but avalanches bury ridge plots as the waves go on.",
+   "twist": "NE→W→SE horseshoe around a collapsing high ridge. Wave 4 cracks a steep scree slide while avalanches bury plots.",
    "newFoe": "Iron swarm",
    "unlocks": "Shop item: Dawn mantle",
    "startGold": 720,
@@ -7467,7 +8505,33 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.3,
+   "hpMul": 1.63,
+   "high": [
+    [
+     345,
+     210
+    ],
+    [
+     1280,
+     210
+    ],
+    [
+     1280,
+     505
+    ],
+    [
+     345,
+     505
+    ],
+    [
+     260,
+     360
+    ],
+    [
+     345,
+     210
+    ]
+   ],
    "roads": [
     {
      "id": "main",
@@ -7475,190 +8539,250 @@
      "w": 50,
      "ctrl": [
       [
-       -40,
-       640
+       1320,
+       125
       ],
       [
-       200,
-       620
+       960,
+       125
       ],
       [
-       400,
-       520
+       560,
+       120
       ],
       [
-       520,
-       400
+       270,
+       140
       ],
       [
-       700,
-       420
+       160,
+       265
       ],
       [
-       860,
-       560
-      ],
-      [
-       1060,
-       600
-      ],
-      [
-       1160,
+       155,
        450
       ],
       [
-       1110,
-       300
+       280,
+       565
       ],
       [
-       1222,
-       250
+       580,
+       580
+      ],
+      [
+       920,
+       580
+      ],
+      [
+       1165,
+       585
+      ]
+     ]
+    },
+    {
+     "id": "scree",
+     "spawn": "w",
+     "w": 40,
+     "openAtWave": 4,
+     "ctrl": [
+      [
+       1320,
+       125
+      ],
+      [
+       960,
+       125
+      ],
+      [
+       705,
+       360
+      ],
+      [
+       580,
+       580
+      ],
+      [
+       920,
+       580
+      ],
+      [
+       1165,
+       585
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 34,
+     "w": 52,
      "ctrl": [
       [
-       300,
-       770
+       30,
+       180
       ],
       [
-       340,
-       690
+       75,
+       360
       ],
       [
-       430,
-       660
+       30,
+       540
       ]
      ]
     }
    ],
-   "high": [
-    [
-     0,
-     0
-    ],
-    [
-     1080,
-     0
-    ],
-    [
-     1070,
-     250
-    ],
-    [
-     920,
-     320
-    ],
-    [
-     700,
-     330
-    ],
-    [
-     420,
-     355
-    ],
-    [
-     0,
-     370
-    ],
-    [
-     0,
-     0
-    ]
-   ],
    "plots": [
     {
      "at": [
-      380,
-      330
-     ]
-    },
-    {
-     "at": [
-      490,
-      275
-     ],
-     "sinkAt": 7
-    },
-    {
-     "at": [
-      615,
-      280
+      355,
+      360
      ],
      "sinkAt": 4
     },
     {
      "at": [
-      745,
-      290
+      485,
+      260
+     ],
+     "sinkAt": 7
+    },
+    {
+     "at": [
+      485,
+      450
      ],
      "sinkAt": 10
     },
     {
      "at": [
-      995,
+      645,
+      235
+     ]
+    },
+    {
+     "at": [
+      755,
       225
      ]
     },
     {
      "at": [
-      300,
-      430
+      945,
+      265
      ]
     },
     {
      "at": [
-      640,
-      540
+      945,
+      445
      ]
     },
     {
      "at": [
-      820,
-      420
+      1130,
+      265
      ]
     },
     {
      "at": [
-      1000,
-      470
+      105,
+      160
      ]
     },
     {
      "at": [
-      1240,
-      400
+      105,
+      555
      ]
     },
     {
      "at": [
-      1040,
-      680
+      465,
+      665
      ]
     },
     {
      "at": [
-      120,
-      520
+      825,
+      665
      ]
+    },
+    {
+     "at": [
+      785,
+      445
+     ],
+     "openAtWave": 4
     }
    ],
    "bridges": [],
    "rune": [
-    500,
-    640
+    1040,
+    360
    ],
    "heroStart": [
-    1000,
-    520
+    900,
+    560
    ],
+   "switches": [
+    {
+     "id": "rockfall",
+     "label": "Scree Gate",
+     "at": [
+      960,
+      125
+     ],
+     "mode": "gate",
+     "closesB": [
+      "main"
+     ],
+     "dur": 10,
+     "cd": 19
+    }
+   ],
+   "terraforms": [
+    {
+     "atWave": 4,
+     "kind": "quakelow",
+     "label": "A rockslide carves a steep scree pass down the ridge!",
+     "openRoads": [
+      "scree"
+     ],
+     "openPlots": [
+      12
+     ]
+    }
+   ],
+   "portals": [
+    {
+     "id": "lavatube",
+     "kind": "tunnel",
+     "fromRoad": "main",
+     "fromAt": 0.25,
+     "toRoad": "scree",
+     "toAt": 0.65,
+     "openAtWave": 7,
+     "everyNth": 3,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Ridge Reversal",
+    "twist": "Foes surge upward from the southern basin onto the crumbling eastern peak, on the ridge road and the scree alike.",
+    "hpMul": 0.65,
+    "reverseRoads": [
+     "main",
+     "scree"
+    ],
+    "heroStart": [
+     640,
+     220
+    ]
+   },
    "waves": [
     {
-     "hint": "Up the ridge",
+     "hint": "Onto the ridge",
      "groups": [
       {
        "kind": "grub",
@@ -7691,7 +8815,7 @@
      ]
     },
     {
-     "hint": "Burrowers",
+     "hint": "Rockslide scree opens!",
      "groups": [
       {
        "kind": "burrower",
@@ -7730,7 +8854,7 @@
      ]
     },
     {
-     "hint": "Menders and iron",
+     "hint": "Lava tube erupts!",
      "groups": [
       {
        "kind": "mender",
@@ -7747,7 +8871,7 @@
      ]
     },
     {
-     "hint": "Shades in the snow",
+     "hint": "Shades in the cinder",
      "groups": [
       {
        "kind": "shade",
@@ -7810,7 +8934,7 @@
    "name": "Mirror Lake",
    "region": 3,
    "lava": true,
-   "twist": "Two gates across a lake of fire. Foes copy your weak side, so defend both and keep Wren moving.",
+   "twist": "A centre rift feeds two opposite spirals, to a north-east and a south-west Keep. The Rift Divert sends the whole horde down one spiral at a time, and Wave 5 cools a third bridge.",
    "newFoe": "Everything doubled",
    "unlocks": "Shop item: Second dawn",
    "startGold": 760,
@@ -7831,28 +8955,32 @@
      "w": 48,
      "ctrl": [
       [
-       -40,
-       380
+       640,
+       360
       ],
       [
-       160,
-       380
+       740,
+       360
       ],
       [
-       300,
-       240
+       820,
+       480
       ],
       [
-       600,
-       180
+       990,
+       515
       ],
       [
-       900,
-       200
+       1065,
+       365
       ],
       [
-       1222,
-       200
+       960,
+       215
+      ],
+      [
+       1155,
+       175
       ]
      ]
     },
@@ -7862,51 +8990,95 @@
      "w": 48,
      "ctrl": [
       [
-       -40,
-       380
+       640,
+       360
       ],
       [
-       160,
-       380
+       540,
+       360
       ],
       [
-       300,
-       520
+       460,
+       240
       ],
       [
-       600,
-       580
+       290,
+       205
       ],
       [
-       900,
-       560
+       215,
+       355
       ],
       [
-       1222,
-       560
+       320,
+       505
+      ],
+      [
+       125,
+       545
+      ]
+     ]
+    },
+    {
+     "id": "cross",
+     "spawn": "w",
+     "w": 40,
+     "openAtWave": 5,
+     "ctrl": [
+      [
+       640,
+       360
+      ],
+      [
+       640,
+       195
+      ],
+      [
+       960,
+       215
+      ],
+      [
+       1155,
+       175
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 92,
+     "id": "lake_n",
+     "w": 64,
+     "drainAtWave": 5,
      "ctrl": [
       [
-       360,
-       382
+       575,
+       155
       ],
       [
-       600,
-       372
+       665,
+       195
       ],
       [
-       880,
-       380
+       755,
+       225
+      ]
+     ]
+    },
+    {
+     "id": "lake_s",
+     "w": 64,
+     "ctrl": [
+      [
+       525,
+       495
       ],
       [
-       1000,
-       385
+       615,
+       525
+      ],
+      [
+       695,
+       590
       ]
      ]
     }
@@ -7914,95 +9086,153 @@
    "plots": [
     {
      "at": [
-      440,
-      90
-     ]
-    },
-    {
-     "at": [
-      760,
-      90
+      335,
+      355
      ]
     },
     {
      "at": [
       440,
-      660
+      385
      ]
     },
     {
      "at": [
-      760,
-      660
+      200,
+      210
      ]
     },
     {
      "at": [
-      1100,
-      310
+      110,
+      370
      ]
     },
     {
      "at": [
-      1100,
-      90
+      245,
+      615
      ]
     },
     {
      "at": [
-      1100,
-      660
+      420,
+      610
      ]
     },
     {
      "at": [
-      600,
-      270
+      945,
+      365
      ]
     },
     {
      "at": [
-      600,
-      480
+      840,
+      335
      ]
     },
     {
      "at": [
-      880,
-      290
-     ]
-    },
-    {
-     "at": [
-      880,
-      470
-     ]
-    },
-    {
-     "at": [
-      180,
-      250
-     ]
-    },
-    {
-     "at": [
-      180,
+      1080,
       510
      ]
+    },
+    {
+     "at": [
+      1170,
+      350
+     ]
+    },
+    {
+     "at": [
+      1045,
+      125
+     ]
+    },
+    {
+     "at": [
+      860,
+      120
+     ]
+    },
+    {
+     "at": [
+      750,
+      145
+     ],
+     "openAtWave": 5
     }
    ],
    "bridges": [],
    "rune": [
-    1240,
-    380
+    470,
+    140
    ],
    "heroStart": [
-    1100,
-    300
+    640,
+    360
    ],
+   "switches": [
+    {
+     "id": "mirror_sw",
+     "label": "Rift Divert",
+     "at": [
+      640,
+      360
+     ],
+     "mode": "fork",
+     "closesA": [
+      "north"
+     ],
+     "closesB": [
+      "south"
+     ],
+     "cd": 16
+    }
+   ],
+   "terraforms": [
+    {
+     "atWave": 5,
+     "kind": "drain",
+     "label": "North magma lake cools into a stone cross-bridge!",
+     "waters": [
+      "lake_n"
+     ],
+     "openRoads": [
+      "cross"
+     ],
+     "openPlots": [
+      12
+     ]
+    }
+   ],
+   "portals": [
+    {
+     "id": "refl",
+     "kind": "rift",
+     "fromRoad": "south",
+     "fromAt": 0.48,
+     "toRoad": "cross",
+     "toAt": 0.65,
+     "openAtWave": 7,
+     "everyNth": 4,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Inverted Reflections",
+    "twist": "The outer corners become the rifts and every spiral feeds inward to one centre Keep.",
+    "hpMul": 0.72,
+    "reverseRoads": [
+     "north",
+     "south",
+     "cross"
+    ]
+   },
    "waves": [
     {
-     "hint": "Reflections",
+     "hint": "Center rift opens",
      "groups": [
       {
        "kind": "grub",
@@ -8052,7 +9282,7 @@
      ]
     },
     {
-     "hint": "Burrowers",
+     "hint": "North lake cools into a bridge!",
      "groups": [
       {
        "kind": "burrower",
@@ -8086,7 +9316,7 @@
      ]
     },
     {
-     "hint": "Shades",
+     "hint": "Reflection portal wakes!",
      "groups": [
       {
        "kind": "shade",
@@ -8155,10 +9385,10 @@
    "name": "The Hollow Gate",
    "region": 3,
    "lava": true,
-   "twist": "Four rifts, every foe. The Hollow adapts after every wave, not every third one.",
+   "twist": "Four-corner radial crucible converging on the Center Keep. Rifts awaken wave by wave while the Hollow adapts every wave.",
    "newFoe": "All of them",
    "unlocks": "Capstones in every tree",
-   "startGold": 820,
+   "startGold": 1120,
    "lives": 20,
    "towers": [
     "watch",
@@ -8169,7 +9399,7 @@
     "beacon"
    ],
    "adaptEvery": 1,
-   "hpMul": 1.36,
+   "hpMul": 0.92,
    "roads": [
     {
      "id": "nw",
@@ -8178,108 +9408,22 @@
      "ctrl": [
       [
        -40,
-       160
+       140
       ],
       [
-       240,
-       200
+       210,
+       145
       ],
       [
-       480,
-       330
+       350,
+       255
       ],
       [
-       640,
-       360
-      ],
-      [
-       800,
-       360
-      ],
-      [
-       960,
-       250
-      ],
-      [
-       1100,
-       300
-      ],
-      [
-       1222,
-       360
-      ]
-     ]
-    },
-    {
-     "id": "sw",
-     "spawn": "sw",
-     "w": 44,
-     "ctrl": [
-      [
-       -40,
-       560
-      ],
-      [
-       240,
-       520
-      ],
-      [
-       480,
-       390
+       500,
+       285
       ],
       [
        640,
-       360
-      ],
-      [
-       800,
-       360
-      ],
-      [
-       960,
-       250
-      ],
-      [
-       1100,
-       300
-      ],
-      [
-       1222,
-       360
-      ]
-     ]
-    },
-    {
-     "id": "n",
-     "spawn": "n",
-     "w": 44,
-     "ctrl": [
-      [
-       620,
-       -40
-      ],
-      [
-       600,
-       120
-      ],
-      [
-       640,
-       360
-      ],
-      [
-       800,
-       360
-      ],
-      [
-       960,
-       250
-      ],
-      [
-       1100,
-       300
-      ],
-      [
-       1222,
        360
       ]
      ]
@@ -8290,188 +9434,303 @@
      "w": 44,
      "ctrl": [
       [
-       620,
-       760
+       1320,
+       580
       ],
       [
-       600,
-       600
+       1070,
+       575
+      ],
+      [
+       930,
+       465
+      ],
+      [
+       780,
+       435
       ],
       [
        640,
        360
+      ]
+     ]
+    },
+    {
+     "id": "n",
+     "spawn": "n",
+     "w": 44,
+     "openAtWave": 3,
+     "ctrl": [
+      [
+       1320,
+       140
       ],
       [
-       800,
+       1070,
+       145
+      ],
+      [
+       930,
+       255
+      ],
+      [
+       780,
+       285
+      ],
+      [
+       640,
        360
+      ]
+     ]
+    },
+    {
+     "id": "sw",
+     "spawn": "sw",
+     "w": 44,
+     "openAtWave": 5,
+     "ctrl": [
+      [
+       -40,
+       580
       ],
       [
-       960,
-       250
+       210,
+       575
       ],
       [
-       1100,
-       300
+       350,
+       465
       ],
       [
-       1222,
+       500,
+       435
+      ],
+      [
+       640,
        360
       ]
      ]
     }
    ],
-   "waters": [],
+   "waters": [
+    {
+     "w": 44,
+     "ctrl": [
+      [
+       640,
+       -40
+      ],
+      [
+       640,
+       175
+      ]
+     ]
+    },
+    {
+     "w": 44,
+     "ctrl": [
+      [
+       640,
+       770
+      ],
+      [
+       640,
+       545
+      ]
+     ]
+    }
+   ],
    "plots": [
     {
      "at": [
-      395,
-      222
-     ]
-    },
-    {
-     "at": [
-      408,
-      490
-     ]
-    },
-    {
-     "at": [
-      760,
-      240
-     ]
-    },
-    {
-     "at": [
-      760,
-      480
-     ]
-    },
-    {
-     "at": [
-      500,
-      140
-     ]
-    },
-    {
-     "at": [
-      500,
-      580
-     ]
-    },
-    {
-     "at": [
-      960,
-      380
-     ]
-    },
-    {
-     "at": [
-      1100,
-      180
-     ]
-    },
-    {
-     "at": [
-      1100,
-      470
-     ]
-    },
-    {
-     "at": [
-      220,
+      275,
       360
      ]
     },
     {
      "at": [
-      720,
-      590
+      445,
+      360
      ]
     },
     {
      "at": [
-      720,
-      130
+      1005,
+      360
      ]
     },
     {
      "at": [
-      1200,
-      450
+      835,
+      360
      ]
+    },
+    {
+     "at": [
+      515,
+      185
+     ]
+    },
+    {
+     "at": [
+      765,
+      185
+     ]
+    },
+    {
+     "at": [
+      370,
+      140
+     ]
+    },
+    {
+     "at": [
+      910,
+      140
+     ]
+    },
+    {
+     "at": [
+      515,
+      535
+     ]
+    },
+    {
+     "at": [
+      765,
+      535
+     ]
+    },
+    {
+     "at": [
+      370,
+      580
+     ]
+    },
+    {
+     "at": [
+      910,
+      580
+     ]
+    },
+    {
+     "at": [
+      640,
+      255
+     ],
+     "rubble": {
+      "kind": "slag",
+      "cost": 90,
+      "holdSec": 5
+     }
+    },
+    {
+     "at": [
+      640,
+      465
+     ],
+     "rubble": {
+      "kind": "slag",
+      "cost": 90,
+      "holdSec": 5
+     }
     }
    ],
    "bridges": [],
    "rune": [
-    200,
-    640
+    565,
+    360
    ],
    "heroStart": [
-    960,
-    420
+    540,
+    360
    ],
+   "switches": [
+    {
+     "id": "col_seal",
+     "label": "Crucible Seal",
+     "at": [
+      500,
+      285
+     ],
+     "mode": "gate",
+     "closesB": [
+      "nw"
+     ],
+     "dur": 10,
+     "cd": 19
+    }
+   ],
+   "portals": [
+    {
+     "id": "quad_rift",
+     "kind": "rift",
+     "fromRoad": "n",
+     "fromAt": 0.35,
+     "toRoad": "s",
+     "toAt": 0.65,
+     "openAtWave": 7,
+     "everyNth": 3,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "All Four From Dawn",
+    "twist": "All four corner rifts are lit from Wave 1 and each sends its own splinter of the horde.",
+    "hpMul": 1.1,
+    "openAtWave": {
+     "n": 1,
+     "sw": 1
+    }
+   },
    "waves": [
     {
-     "hint": "Four rifts tear open",
+     "hint": "Two corners breach",
      "groups": [
       {
        "kind": "grub",
-       "n": 8,
+       "n": 14,
        "gap": 0.9,
        "delay": 0,
        "spawn": "nw"
       },
       {
        "kind": "grub",
-       "n": 8,
+       "n": 14,
        "gap": 0.9,
        "delay": 1,
-       "spawn": "sw"
-      },
-      {
-       "kind": "grub",
-       "n": 8,
-       "gap": 0.9,
-       "delay": 2,
-       "spawn": "n"
-      },
-      {
-       "kind": "grub",
-       "n": 8,
-       "gap": 0.9,
-       "delay": 3,
        "spawn": "s"
       }
      ]
     },
     {
-     "hint": "Iron from the north",
+     "hint": "Iron on the ramps",
      "groups": [
       {
        "kind": "elite",
        "n": 6,
        "gap": 2,
        "delay": 0,
-       "spawn": "n"
+       "spawn": "nw"
       },
       {
        "kind": "skitter",
        "n": 10,
        "gap": 0.4,
        "delay": 0,
-       "spawn": "sw"
+       "spawn": "s"
       }
      ]
     },
     {
-     "hint": "Shades from the south",
+     "hint": "North-East corner tears open!",
      "groups": [
       {
        "kind": "shade",
        "n": 10,
        "gap": 0.8,
        "delay": 0,
-       "spawn": "s"
+       "spawn": "n"
       },
       {
        "kind": "burrower",
@@ -8497,12 +9756,12 @@
        "n": 10,
        "gap": 1,
        "delay": 0,
-       "spawn": "sw"
+       "spawn": "n"
       }
      ]
     },
     {
-     "hint": "Wardens from all sides",
+     "hint": "South-West breaches: all 4 active!",
      "groups": [
       {
        "kind": "warden",
@@ -8568,7 +9827,7 @@
      ]
     },
     {
-     "hint": "Burrow everywhere",
+     "hint": "Burrow & warp portal",
      "groups": [
       {
        "kind": "burrower",
@@ -8685,10 +9944,10 @@
    "name": "The Hollow Queen",
    "region": 3,
    "lava": true,
-   "twist": "Final boss. The Queen walks from the far rifts. Each time she breaks a phase, the lava moves and new roads open.",
+   "twist": "Final boss. 4 Cathedral naves around a central Royal Altar. At Wave 4 inner naves crack open; each Queen phase breaks a new path & floods the floor.",
    "newFoe": "The Hollow Queen",
    "unlocks": "The ending",
-   "startGold": 1000,
+   "startGold": 1320,
    "lives": 20,
    "towers": [
     "watch",
@@ -8698,148 +9957,197 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.38,
+   "hpMul": 0.75,
+   "high": [
+    [
+     485,
+     145
+    ],
+    [
+     795,
+     145
+    ],
+    [
+     825,
+     290
+    ],
+    [
+     755,
+     390
+    ],
+    [
+     525,
+     390
+    ],
+    [
+     455,
+     290
+    ],
+    [
+     485,
+     145
+    ]
+   ],
    "roads": [
     {
      "id": "high",
-     "spawn": "ne",
-     "w": 46,
+     "spawn": "nw",
+     "w": 44,
      "ctrl": [
       [
-       1320,
-       120
+       240,
+       -40
       ],
       [
-       1000,
+       210,
        130
       ],
       [
-       700,
-       200
-      ],
-      [
-       400,
-       160
-      ],
-      [
-       200,
-       260
-      ],
-      [
-       150,
-       440
-      ],
-      [
        160,
-       620
+       290
+      ],
+      [
+       220,
+       480
+      ],
+      [
+       420,
+       575
+      ],
+      [
+       640,
+       625
       ]
      ]
     },
     {
      "id": "mid",
-     "spawn": "ne",
-     "w": 46,
+     "spawn": "nw",
+     "w": 44,
+     "openAtWave": 4,
      "ctrl": [
       [
-       1320,
-       120
+       240,
+       -40
       ],
       [
-       1000,
-       130
+       270,
+       135
       ],
       [
-       900,
-       360
+       375,
+       285
       ],
       [
-       600,
-       420
+       440,
+       445
       ],
       [
-       300,
-       560
+       640,
+       470
       ],
       [
-       160,
-       620
+       640,
+       625
       ]
      ]
     },
     {
      "id": "low",
-     "spawn": "se",
-     "w": 46,
+     "spawn": "ne",
+     "w": 44,
      "ctrl": [
       [
-       1320,
-       600
+       1040,
+       -40
       ],
       [
-       1000,
-       620
+       1070,
+       130
       ],
       [
-       700,
-       600
+       1120,
+       290
       ],
       [
-       400,
-       650
+       1060,
+       480
       ],
       [
-       160,
-       620
+       860,
+       575
+      ],
+      [
+       640,
+       625
       ]
      ]
     },
     {
      "id": "causeway",
-     "spawn": "se",
-     "w": 38,
+     "spawn": "ne",
+     "w": 40,
+     "openOnPhase": 1,
      "ctrl": [
       [
-       1320,
-       600
+       1040,
+       -40
       ],
       [
-       1030,
-       580
+       1010,
+       135
       ],
       [
-       900,
-       430
+       905,
+       285
       ],
       [
-       600,
-       420
+       840,
+       445
       ],
       [
-       300,
-       560
+       640,
+       470
       ],
       [
-       160,
-       620
+       640,
+       625
       ]
      ]
     }
    ],
    "waters": [
     {
-     "w": 40,
+     "w": 46,
      "ctrl": [
       [
-       1300,
-       380
+       50,
+       160
       ],
       [
-       1150,
+       65,
        360
       ],
       [
-       1060,
-       400
+       50,
+       560
+      ]
+     ]
+    },
+    {
+     "w": 46,
+     "ctrl": [
+      [
+       1230,
+       160
+      ],
+      [
+       1215,
+       360
+      ],
+      [
+       1230,
+       560
       ]
      ]
     }
@@ -8847,139 +10155,153 @@
    "plots": [
     {
      "at": [
-      700,
-      300
+      525,
+      240
      ]
     },
     {
      "at": [
-      500,
-      290
-     ]
-    },
-    {
-     "at": [
-      300,
-      380
-     ]
-    },
-    {
-     "at": [
-      800,
-      500
-     ]
-    },
-    {
-     "at": [
-      520,
-      520
-     ]
-    },
-    {
-     "at": [
-      1100,
-      250
-     ]
-    },
-    {
-     "at": [
-      1100,
-      480
-     ]
-    },
-    {
-     "at": [
-      850,
-      60
+      755,
+      240
      ]
     },
     {
      "at": [
       560,
-      60
+      345
      ]
     },
     {
      "at": [
-      80,
-      300
+      720,
+      345
      ]
     },
     {
      "at": [
-      253,
-      688
+      265,
+      290
      ]
     },
     {
      "at": [
-      993,
-      688
+      315,
+      445
      ]
     },
     {
      "at": [
-      970,
-      360
+      125,
+      185
+     ]
+    },
+    {
+     "at": [
+      270,
+      610
+     ]
+    },
+    {
+     "at": [
+      1015,
+      290
+     ]
+    },
+    {
+     "at": [
+      965,
+      445
+     ]
+    },
+    {
+     "at": [
+      1155,
+      185
+     ]
+    },
+    {
+     "at": [
+      1010,
+      610
+     ]
+    },
+    {
+     "at": [
+      525,
+      535
+     ]
+    },
+    {
+     "at": [
+      755,
+      535
      ]
     }
    ],
    "bridges": [],
    "rune": [
-    700,
-    420
+    640,
+    115
    ],
    "heroStart": [
-    300,
-    520
+    640,
+    485
    ],
-   "shifts": [
+   "terraforms": [
     {
-     "kind": "lava",
-     "closes": [
+     "atWave": 4,
+     "kind": "quakelow",
+     "label": "The central west cloister tears open!",
+     "openRoads": [
+      "mid"
+     ]
+    },
+    {
+     "atPhase": 1,
+     "kind": "raisehigh",
+     "label": "Queen Phase 1: The eastern causeway shatters open!",
+     "openRoads": [
+      "causeway"
+     ],
+     "sinkPlots": [
+      6
+     ]
+    },
+    {
+     "atPhase": 2,
+     "kind": "flood",
+     "label": "Queen Phase 2: Magma floods the eastern outer cloister. Everything surges inward!",
+     "closeRoads": [
       "low"
      ],
-     "every": 60,
-     "start": 0,
-     "dur": 15,
-     "at": [
-      700,
-      600
-     ],
-     "r": 56,
-     "label": "Lava cuts the low road"
-    },
-    {
-     "kind": "lava",
-     "closes": [
-      "mid"
-     ],
-     "every": 60,
-     "start": 20,
-     "dur": 15,
-     "at": [
-      900,
-      360
-     ],
-     "r": 60,
-     "label": "Lava cuts the middle road"
-    },
-    {
-     "kind": "lava",
-     "closes": [
-      "high"
-     ],
-     "every": 60,
-     "start": 40,
-     "dur": 15,
-     "at": [
-      400,
-      160
-     ],
-     "r": 56,
-     "label": "Lava cuts the high road"
+     "sinkPlots": [
+      10
+     ]
     }
    ],
+   "portals": [
+    {
+     "id": "queen_rift",
+     "kind": "rift",
+     "fromRoad": "high",
+     "fromAt": 0.42,
+     "toRoad": "mid",
+     "toAt": 0.62,
+     "openAtWave": 6,
+     "everyNth": 3,
+     "groundOnly": true
+    }
+   ],
+   "alt": {
+    "name": "Ashen Eclipse",
+    "twist": "The Queen shrouds her cathedral in darkness and adapts every 2 waves.",
+    "hpMul": 0.87,
+    "openAtWave": {
+     "mid": 2
+    },
+    "adaptEvery": 2,
+    "night": true
+   },
    "waves": [
     {
      "hint": "Her heralds",
@@ -8989,14 +10311,14 @@
        "n": 24,
        "gap": 0.4,
        "delay": 0,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "grub",
        "n": 12,
        "gap": 0.5,
        "delay": 0,
-       "spawn": "se"
+       "spawn": "ne"
       }
      ]
     },
@@ -9008,14 +10330,14 @@
        "n": 8,
        "gap": 1.5,
        "delay": 0,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "burrower",
        "n": 8,
        "gap": 1,
        "delay": 0,
-       "spawn": "se"
+       "spawn": "ne"
       }
      ]
     },
@@ -9027,40 +10349,40 @@
        "n": 18,
        "gap": 0.45,
        "delay": 0,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "moth",
        "n": 14,
        "gap": 0.5,
        "delay": 0,
-       "spawn": "se"
+       "spawn": "ne"
       },
       {
        "kind": "grub",
        "n": 12,
        "gap": 0.5,
        "delay": 4,
-       "spawn": "ne"
+       "spawn": "nw"
       }
      ]
     },
     {
-     "hint": "Splitter tide",
+     "hint": "Inner nave fractures!",
      "groups": [
       {
        "kind": "splitter",
        "n": 20,
        "gap": 0.6,
        "delay": 0,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "mender",
        "n": 6,
        "gap": 2,
        "delay": 0,
-       "spawn": "se"
+       "spawn": "ne"
       }
      ]
     },
@@ -9072,14 +10394,14 @@
        "n": 4,
        "gap": 4,
        "delay": 0,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "elite",
        "n": 10,
        "gap": 1.4,
        "delay": 0,
-       "spawn": "se"
+       "spawn": "ne"
       }
      ]
     },
@@ -9091,21 +10413,21 @@
        "n": 14,
        "gap": 0.6,
        "delay": 0,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "burrower",
        "n": 8,
        "gap": 0.9,
        "delay": 0,
-       "spawn": "se"
+       "spawn": "ne"
       },
       {
        "kind": "grub",
        "n": 10,
        "gap": 0.5,
        "delay": 3,
-       "spawn": "ne"
+       "spawn": "nw"
       }
      ]
     },
@@ -9117,35 +10439,35 @@
        "n": 1,
        "gap": 3,
        "delay": 0,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "warden",
        "n": 4,
        "gap": 5,
        "delay": 4,
-       "spawn": "se"
+       "spawn": "ne"
       },
       {
        "kind": "elite",
        "n": 12,
        "gap": 1.5,
        "delay": 12,
-       "spawn": "ne"
+       "spawn": "nw"
       },
       {
        "kind": "ashmoth",
        "n": 18,
        "gap": 0.5,
        "delay": 20,
-       "spawn": "se"
+       "spawn": "ne"
       },
       {
        "kind": "mender",
        "n": 6,
        "gap": 3,
        "delay": 30,
-       "spawn": "ne"
+       "spawn": "nw"
       }
      ]
     }
