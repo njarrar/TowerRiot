@@ -8,12 +8,12 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { TOWERS, TOWER_ORDER, BEACON_BUFF } from '../src/game/data/towers';
+import { TOWERS, TOWER_ORDER, BEACON_BUFF, MAX_TOWER_LEVEL } from '../src/game/data/towers';
 import { ENEMIES } from '../src/game/data/enemies';
 import { HERO, SKILLS, SWEEP, SNARE, ATTUNE, SUNRISE } from '../src/game/data/hero';
-import { ITEMS, ITEM_ORDER, ITEM_SLOTS, SELL_ITEM, RUNES, RUNE_ORDER, RUNE_FIRST, RUNE_EVERY } from '../src/game/data/shop';
+import { COURIER_SURCHARGE, ITEMS, ITEM_ORDER, ITEM_SLOTS, SELL_ITEM, RUNES, RUNE_ORDER, RUNE_FIRST, RUNE_EVERY, RUNE_LIFETIME, RUNE_WARN_SEC } from '../src/game/data/shop';
 import { TREES } from '../src/game/data/trees';
-import { STAGES, REGIONS } from '../src/game/data/stages';
+import { STAGES, REGIONS, type OathId, type StageVariant } from '../src/game/data/stages';
 import { playStage, typicalMods } from './bot';
 
 const KIT = 'ios/TowerRiotKit';
@@ -23,30 +23,48 @@ const update = process.env.UPDATE_NATIVE_DATA === '1';
 
 function gameData() {
   return {
+    maxTowerLevel: MAX_TOWER_LEVEL,
     towers: TOWER_ORDER.map(k => TOWERS[k]),
     beaconBuff: BEACON_BUFF,
     enemies: Object.values(ENEMIES),
-    hero: { ...HERO, respawn: undefined, respawnBase: 4 },
+    hero: HERO,
     skills: (['q', 'w', 'e', 'r'] as const).map(k => {
       const s = SKILLS[k];
-      return { key: s.key, name: s.name, desc: s.desc, maxRank: s.maxRank, cd: s.cd, needLevel: Array.from({ length: s.maxRank }, (_, i) => s.needLevel(i + 1)) };
+      return { key: s.key, name: s.name, desc: s.desc, maxRank: s.maxRank, cd: s.cd, needLevel: s.needLevel };
     }),
     sweep: SWEEP, snare: SNARE, attune: ATTUNE, sunrise: SUNRISE,
     items: ITEM_ORDER.map(id => ITEMS[id]),
-    itemSlots: ITEM_SLOTS, sellItem: SELL_ITEM,
+    itemSlots: ITEM_SLOTS, sellItem: SELL_ITEM, courierSurcharge: COURIER_SURCHARGE,
     runes: RUNE_ORDER.map(k => ({ kind: k, ...RUNES[k] })),
-    runeFirst: RUNE_FIRST, runeEvery: RUNE_EVERY,
+    runeFirst: RUNE_FIRST, runeEvery: RUNE_EVERY, runeLifetime: RUNE_LIFETIME, runeWarnSec: RUNE_WARN_SEC,
     trees: TREES,
     regions: REGIONS,
     stages: STAGES,
   };
 }
 
+/** Oath runs recorded for the Swift engine: each oath on a spread of stages, and all three at once on a Variant B layout. */
+const OATH_ROWS: { stage: number; variant?: StageVariant; oaths: OathId[] }[] = [
+  ...[3, 9, 14, 19].flatMap(stage => (['twinRifts', 'shiftingEarth', 'longNight'] as OathId[]).map(o => ({ stage, oaths: [o] }))),
+  { stage: 6, variant: 'alt', oaths: ['twinRifts', 'shiftingEarth', 'longNight'] },
+  { stage: 16, variant: 'alt', oaths: ['twinRifts', 'shiftingEarth', 'longNight'] },
+];
+
 function botResults() {
-  return STAGES.map(st => {
-    const r = playStage(st.id, typicalMods(st.id));
-    return { stage: st.id, won: r.won, lives: r.lives, waves: r.waves, level: r.level, gold: r.gold, towers: r.towers, kills: r.b.kills, clock: Math.round(r.b.clock * 1000) / 1000 };
-  });
+  const row = (stage: number, variant?: StageVariant, oaths?: OathId[]) => {
+    const r = playStage(stage, typicalMods(stage), 7, 1500, { variant, oaths });
+    return {
+      stage, ...(variant ? { variant } : {}), ...(oaths ? { oaths } : {}),
+      won: r.won, lives: r.lives, waves: r.waves, level: r.level, gold: r.gold, towers: r.towers, kills: r.b.kills, clock: Math.round(r.b.clock * 1000) / 1000,
+    };
+  };
+  return [
+    // The first 20 rows keep their old shape: the standard layout, no oaths.
+    ...STAGES.map(st => row(st.id)),
+    // Then every Variant B layout, then the oath runs.
+    ...STAGES.map(st => row(st.id, 'alt')),
+    ...OATH_ROWS.map(o => row(o.stage, o.variant, o.oaths)),
+  ];
 }
 
 function check(path: string, json: string) {

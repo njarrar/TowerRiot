@@ -1,5 +1,5 @@
 /** Sound effects made on the fly with WebAudio: no files, so they work offline everywhere. */
-type Sfx = 'bolt' | 'boom' | 'zap' | 'bell' | 'root' | 'coin' | 'level' | 'leak' | 'wave' | 'build' | 'click' | 'sweep' | 'snare' | 'sunrise' | 'rune' | 'boss' | 'win' | 'lose' | 'hero';
+type Sfx = 'bolt' | 'boom' | 'zap' | 'bell' | 'root' | 'coin' | 'level' | 'leak' | 'wave' | 'build' | 'click' | 'sweep' | 'snare' | 'sunrise' | 'rune' | 'boss' | 'win' | 'lose' | 'hero' | 'switch' | 'clear' | 'warp';
 
 export class Audio {
   private ctx: AudioContext | null = null;
@@ -73,6 +73,9 @@ export class Audio {
       case 'boss': tone('sawtooth', 70, 55, 1.6, 0.18); hiss(300, 0.5, 1.4, 0.2); break;
       case 'win': [523, 659, 784, 1047, 1319].forEach((f, i) => tone('triangle', f, f, 0.4, 0.1, i * 0.12)); break;
       case 'lose': [392, 330, 262, 196].forEach((f, i) => tone('triangle', f, f * 0.98, 0.5, 0.1, i * 0.18)); break;
+      case 'switch': tone('square', 280, 420, 0.08, 0.09); hiss(1100, 1.4, 0.09, 0.08, 'bandpass'); break;
+      case 'clear': hiss(480, 0.8, 0.28, 0.16); tone('triangle', 140, 68, 0.24, 0.14); break;
+      case 'warp': tone('sine', 620, 1240, 0.2, 0.07); break;
     }
   }
 }

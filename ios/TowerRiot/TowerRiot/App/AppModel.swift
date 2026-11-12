@@ -3,11 +3,13 @@ import TowerRiotKit
 
 /// Screens and flow: title, campaign map, skill trees, settings and the battle. A port of src/ui/app.ts.
 final class AppModel: ObservableObject {
-    enum Screen: Equatable { case title, campaign(focus: Int?), trees, settings, battle(Int) }
+    enum Screen: Equatable { case title, campaign(focus: Int?), trees, settings, battle(Int, StageVariant, [OathId]) }
 
     @Published var screen: Screen = .title
     @Published private(set) var save: Save
     @Published var treeTab = 0
+    @Published var variantByStage: [Int: StageVariant] = [:]
+    @Published var selectedOaths: Set<OathId> = []
     /// Bumped for every new fight, so Try again on the same stage starts fresh.
     @Published private(set) var battleRun = 0
     let sound = Sound()
@@ -47,17 +49,29 @@ final class AppModel: ObservableObject {
 
     func resetTrees() { save.resetTrees(); persist() }
 
+    /// The note about rebalanced trees has been read: do not show it again.
+    func clearTreesRefunded() {
+        guard save.treesRefunded else { return }
+        save.treesRefunded = false
+        persist()
+    }
+
     func eraseProgress() { save = Save(); persist(); sound.enabled = save.settings.sound; screen = .title }
 
     /// Record a win. Returns the Embers it earned.
-    func record(stage: Int, stars: Int) -> Int {
-        let got = save.record(stage: stage, stars: stars)
+    func record(stage: Int, stars: Int, variant: StageVariant = .standard, oaths: [OathId] = []) -> Int {
+        let got = save.record(stage: stage, stars: stars, variant: variant, oaths: oaths)
         save.seenIntro = true
         persist()
         return got
     }
 
-    func play(_ id: Int) { battleRun += 1; screen = .battle(id) }
+    func play(_ id: Int, variant: StageVariant? = nil, oaths: [OathId]? = nil) {
+        let v = variant ?? variantByStage[id] ?? .standard
+        let o = oaths ?? Array(selectedOaths)
+        battleRun += 1
+        screen = .battle(id, v, o)
+    }
 
     /// The stage after the last one cleared, for Continue.
     var nextStage: Int { min(20, save.cleared + 1) }

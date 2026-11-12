@@ -49,19 +49,23 @@ function pic(name: string, w: number, h: number, ox: number, oy: number, s: numb
 
 /* ------------------------------------------------------------------ what to paint */
 
-function towerScale(lv: number) { return 0.6 + 0.06 * (Math.min(lv, 4) - 1); }
+function towerScale(lv: number) { return 0.6 + 0.06 * (Math.min(lv, 5) - 1); }
 
 function towerPics(out: (Pic | null)[]) {
   for (const k of TOWER_ORDER) {
-    for (let lv = 1; lv <= 4; lv++) {
+    for (let lv = 1; lv <= 5; lv++) {
       const S = towerScale(lv);
-      // Two looks per tower and level: the web game seeds each tower by its plot.
-      for (let v = 0; v < 2; v++) {
-        const seed = 200 + v * 7;
-        out.push(pic(`t-${k}-${lv}-${v}`, 280, 300, 140, 262, 2, g => {
-          // The cannon's barrel turns to aim, so the iOS game draws it on top as its own picture.
-          paintTower(g, k, 0, 0, S, 'base', seed, lv, null, k !== 'cannon');
-        }));
+      const splits: ('a' | 'b' | null)[] = lv >= 4 ? ['a', 'b'] : [null];
+      for (const split of splits) {
+        // Two looks per tower and level: the web game seeds each tower by its plot.
+        for (let v = 0; v < 2; v++) {
+          const seed = 200 + v * 7;
+          const suffix = split ? `-${split}` : '';
+          out.push(pic(`t-${k}-${lv}${suffix}-${v}`, 280, 300, 140, 262, 2, g => {
+            // The cannon's barrel turns to aim, so the iOS game draws it on top as its own picture.
+            paintTower(g, k, 0, 0, S, 'base', seed, lv, split, k !== 'cannon');
+          }));
+        }
       }
       const e = (name: string, fn: (g: G) => void) => out.push(pic(name, 280, 320, 140, 282, 1.5, fn));
       switch (k) {

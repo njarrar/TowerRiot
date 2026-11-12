@@ -12,18 +12,22 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Toggle2(label: "Sound", note: "Tower fire, hits and Wren. Mute it any time with the speaker button.", on: st.sound) { v in app.setSetting { $0.sound = v } }
-                    Toggle2(label: "Calm motion", note: "No screen shake, crows or drifting light.", on: st.reduceMotion) { v in app.setSetting { $0.reduceMotion = v } }
+                    Toggle2(label: "Calm motion", note: "No screen shake, screen flash, rain or crows. The lighthouse beam and breach warnings hold still.", on: st.reduceMotion) { v in app.setSetting { $0.reduceMotion = v } }
                     // Auto skills starts unset: on for the first region, then off. Showing it ticked matches what a new player gets first.
-                    Toggle2(label: "Auto skill points", note: "Spend Wren's points for you as she levels. On by default in Mosslight Vale.", on: st.autoSkills ?? true) { v in app.setSetting { $0.autoSkills = v } }
+                    Toggle2(label: "Auto skill points", note: "Automatically spend Wren skill points on level up (default in Mosslight Vale).", on: st.autoSkills ?? true) { v in app.setSetting { $0.autoSkills = v } }
                     Toggle2(label: "Damage numbers", note: "Show the damage of big hits over foes.", on: st.dmgNumbers) { v in app.setSetting { $0.dmgNumbers = v } }
+                    Toggle2(label: "Tap ground moves Wren (touch)", note: "Allow single ground taps to pin Wren (dragging Wren always works).", on: st.tapGroundMove) { v in app.setSetting { $0.tapGroundMove = v } }
+                    Toggle2(label: "Tap-to-aim W (accessibility)", note: "Aim Lantern Snare with two taps instead of touch drag-and-release.", on: st.tapAimW) { v in app.setSetting { $0.tapAimW = v } }
+                    Toggle2(label: "Auto-call next wave", note: "Start the next wave automatically when the field is clear.", on: st.autoNext) { v in app.setSetting { $0.autoNext = v } }
+                    Toggle2(label: "Left-handed HUD", note: "Mirror the battle HUD controls to the left side for left-thumb reach.", on: st.leftHandHud) { v in app.setSetting { $0.leftHandHud = v } }
                     Text("How to play").font(Face.body(17, .heavy)).foregroundStyle(Ink.ink).padding(.top, 18).padding(.bottom, 6)
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach([
-                            "Tap a stone plot to build. Tap a tower to upgrade, split, aim or sell it.",
+                            "Tap a stone plot to build (3x2 tower deck), clear rubble, or tap a switch lever to redirect roads/brakes.",
                             "Holding the phone upright? Drag the map left and right. Red notches at its edges point to foes out of view.",
-                            "Tap the ground to move Wren. She holds that spot and blocks up to two foes. Tap a foe to send her after it.",
-                            "Wren gains levels inside each stage. Spend points on Q, W, E and R. Landing the killing blow pays 50% more gold.",
-                            "Shop between waves from anywhere, or walk Wren to the gate during combat. Grab runes when they glow on the map.",
+                            "Drag Wren to pin her anywhere along the road (she fights inside a 90 px leash while holding 2 foes).",
+                            "Wren gains XP and gold (+50% on last hits). Clear adjacent rubble free by standing Wren beside it.",
+                            "Shop free at the Gate or between waves, or via +20% field courier during combat. Grab runes before they fade.",
                         ], id: \.self) { line in
                             HStack(alignment: .top, spacing: 8) {
                                 Text("•").foregroundStyle(Ink.inkDim)

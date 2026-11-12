@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "lint:arch": "vitest run tests/invariants.test.ts tests/stages.test.ts",
     "icons": "node scripts/make-icons.mjs",
     "cap:sync": "npm run build && cap sync",
     "cap:add:android": "cap add android",

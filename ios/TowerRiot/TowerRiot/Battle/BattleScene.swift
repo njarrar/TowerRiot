@@ -7,7 +7,11 @@ struct SceneView {
     var selPlot: Int?
     var selTower: Int?
     var preview: TowerKind?
+    /// W is being aimed: time runs slow and touches steer the mark until it is thrown or called off.
+    var aiming = false
+    /// Where the snare would land. Nil while not aiming, and while the finger sits in the call-off zone.
     var aimW: Vec?
+    var showLeash = false
     var reduceMotion = false
     var dmgNumbers = false
     var hintPlot: Int?
@@ -27,9 +31,16 @@ final class BattleScene: SKScene {
     var onFrame: ((Double) -> [BattleEvent])?
     var onTap: ((Double, Double) -> Void)?
     var onAim: ((Double, Double) -> Void)?
+    var onAimEnd: ((Double, Double, Bool) -> Void)?
+    var onHeroDrag: ((Double, Double) -> Void)?
+    var onHeroDragEnd: ((Double, Double) -> Void)?
+    var onHeroDragCancel: (() -> Void)?
+    /// True when something else owns a touch at this world point, so it must not pick Wren up.
+    var grabBlocked: ((Double, Double) -> Bool)?
     /// A drag across the map, in points, when the map is wider than the screen.
     var onPan: ((CGFloat) -> Void)?
     var canPan = false
+    var tapAimW = false
 
     private let art = Art.shared
     private let world = SKNode()
@@ -67,6 +78,16 @@ final class BattleScene: SKScene {
     private var posts: [Vec] = []
     private var waters: [(path: CGPath, w: Double)] = []
     private var waterNodes: [(glint: SKShapeNode, lava: SKShapeNode?, path: CGPath)] = []
+    private var drainWaterNodes: [(idx: Int, wet: SKShapeNode, glint: SKShapeNode, dry: SKShapeNode, path: CGPath)] = []
+    private var dynRoadNodes: [(road: RoadRt, fill: SKShapeNode, dash: SKShapeNode)] = []
+    private var riftWarnNodes: [(road: RoadRt, line: SKShapeNode, badge: SKNode)] = []
+    private var portalNodes: [(arc: SKShapeNode, fromDot: SKShapeNode, toDot: SKShapeNode, glowA: SKSpriteNode, glowB: SKSpriteNode)] = []
+    private var switchNodes: [(ring: SKShapeNode, lever: SKShapeNode, knob: SKShapeNode, arc: SKShapeNode, boost: SKShapeNode, gateBar: SKShapeNode, gateDash: SKShapeNode)] = []
+    /// The state each lever was last drawn in, so its path is rebuilt only when it flips.
+    private var leverState: [Int] = []
+    private var sanctuaryNodes: [SKShapeNode] = []
+    private var rainNodes: [SKShapeNode] = []
+    private var lighthouseBeam: SKShapeNode?
     private var plotNodes: [PlotNode] = []
     private var shiftNodes: [SKNode] = []
     private var barrierNodes: [String: (whole: SKSpriteNode, down: SKSpriteNode, bar: Bar)] = [:]
@@ -98,28 +119,73 @@ final class BattleScene: SKScene {
 
         let meta = ArtFiles.maps[st.id]
         posts = (meta?.posts ?? []).map { Vec($0[0], $0[1]) }
-        let wl = meta?.waters ?? st.waters.map { ArtFiles.Water(w: $0.w, pts: smooth($0.ctrl).map { [$0.x, $0.y] }) }
-        for w in wl {
+        // Baked water lines are used only while they still match the stage; after a stale bake the engine's own paths stand in.
+        let baked = meta?.waters ?? []
+        let bakedFits = baked.count == st.waters.count && zip(baked, st.waters).allSatisfy { m, w in
+            guard let p = m.pts.first, p.count >= 2, let c = w.ctrl.first else { return false }
+            return abs(p[0] - c.x) < 1 && abs(p[1] - c.y) < 1 && abs(m.w - w.w) < 0.5
+        }
+        // Waters that can drain or flood: on a set wave, or named by a terraform.
+        let shifting = Set((st.terraforms ?? []).flatMap { $0.waters ?? [] })
+        for (idx, w) in battle.waters.enumerated() {
+            let pts: [CGPoint] = bakedFits
+                ? baked[idx].pts.filter { $0.count >= 2 }.map { P($0[0], $0[1]) }
+                : w.path.pts.map { P($0.x, $0.y) }
             let path = CGMutablePath()
-            for (i, p) in w.pts.enumerated() { i == 0 ? path.move(to: P(p[0], p[1])) : path.addLine(to: P(p[0], p[1])) }
+            path.addLines(between: pts)
             waters.append((path, w.w))
-            let glint = SKShapeNode()
-            glint.lineCap = .round; glint.lineJoin = .round; glint.blendMode = .add; glint.zPosition = Z.water
-            var lava: SKShapeNode?
-            if st.isLava {
-                let l = SKShapeNode(path: path)
-                l.lineWidth = w.w * 0.55; l.lineCap = .round; l.lineJoin = .round; l.blendMode = .add; l.zPosition = Z.water
-                world.addChild(l); lava = l
-                glint.strokeColor = UIColor(255, 220, 140, 0.35); glint.lineWidth = 2
+            let byWave = idx < st.waters.count && st.waters[idx].drainAtWave != nil
+            let byTerraform = w.id.map { shifting.contains($0) } ?? false
+            if byWave || byTerraform {
+                let wet = SKShapeNode(path: path); wet.lineCap = .round; wet.lineJoin = .round; wet.lineWidth = w.w
+                wet.strokeColor = st.isLava ? UIColor(110, 40, 18, 0.92) : UIColor(56, 112, 138, 0.86); wet.zPosition = Z.water
+                let glint = SKShapeNode(); glint.lineCap = .round; glint.lineJoin = .round; glint.blendMode = .add; glint.lineWidth = 1.8
+                glint.strokeColor = st.isLava ? UIColor(255, 140, 60, 0.4) : UIColor(220, 235, 245, 0.32); glint.zPosition = Z.water + 0.01
+                let dry = SKShapeNode(path: path); dry.lineCap = .round; dry.lineJoin = .round; dry.lineWidth = w.w * 0.92
+                dry.strokeColor = st.isLava ? UIColor(66, 54, 48, 0.88) : UIColor(154, 142, 118, 0.84); dry.zPosition = Z.water; dry.isHidden = true
+                world.addChild(wet); world.addChild(glint); world.addChild(dry)
+                drainWaterNodes.append((idx, wet, glint, dry, path))
             } else {
-                glint.strokeColor = UIColor(220, 235, 245, 0.3); glint.lineWidth = 1.6
+                let glint = SKShapeNode()
+                glint.lineCap = .round; glint.lineJoin = .round; glint.blendMode = .add; glint.zPosition = Z.water
+                var lava: SKShapeNode?
+                if st.isLava {
+                    let l = SKShapeNode(path: path)
+                    l.lineWidth = w.w * 0.55; l.lineCap = .round; l.lineJoin = .round; l.blendMode = .add; l.zPosition = Z.water
+                    world.addChild(l); lava = l
+                    glint.strokeColor = UIColor(255, 220, 140, 0.35); glint.lineWidth = 2
+                } else {
+                    glint.strokeColor = UIColor(220, 235, 245, 0.3); glint.lineWidth = 1.6
+                }
+                world.addChild(glint)
+                waterNodes.append((glint, lava, path))
             }
-            world.addChild(glint)
-            waterNodes.append((glint, lava, path))
+        }
+        // Dynamically awakened roads (openAtWave or openOnPhase once activated).
+        for r in battle.roads where r.def.openAtWave != nil || r.def.openOnPhase != nil {
+            let p = CGMutablePath()
+            for (i, pt) in r.path.pts.enumerated() { i == 0 ? p.move(to: P(pt.x, pt.y)) : p.addLine(to: P(pt.x, pt.y)) }
+            let fill = SKShapeNode(path: p); fill.lineCap = .round; fill.lineJoin = .round; fill.lineWidth = r.def.w
+            fill.strokeColor = st.isLava ? UIColor(46, 38, 34, 0.92) : UIColor(192, 172, 138, 0.9); fill.zPosition = Z.water + 0.02
+            let dash = SKShapeNode(path: p.copy(dashingWithPhase: 0, lengths: [6, 12])); dash.lineCap = .round; dash.lineWidth = 2
+            dash.strokeColor = UIColor(24, 20, 16, 0.24); dash.zPosition = Z.water + 0.03
+            fill.isHidden = !r.active; dash.isHidden = !r.active
+            world.addChild(fill); world.addChild(dash)
+            dynRoadNodes.append((r, fill, dash))
         }
 
         buildMapRules()
-        for (i, p) in battle.plots.enumerated() { let n = PlotNode(plot: p, index: i); world.addChild(n.root); plotNodes.append(n) }
+        for (i, p) in battle.plots.enumerated() { let n = PlotNode(plot: p, index: i, lava: st.isLava); world.addChild(n.root); plotNodes.append(n) }
+
+        // Sanctuary perimeter arc around each Keep Gate.
+        for g in battle.gate {
+            let r = battle.data.hero.gateRadius
+            let el = CGPath(ellipseIn: CGRect(x: -r, y: -r / World.ySquash, width: r * 2, height: r * 2 / World.ySquash), transform: nil)
+            let ring = SKShapeNode(path: el.copy(dashingWithPhase: 0, lengths: [6, 8]))
+            ring.position = P(g.x, g.y); ring.lineWidth = 1.6; ring.zPosition = Z.rules + 0.02; ring.isHidden = true
+            world.addChild(ring)
+            sanctuaryNodes.append(ring)
+        }
 
         // Rune.
         runeNode.zPosition = Z.rune
@@ -148,7 +214,20 @@ final class BattleScene: SKScene {
             postFlames.append((glow, flame, p.x))
         }
         if let lh = st.lighthouse {
-            let g = glowSprite(color: UIColor(hex: 0xffe6b0), r: 60, a: 0.5); g.position = P(lh.x, lh.y - 110); g.zPosition = Z.emit(lh.y); world.addChild(g)
+            let beamPath = CGMutablePath()
+            beamPath.move(to: CGPoint(x: 0, y: -10)); beamPath.addLine(to: CGPoint(x: 380, y: -76))
+            beamPath.addLine(to: CGPoint(x: 380, y: 76)); beamPath.addLine(to: CGPoint(x: 0, y: 10)); beamPath.closeSubpath()
+            let beam = SKShapeNode(path: beamPath); beam.fillColor = UIColor(255, 230, 175, 0.16); beam.strokeColor = .clear
+            beam.blendMode = .add; beam.position = P(lh.x, lh.y - 110); beam.zPosition = Z.emit(lh.y) - 0.001
+            world.addChild(beam); lighthouseBeam = beam
+            let g = glowSprite(color: UIColor(hex: 0xffe6b0), r: 62, a: 0.55); g.position = P(lh.x, lh.y - 110); g.zPosition = Z.emit(lh.y); world.addChild(g)
+        }
+        if st.weather == "rain" {
+            for _ in 0..<65 {
+                let path = CGMutablePath(); path.move(to: .zero); path.addLine(to: CGPoint(x: -14, y: -28))
+                let s = SKShapeNode(path: path); s.strokeColor = UIColor(195, 222, 245, 0.24); s.lineWidth = 1.1; s.lineCap = .round; s.zPosition = Z.fx
+                world.addChild(s); rainNodes.append(s)
+            }
         }
 
         hero = HeroNode(art: art)
@@ -159,7 +238,7 @@ final class BattleScene: SKScene {
         sunWash.texture = st.isLava ? Art.sun((1, 170 / 255, 110 / 255), 0.55) : Art.sun((1, 232 / 255, 180 / 255), 0.32)
         sunWash.anchorPoint = .zero; sunWash.size = size; sunWash.zPosition = Z.sun; sunWash.blendMode = .screen; sunWash.alpha = 0.7
         world.addChild(sunWash)
-        for _ in 0..<4 {
+        for _ in 0..<6 {
             let r = SKShapeNode(); r.zPosition = Z.ranges; r.lineWidth = 1.5; r.isHidden = true
             world.addChild(r); ranges.append(r)
         }
@@ -172,6 +251,62 @@ final class BattleScene: SKScene {
 
     private func buildMapRules() {
         let st = battle.stage
+        // Telegraphed Wave+1 breaches (dashed red-orange path + '!' rift beacon).
+        for r in battle.roads where r.def.openAtWave != nil {
+            let p = CGMutablePath()
+            for (i, pt) in r.path.pts.enumerated() { i == 0 ? p.move(to: P(pt.x, pt.y)) : p.addLine(to: P(pt.x, pt.y)) }
+            let line = SKShapeNode(); line.lineWidth = 3; line.zPosition = Z.rules
+            line.strokeColor = UIColor(218, 86, 52, 0.42); line.isHidden = !r.telegraph
+            line.path = p.copy(dashingWithPhase: 0, lengths: [8, 10])
+            let badge = SKNode(); let p0 = r.path.point(at: 36); badge.position = P(p0.x, p0.y); badge.zPosition = Z.rules + 0.02
+            let disc = SKShapeNode(circleOfRadius: 13); disc.fillColor = UIColor(28, 16, 14, 0.86)
+            disc.strokeColor = UIColor(hex: 0xff8a50); disc.lineWidth = 2
+            let ex = SKLabelNode(text: "!"); ex.fontName = "Barlow-ExtraBold"; ex.fontSize = 13; ex.fontColor = UIColor(hex: 0xffe6b8)
+            ex.verticalAlignmentMode = .center; ex.horizontalAlignmentMode = .center
+            badge.addChild(disc); badge.addChild(ex); badge.isHidden = !r.telegraph
+            world.addChild(line); world.addChild(badge)
+            riftWarnNodes.append((r, line, badge))
+        }
+        // Portals / Chutes / Drift Rifts with quadratic directional flow arcs.
+        for pt in battle.portals {
+            let col = pt.def.kind == .rift ? UIColor(hex: 0xff7a3a) : pt.def.kind == .chute ? UIColor(hex: 0xe5a444) : UIColor(hex: 0x5ad8ff)
+            let arcPath = CGMutablePath()
+            let a = P(pt.fromPos.x, pt.fromPos.y), b = P(pt.toPos.x, pt.toPos.y)
+            let midY = max(a.y, b.y) + 42
+            arcPath.move(to: a); arcPath.addQuadCurve(to: b, control: CGPoint(x: (a.x + b.x) / 2, y: midY))
+            let arc = SKShapeNode(path: arcPath.copy(dashingWithPhase: 0, lengths: [5, 7]))
+            arc.strokeColor = col; arc.lineWidth = 1.6; arc.zPosition = Z.rules
+            let dotA = SKShapeNode(ellipseOf: CGSize(width: 32, height: 16))
+            dotA.fillColor = UIColor(18, 22, 26, 0.8); dotA.strokeColor = col; dotA.lineWidth = 2; dotA.position = a; dotA.zPosition = Z.rules
+            let dotB = SKShapeNode(ellipseOf: CGSize(width: 32, height: 16))
+            dotB.fillColor = UIColor(18, 22, 26, 0.8); dotB.strokeColor = col; dotB.lineWidth = 2; dotB.position = b; dotB.zPosition = Z.rules
+            let glowA = glowSprite(color: col, r: 16, a: 0.35); glowA.position = a; glowA.zPosition = Z.emit(pt.fromPos.y)
+            let glowB = glowSprite(color: col, r: 16, a: 0.35); glowB.position = b; glowB.zPosition = Z.emit(pt.toPos.y)
+            world.addChild(arc); world.addChild(dotA); world.addChild(dotB); world.addChild(glowA); world.addChild(glowB)
+            portalNodes.append((arc, dotA, dotB, glowA, glowB))
+        }
+        // Interactive tactical switches (fork / gate / belt).
+        for sw in battle.switches {
+            let sp = P(sw.def.at.x, sw.def.at.y)
+            let ring = SKShapeNode(ellipseOf: CGSize(width: 32, height: 16))
+            ring.fillColor = UIColor(hex: 0x2d2924); ring.lineWidth = 1.8; ring.position = CGPoint(x: sp.x, y: sp.y - 2); ring.zPosition = Z.rules + 0.01
+            let lever = SKShapeNode(); lever.strokeColor = UIColor(hex: 0xd8cbb4); lever.lineWidth = 3; lever.lineCap = .round
+            lever.position = sp; lever.zPosition = Z.rules + 0.02
+            let knob = SKShapeNode(circleOfRadius: 4.5); knob.lineWidth = 0; knob.position = sp; knob.zPosition = Z.rules + 0.03
+            let arc = SKShapeNode(); arc.lineWidth = 2.5; arc.position = CGPoint(x: sp.x, y: sp.y + 6); arc.zPosition = Z.rules + 0.03
+            let boost = SKShapeNode(ellipseOf: CGSize(width: 44, height: 22))
+            boost.strokeColor = UIColor(255, 214, 140, 0.75); boost.lineWidth = 1.4; boost.fillColor = .clear
+            boost.position = CGPoint(x: sp.x, y: sp.y - 2); boost.zPosition = Z.rules + 0.01; boost.isHidden = true
+            let barPath = CGMutablePath(); barPath.move(to: CGPoint(x: -26, y: 0)); barPath.addLine(to: CGPoint(x: 26, y: 0))
+            let gateBar = SKShapeNode(path: barPath); gateBar.strokeColor = UIColor(hex: 0xd98a2b); gateBar.lineWidth = 6
+            gateBar.position = CGPoint(x: sp.x, y: sp.y + 6); gateBar.zPosition = Z.rules + 0.02; gateBar.isHidden = true
+            let gateDash = SKShapeNode(path: barPath.copy(dashingWithPhase: 0, lengths: [7, 7])); gateDash.strokeColor = UIColor(hex: 0x1d1914)
+            gateDash.lineWidth = 6; gateDash.position = CGPoint(x: sp.x, y: sp.y + 6); gateDash.zPosition = Z.rules + 0.025; gateDash.isHidden = true
+            world.addChild(ring); world.addChild(lever); world.addChild(knob); world.addChild(arc); world.addChild(boost)
+            world.addChild(gateBar); world.addChild(gateDash)
+            switchNodes.append((ring, lever, knob, arc, boost, gateBar, gateDash))
+            leverState.append(-1)
+        }
         // Tides and lava closures.
         for s in st.shifts ?? [] {
             let n = SKNode(); n.position = P(s.at.x, s.at.y); n.zPosition = Z.rules
@@ -239,7 +374,7 @@ final class BattleScene: SKScene {
         let dt = lastTime.map { min(0.05, max(0, currentTime - $0)) } ?? 0
         lastTime = currentTime
         T += dt
-        let simDt = look.aimW != nil ? dt * 0.25 : dt
+        let simDt = look.aiming ? dt * 0.25 : dt
         let events = onFrame?(dt) ?? []
         consume(events)
         render(dt: battle.paused ? 0 : simDt)
@@ -260,13 +395,40 @@ final class BattleScene: SKScene {
         stepGaits(dt)
         if shake > 0 && !look.reduceMotion { world.position = CGPoint(x: (R() - 0.5) * shake, y: (R() - 0.5) * shake) } else { world.position = .zero }
 
-        // Water glints, or lava flowing.
+        // Water glints, drainable channels, dynamic roads, lighthouse beam & Sanctuary perimeter.
         for (i, w) in waterNodes.enumerated() {
             if let lava = w.lava { lava.strokeColor = UIColor(255, 110 + 30 * sin(T * 2), 40, 0.35); _ = i }
             let lengths: [CGFloat] = st.isLava ? [10, 26, 4, 30] : [6, 30, 14, 46]
             let total = lengths.reduce(0, +)
             let speed = st.isLava ? 18.0 : 26.0
             w.glint.path = w.path.copy(dashingWithPhase: total - CGFloat((T * speed).truncatingRemainder(dividingBy: Double(total))), lengths: lengths)
+        }
+        for dw in drainWaterNodes {
+            let drained = dw.idx < b.waters.count ? b.waters[dw.idx].drained : false
+            dw.wet.isHidden = drained; dw.glint.isHidden = drained; dw.dry.isHidden = !drained
+            if !drained {
+                let lengths: [CGFloat] = [6, 26, 12, 40], total = lengths.reduce(0, +)
+                dw.glint.path = dw.path.copy(dashingWithPhase: total - CGFloat((T * 24).truncatingRemainder(dividingBy: Double(total))), lengths: lengths)
+            }
+        }
+        for dr in dynRoadNodes { dr.fill.isHidden = !dr.road.active; dr.dash.isHidden = !dr.road.active }
+        for (i, ring) in sanctuaryNodes.enumerated() where i < b.gate.count {
+            if look.still || b.hero.dead { ring.isHidden = true; continue }
+            let g = b.gate[i]
+            let near = hypot2(g.x - b.hero.x, g.y - b.hero.y) < b.data.hero.gateRadius
+            let show = near || b.hero.hp < b.heroMaxHp() * 0.85
+            ring.isHidden = !show
+            ring.strokeColor = near ? UIColor(128, 210, 110, 0.36) : UIColor(235, 195, 120, 0.2)
+        }
+        if let beam = lighthouseBeam, !look.reduceMotion { beam.zRotation = -CGFloat(T * 0.65) }
+        for (i, rn) in rainNodes.enumerated() {
+            let show = !look.reduceMotion && !look.still
+            rn.isHidden = !show
+            if show {
+                let rx = (Double(i * 97) + T * 420).truncatingRemainder(dividingBy: World.width + 120) - 60
+                let ry = (Double(i * 71) + T * 880).truncatingRemainder(dividingBy: World.height + 80) - 40
+                rn.position = P(rx, ry)
+            }
         }
         drawMapRules()
         drawPlots()
@@ -282,7 +444,7 @@ final class BattleScene: SKScene {
         drawRanges()
         drawCrows(dt)
         vignette.alpha = b.night ? 0.7 : 0.16
-        flashNode.alpha = flash * 0.35
+        flashNode.alpha = look.reduceMotion ? 0 : flash * 0.35
         flashNode.color = b.status == .lost ? UIColor(255, 80, 60) : UIColor(255, 230, 180)
         drawCoins()
         drawFloats()
@@ -366,6 +528,38 @@ final class BattleScene: SKScene {
             case .heroDown: float(b.hero.x, b.hero.y - 80, "Wren falls", UIColor(hex: 0xff8a7a), big: true)
             case .revive: addFx(.sun, b.hero.x, b.hero.y, r: 0, max: 1, life: 1)
             case let .rune(kind, picked): if picked { let d = b.data.rune(kind); float(b.hero.x, b.hero.y - 80, d.name, UIColor(css: d.color), big: true) }
+            case let .riftWarn(road, _):
+                if let r = b.roads.first(where: { $0.def.id == road }) {
+                    let p = r.path.point(at: 36)
+                    addFx(.ring, p.x, p.y, r: 0, max: 85, life: 1.1, color: UIColor(255, 155, 70))
+                }
+            case let .riftOpen(road):
+                if let r = b.roads.first(where: { $0.def.id == road }) {
+                    let p = r.path.point(at: 36)
+                    addFx(.ring, p.x, p.y, r: 0, max: 140, life: 1, color: UIColor(96, 226, 180))
+                    shake = max(shake, 5)
+                }
+            case let .clearPlot(plot, free):
+                if plot >= 0 && plot < b.plots.count {
+                    let pl = b.plots[plot]
+                    for _ in 0..<10 { let a = R() * TAU; parts.append(Part(x: pl.x, y: pl.y - 6, vx: cos(a) * 65, vy: sin(a) * 35 - 40, life: 0.65, max: 0.65, color: UIColor(hex: 0x7a6c58), s: 2.5, kind: .chip, grav: true)) }
+                    addFx(.ring, pl.x, pl.y, r: 0, max: 52, life: 0.6, color: free ? UIColor(140, 220, 160) : UIColor(230, 190, 110))
+                }
+            case let .switchFlip(id, _, _):
+                if let sw = b.switches.first(where: { $0.def.id == id }) {
+                    let sx = sw.def.at.x, sy = sw.def.at.y
+                    addFx(.ring, sx, sy, r: 0, max: 58, life: 0.65, color: UIColor(230, 185, 95))
+                    for _ in 0..<6 { let a = R() * TAU; parts.append(Part(x: sx, y: sy - 10, vx: cos(a) * 55, vy: sin(a) * 40, life: 0.35, max: 0.35, color: UIColor(hex: 0xffd480), s: 2, kind: .spark)) }
+                }
+            case .terraform:
+                shake = max(shake, 8)
+                addFx(.ring, World.width / 2, World.height / 2, r: 0, max: 420, life: 0.9, color: UIColor(180, 220, 210))
+            case let .warp(fx, fy, tx, ty, _):
+                addFx(.ring, fx, fy, r: 0, max: 46, life: 0.55, color: UIColor(90, 210, 255))
+                addFx(.ring, tx, ty, r: 0, max: 54, life: 0.65, color: UIColor(255, 150, 70))
+            case let .gateShock(gx, gy):
+                addFx(.ring, gx, gy, r: 0, max: 180, life: 0.85, color: UIColor(255, 215, 120))
+                shake = max(shake, 6)
             default: break
             }
         }
@@ -400,8 +594,8 @@ final class BattleScene: SKScene {
 
     /// Gold from kills close together in time and place adds up in one number instead of a stack.
     private func goldPop(_ x: Double, _ y: Double, _ gold: Int, _ byHero: Bool) {
-        if let f = floats.first(where: { $0.gold != nil && $0.max - $0.life < 0.5 && hypot($0.x - x, $0.y - y) < 140 }) {
-            f.gold! += gold; f.text = "+\(f.gold!)"; f.life = f.max
+        if let f = floats.first(where: { $0.gold != nil && $0.max - $0.life < 0.45 && hypot2($0.x - x, $0.y - y) < 95 }) {
+            f.gold! += gold; f.text = "+\(f.gold!)"; f.life = f.max; f.y -= 3
             if byHero { f.color = UIColor(hex: 0xffd76a); f.big = true }
             return
         }
@@ -410,8 +604,8 @@ final class BattleScene: SKScene {
     }
 
     private func float(_ x: Double, _ y: Double, _ text: String, _ color: UIColor, big: Bool) {
-        if floats.count > 60 { floats.removeFirst().node.removeFromParent() }
-        let f = FloatText(x: x + (R() - 0.5) * 12, y: y, text: text, color: color, big: big)
+        if floats.count > 28 { floats.removeFirst().node.removeFromParent() }
+        let f = FloatText(x: x + (R() - 0.5) * 14, y: max(85, y), text: text, color: color, big: big)
         f.node.zPosition = Z.floats
         f.node.horizontalAlignmentMode = .center
         f.node.verticalAlignmentMode = .baseline
@@ -455,6 +649,59 @@ final class BattleScene: SKScene {
 
     private func drawMapRules() {
         let b = battle, st = b.stage
+        // Telegraphed Wave+1 breaches.
+        for rw in riftWarnNodes {
+            let show = rw.road.telegraph
+            rw.line.isHidden = !show; rw.badge.isHidden = !show
+            if show {
+                rw.line.strokeColor = UIColor(218, 86, 52, look.reduceMotion ? 0.42 : 0.32 + 0.16 * sin(T * 4))
+            }
+        }
+        // Portals / Chutes / Drift Rifts.
+        for (i, pn) in portalNodes.enumerated() where i < b.portals.count {
+            let active = b.portals[i].active
+            let a = active ? 0.92 : 0.35
+            pn.arc.alpha = a; pn.fromDot.alpha = a; pn.toDot.alpha = a
+            pn.glowA.isHidden = !active; pn.glowB.isHidden = !active
+            if active {
+                let pulse = 0.35 + 0.1 * sin(T * 5)
+                pn.glowA.alpha = pulse; pn.glowB.alpha = pulse
+            }
+        }
+        // Interactive tactical switches (fork / gate / belt).
+        for (i, sw) in b.switches.enumerated() where i < switchNodes.count {
+            let sn = switchNodes[i]
+            let active = sw.activeT > 0
+            let ready = sw.cdLeft <= 0 && !active
+            let col = active ? UIColor(hex: 0x5ee8c0) : ready ? UIColor(hex: 0xe6a83e) : UIColor(hex: 0x7a756c)
+            sn.ring.strokeColor = col
+            // The lever only moves when the switch flips: its path is rebuilt then, not every frame.
+            if i < leverState.count, leverState[i] != sw.state {
+                leverState[i] = sw.state
+                let lean: Double = sw.state != 0 ? 10 : -10
+                let lp = CGMutablePath()
+                lp.move(to: .zero)
+                lp.addLine(to: CGPoint(x: lean, y: 14))
+                sn.lever.path = lp
+                sn.knob.position = P(sw.def.at.x + lean, sw.def.at.y - 14)
+            }
+            sn.knob.fillColor = col
+            sn.boost.isHidden = !sw.boosted
+            if sw.cdLeft > 0 || active {
+                let share = active ? sw.activeT / (sw.def.dur ?? 10) : 1 - sw.cdLeft / sw.def.cd
+                let ap = CGMutablePath()
+                ap.addArc(center: .zero, radius: 15, startAngle: .pi / 2, endAngle: .pi / 2 - share * .pi * 2, clockwise: true)
+                sn.arc.path = ap
+                sn.arc.strokeColor = active ? UIColor(hex: 0x6ff5d0) : UIColor(246, 240, 228, 0.75)
+                sn.arc.isHidden = false
+            } else {
+                sn.arc.isHidden = true
+            }
+            let barOn = sw.def.mode == .gate && active
+            sn.gateBar.isHidden = !barOn
+            sn.gateDash.isHidden = !barOn
+        }
+        // Tides and lava closures.
         for (i, s) in (st.shifts ?? []).enumerated() where i < shiftNodes.count {
             let on = b.shiftActive(i), n = shiftNodes[i]
             if s.kind == "lava" {
@@ -668,13 +915,13 @@ final class BattleScene: SKScene {
             }
         }
         n.ashGlow?.position = P(bx, by - 60)
-        n.status(f, x: x, y: y)
+        n.status(f, x: x, y: y, T: T)
         // Health and the white flash of a hit.
         let showBar = !hidden && !look.still && (f.hp < f.max || f.def.isBoss)
         n.bar.root.isHidden = !showBar
         if showBar {
             n.bar.width = f.def.isBoss ? 90 : 34
-            n.bar.color = f.def.isBoss ? UIColor(hex: 0xe0503a) : f.shielded ? UIColor(hex: 0x5ac8a8) : UIColor(hex: 0xc8552e)
+            n.bar.color = f.def.isBoss ? UIColor(hex: 0xe0503a) : f.shielded ? UIColor(hex: 0x5ac8a8) : f.vulnT > 0 ? UIColor(hex: 0xe88b3a) : UIColor(hex: 0xc8552e)
             n.bar.place(x: x, y: y - f.def.bar * K)
             n.bar.set(f.hp / f.max)
         }
@@ -911,7 +1158,14 @@ final class BattleScene: SKScene {
             let modRange = 1 + (b.mods.towerRange[kind] ?? 0) + b.mods.rangeAll + waterBonus
             want.append((p.x, p.y, b.data.tower(kind).range[0] * modRange * (p.high ? 1.2 : 1), UIColor(255, 214, 140)))
         }
-        if let a = look.aimW { want.append((a.x, a.y, b.data.snare.radius, UIColor(255, 190, 110))) }
+        if look.aiming {
+            want.append((b.hero.x, b.hero.y, b.data.snare.range, UIColor(255, 214, 140)))
+            if let a = look.aimW { want.append((a.x, a.y, b.data.snare.radius, UIColor(255, 150, 70))) }
+        }
+        if look.showLeash && !b.hero.dead {
+            want.append((b.hero.anchorX, b.hero.anchorY, b.data.hero.leash, UIColor(255, 214, 140)))
+            if b.hero.rank(.e) > 0 { want.append((b.hero.x, b.hero.y, b.data.attune.radius, UIColor(130, 220, 145))) }
+        }
         let key = want.map { "\(Int($0.0)),\(Int($0.1)),\(Int($0.2))" }.joined(separator: ";")
         guard key != rangeKey else { return }
         rangeKey = key
@@ -965,6 +1219,9 @@ final class BattleScene: SKScene {
     private var touchStart: CGPoint?
     private var lastX: CGFloat = 0
     private var panning = false
+    /// A finger came down on Wren. She is picked up once it travels; a still release stays a tap.
+    private var heroGrab = false
+    private var heroDragging = false
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
@@ -972,33 +1229,70 @@ final class BattleScene: SKScene {
         touchStart = t.location(in: nil)
         lastX = touchStart?.x ?? 0
         panning = false
-        aim(t)
+        heroGrab = false
+        heroDragging = false
+        if look.aiming { aim(t); return }
+        let wp = t.location(in: self)
+        let wx = Double(wp.x), wy = World.height - Double(wp.y)
+        let onHero = !battle.hero.dead && hypot2(wx - battle.hero.x, wy - (battle.hero.y - 20)) < 52
+        if onHero && !(grabBlocked?(wx, wy) ?? false) { heroGrab = true }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
+        let wp = t.location(in: self)
+        let wx = Double(wp.x), wy = World.height - Double(wp.y)
+        if heroDragging { onHeroDrag?(wx, wy); return }
+        if look.aiming { aim(t); return }
         let now = t.location(in: nil)
-        if canPan && look.aimW == nil, let s = touchStart {
+        if heroGrab, let s = touchStart {
+            // Wren follows only after the finger has clearly moved, so a tap near her never shifts her.
+            if hypot(now.x - s.x, now.y - s.y) > 10 {
+                heroDragging = true
+                look.showLeash = true
+                onHeroDrag?(wx, wy)
+            }
+            return
+        }
+        if canPan, let s = touchStart {
             if !panning && abs(now.x - s.x) > 10 { panning = true }
             if panning { onPan?(now.x - lastX); lastX = now.x }
             return
         }
-        aim(t)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first, let s = touchStart else { return }
         touchStart = nil
-        let now = t.location(in: nil)
-        if panning || hypot(now.x - s.x, now.y - s.y) > 18 { panning = false; return }
+        heroGrab = false
         let p = t.location(in: self)
-        onTap?(Double(p.x), World.height - Double(p.y))
+        let wx = Double(p.x), wy = World.height - Double(p.y)
+        if heroDragging {
+            heroDragging = false
+            onHeroDragEnd?(wx, wy)
+            return
+        }
+        let now = t.location(in: nil)
+        let dist = hypot(now.x - s.x, now.y - s.y)
+        if look.aiming {
+            // Tap-to-aim: a drag only moves the mark, and the next tap throws.
+            if tapAimW && dist > 18 { return }
+            // Every other release ends the aim: thrown, or called off when let go far outside the range.
+            let cancel = hypot2(wx - battle.hero.x, wy - battle.hero.y) > battle.data.snare.range + 45
+            onAimEnd?(wx, wy, cancel)
+            return
+        }
+        if panning || dist > 18 { panning = false; return }
+        onTap?(wx, wy)
     }
 
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { touchStart = nil; panning = false }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touchStart = nil; panning = false; heroGrab = false
+        if heroDragging { heroDragging = false; look.showLeash = false; onHeroDragCancel?() }
+    }
 
     private func aim(_ t: UITouch) {
-        guard look.aimW != nil else { return }
+        guard look.aiming else { return }
         let p = t.location(in: self)
         onAim?(Double(p.x), World.height - Double(p.y))
     }
@@ -1037,7 +1331,11 @@ final class BattleScene: SKScene {
         private let under = SKShapeNode()
         private let marks = SKShapeNode()
         private let slow = SKShapeNode()
-        private let burn = SKShapeNode(ellipseOf: CGSize(width: 12, height: 20))
+        private let burn = SKShapeNode()
+        private let vuln = SKShapeNode()
+        private let shieldRing = SKShapeNode()
+        /// 0 none, 1 chilled, 2 frozen: which frost shape `slow` holds now.
+        private var chillShown = 0
 
         init(foe f: Foe, scene: BattleScene) {
             bodyEmit.blendMode = .add
@@ -1069,16 +1367,22 @@ final class BattleScene: SKScene {
             if f.kind == .ashmoth { let g = scene.glowSprite(color: UIColor(hex: 0xff7a3a), r: 22, a: 0.35); emit.addChild(g); ashGlow = g }
             under.fillColor = UIColor(40, 32, 24, 0.9); under.lineWidth = 0; base.addChild(under)
             marks.fillColor = UIColor(hex: 0x0d0f0a); marks.lineWidth = 0; base.addChild(marks)
-            slow.lineWidth = 0; base.addChild(slow)
-            burn.fillColor = UIColor(255, 120, 40, 0.5); burn.lineWidth = 0; base.addChild(burn)
-            [under, marks, slow, burn].forEach { $0.isHidden = true }
+            slow.lineWidth = 1; base.addChild(slow)
+            burn.fillColor = UIColor(255, 130, 48, 0.78); burn.lineWidth = 0; base.addChild(burn)
+            vuln.strokeColor = UIColor(255, 158, 64, 0.82); vuln.lineWidth = 1.6; vuln.fillColor = .clear; base.addChild(vuln)
+            shieldRing.strokeColor = UIColor(90, 220, 185, 0.4); shieldRing.lineWidth = 1.8; shieldRing.blendMode = .add; shieldRing.fillColor = .clear; emit.addChild(shieldRing)
+            // Shapes that never change for this foe are built once here; each frame only shows, hides and moves them.
+            let S = f.def.size, sr = 20 * S
+            vuln.path = CGPath(ellipseIn: CGRect(x: -19 * S, y: -6.5 * S, width: 38 * S, height: 13 * S), transform: nil).copy(dashingWithPhase: 0, lengths: [4, 3])
+            shieldRing.path = CGPath(ellipseIn: CGRect(x: -sr, y: -sr * 0.6, width: sr * 2, height: sr * 1.2), transform: nil)
+            [under, marks, slow, burn, vuln, shieldRing].forEach { $0.isHidden = true }
             scene.world.addChild(base); scene.world.addChild(emit)
         }
 
         func showUnder(x: Double, y: Double, size S: Double, T: Double) {
-            [body, bodyEmit, seam, hit, bar.root].forEach { $0.isHidden = true }
+            [body, bodyEmit, seam, hit, bar.root, shieldRing].forEach { $0.isHidden = true }
             wings?.isHidden = true; wingsEmit?.isHidden = true; ring?.isHidden = true; ashGlow?.isHidden = true
-            [marks, slow, burn].forEach { $0.isHidden = true }
+            [marks, slow, burn, vuln].forEach { $0.isHidden = true }
             under.isHidden = false
             let path = CGMutablePath()
             path.addEllipse(in: CGRect(x: -14 * S, y: -6 * S, width: 28 * S, height: 12 * S))
@@ -1093,8 +1397,8 @@ final class BattleScene: SKScene {
             wings?.isHidden = false; wingsEmit?.isHidden = false; ashGlow?.isHidden = false
         }
 
-        /// Roots holding it, frost slowing it, fire on it.
-        func status(_ f: Foe, x: Double, y: Double) {
+        /// Roots holding it, faceted ice / frost on it, multi-tongue fire, vulnerability, and shield aura.
+        func status(_ f: Foe, x: Double, y: Double, T: Double) {
             let S = f.def.size
             marks.isHidden = f.rootT <= 0
             if f.rootT > 0 {
@@ -1105,28 +1409,59 @@ final class BattleScene: SKScene {
                 }
                 marks.path = path; marks.position = P(x, y)
             }
-            slow.isHidden = !(f.slowT > 0 || f.freezeT > 0)
-            if !slow.isHidden {
-                slow.path = CGPath(ellipseIn: CGRect(x: -18 * S, y: -5 * S, width: 36 * S, height: 10 * S), transform: nil)
-                slow.fillColor = f.freezeT > 0 ? UIColor(200, 235, 255, 0.6) : UIColor(190, 225, 250, 0.35)
-                slow.position = P(x, y + 2)
+            // Frozen shows a crystal, chilled a frost patch. The shape is rebuilt only when that state changes.
+            let chill = f.freezeT > 0 ? 2 : f.slowT > 0 ? 1 : 0
+            slow.isHidden = chill == 0
+            if chill != chillShown {
+                chillShown = chill
+                if chill == 2 {
+                    let crystal = CGMutablePath()
+                    crystal.move(to: CGPoint(x: -14 * S, y: 0)); crystal.addLine(to: CGPoint(x: -10 * S, y: 22 * S))
+                    crystal.addLine(to: CGPoint(x: 0, y: 28 * S)); crystal.addLine(to: CGPoint(x: 11 * S, y: 20 * S))
+                    crystal.addLine(to: CGPoint(x: 14 * S, y: 0)); crystal.closeSubpath()
+                    slow.path = crystal
+                    slow.fillColor = UIColor(185, 232, 255, 0.55)
+                    slow.strokeColor = UIColor(240, 252, 255, 0.9)
+                } else if chill == 1 {
+                    slow.path = CGPath(ellipseIn: CGRect(x: -18 * S, y: -5 * S, width: 36 * S, height: 10 * S), transform: nil)
+                    slow.fillColor = UIColor(190, 225, 250, 0.35)
+                    slow.strokeColor = .clear
+                }
             }
+            if chill == 2 { slow.position = P(x, y) } else if chill == 1 { slow.position = P(x, y + 2) }
             burn.isHidden = f.burnT <= 0
-            if f.burnT > 0 { burn.position = P(x, y - 8) }
+            if f.burnT > 0 {
+                let fp = CGMutablePath()
+                for k in -1...1 {
+                    let fh = 12 + sin(T * 14 + Double(k) * 2) * 3
+                    let cx = Double(k) * 5
+                    fp.move(to: CGPoint(x: cx - 3, y: 4))
+                    fp.addQuadCurve(to: CGPoint(x: cx + 3, y: 4), control: CGPoint(x: cx + sin(T * 9 + Double(k)) * 3, y: 4 + fh))
+                    fp.closeSubpath()
+                }
+                burn.path = fp; burn.position = P(x, y)
+            }
+            vuln.isHidden = f.vulnT <= 0
+            if f.vulnT > 0 { vuln.position = P(x, y + 2) }
+            shieldRing.isHidden = f.hidden || !f.shielded
+            if !shieldRing.isHidden {
+                shieldRing.position = P(x, y - f.def.bar * 0.4)
+                shieldRing.alpha = 0.35 + 0.08 * sin(T * 5)
+            }
         }
 
         func remove() { base.removeFromParent(); emit.removeFromParent() }
     }
 
-    /// One tower: its painted body, cannon barrel, level plaque, and its lit parts.
+    /// One tower: painted body, cannon barrel, integrated plinth gem, sleep icon badge, and lit aura.
     final class TowerNode {
         let base = SKNode(), emit = SKNode()
         let body = SKSpriteNode()
         var barrel: SKSpriteNode?
-        let plaque = SKNode()
-        private var squares: [SKSpriteNode] = []
-        private let roundDot = SKShapeNode(circleOfRadius: 4)
-        private let tag = SKNode()
+        private let plinthRim = SKShapeNode(circleOfRadius: 5.2)
+        private let plinthGem = SKShapeNode(circleOfRadius: 3.6)
+        private let sleepBadge = SKNode()
+        private let masteryRing = SKShapeNode(ellipseOf: CGSize(width: 66, height: 26))
         let lit = SKSpriteNode(), hot = SKSpriteNode()
         let splitGlow: SKSpriteNode, muzzle: SKSpriteNode
         private var key = ""
@@ -1137,30 +1472,20 @@ final class BattleScene: SKScene {
             muzzle = scene.glowSprite(color: UIColor(hex: 0xffa040), r: 26, a: 0)
             base.addChild(body)
             if t.kind == .cannon { let b = SKSpriteNode(); b.zPosition = 0.001; base.addChild(b); barrel = b }
-            // Level plaque at the foot of the tower: one mark per level, all gold once it has split.
-            let px = t.x, py = t.y + 20
-            let shade = SKSpriteNode(color: UIColor(40, 30, 20, 0.3), size: CGSize(width: 38, height: 13)); shade.anchorPoint = CGPoint(x: 0, y: 1); shade.position = P(px - 18, py - 4)
-            let card = SKShapeNode(rect: CGRect(x: 0, y: -13, width: 38, height: 13), cornerRadius: 3)
-            card.fillColor = UIColor(246, 240, 228, 0.95); card.strokeColor = UIColor(70, 56, 40, 0.7); card.lineWidth = 1; card.position = P(px - 19, py - 6)
-            plaque.addChild(shade); plaque.addChild(card)
-            for i in 0..<3 {
-                let q = SKSpriteNode(color: .clear, size: CGSize(width: 8, height: 7)); q.anchorPoint = CGPoint(x: 0, y: 1)
-                q.position = P(px - 14 + Double(i) * 10, py - 3); q.zPosition = 0.001
-                plaque.addChild(q); squares.append(q)
-            }
-            plaque.zPosition = 0.002
-            base.addChild(plaque)
-            roundDot.position = P(t.x + 30, t.y + 8); roundDot.lineWidth = 0; roundDot.zPosition = 0.003; base.addChild(roundDot)
-            // A small paper tag over the plaque when a lowered gear plot puts it to sleep.
-            let label = SKLabelNode(text: "Rests this wave")
-            label.fontName = "Barlow-ExtraBold"; label.fontSize = 12; label.fontColor = UIColor(hex: 0x3a3128)
-            label.verticalAlignmentMode = .center; label.horizontalAlignmentMode = .center
-            let w = label.frame.width + 14
-            let bg = SKShapeNode(rect: CGRect(x: -w / 2, y: -9, width: w, height: 18), cornerRadius: 3)
-            bg.fillColor = UIColor(246, 240, 228, 0.96); bg.strokeColor = UIColor(70, 56, 40, 0.6); bg.lineWidth = 1
-            tag.addChild(bg); tag.addChild(label)
-            tag.position = P(px, py - 22); tag.zPosition = 0.004; tag.isHidden = true
-            base.addChild(tag)
+            // Integrated plinth rune gem for elemental rounds (replaces floating badge dots & white plaque cards).
+            plinthRim.fillColor = UIColor(hex: 0x1c1814); plinthRim.lineWidth = 0; plinthRim.position = P(t.x, t.y - 5); plinthRim.zPosition = 0.002
+            plinthGem.lineWidth = 0; plinthGem.position = P(t.x, t.y - 5); plinthGem.zPosition = 0.003
+            base.addChild(plinthRim); base.addChild(plinthGem)
+            // Compact crescent sleep badge when lowered gear rests this wave.
+            let disc = SKShapeNode(circleOfRadius: 9); disc.fillColor = UIColor(24, 22, 20, 0.88); disc.strokeColor = UIColor(220, 195, 150, 0.75); disc.lineWidth = 1.2
+            let moonPath = CGMutablePath()
+            moonPath.addArc(center: CGPoint(x: -1, y: 0), radius: 4.5, startAngle: 0.6, endAngle: .pi * 2 - 0.6, clockwise: false)
+            let moon = SKShapeNode(path: moonPath); moon.fillColor = UIColor(hex: 0xe8d4a6); moon.lineWidth = 0
+            sleepBadge.addChild(disc); sleepBadge.addChild(moon); sleepBadge.position = P(t.x, t.y - 26); sleepBadge.zPosition = 0.004; sleepBadge.isHidden = true
+            base.addChild(sleepBadge)
+            masteryRing.strokeColor = UIColor(255, 220, 125, 0.72); masteryRing.lineWidth = 1.6; masteryRing.fillColor = .clear
+            masteryRing.position = P(t.x, t.y); masteryRing.zPosition = -0.001; masteryRing.isHidden = true
+            base.addChild(masteryRing)
             emit.addChild(lit); emit.addChild(hot); emit.addChild(splitGlow); emit.addChild(muzzle)
             base.position = .zero; emit.position = .zero
             base.zPosition = Z.unit(t.y); emit.zPosition = Z.emit(t.y)
@@ -1169,24 +1494,22 @@ final class BattleScene: SKScene {
         }
 
         func update(_ t: Tower, battle b: Battle, T: Double) {
-            let lv = min(t.lv, 4), S = 0.6 + 0.06 * Double(lv - 1)
-            let k = "\(t.lv)|\(t.round?.rawValue ?? "")|\(t.down)"
+            let lv = min(t.lv, b.data.maxTowerLevel), fbLv = min(lv, 4), splitTag = t.split.map { "-\($0.rawValue)" } ?? ""
+            let S = lv >= 5 ? 0.86 : 0.6 + 0.06 * Double(fbLv - 1)
+            let k = "\(lv)|\(splitTag)|\(t.round?.rawValue ?? "")|\(t.down)"
             if k != key {
                 key = k
-                Art.shared.set(body, "t-\(t.kind.rawValue)-\(lv)-\(t.plot % 2)")
-                let n = min(t.lv, 3), temper = max(0, t.lv - 4)
-                for (i, q) in squares.enumerated() {
-                    q.color = i < temper ? UIColor(hex: 0xfff3c4) : i < n ? (t.lv >= 4 ? UIColor(hex: 0xd9a23a) : UIColor(hex: 0xa63d26)) : UIColor(70, 56, 40, 0.18)
-                }
-                roundDot.isHidden = t.round == nil
-                roundDot.fillColor = t.round == .ember ? UIColor(hex: 0xff8a3a) : t.round == .frost ? UIColor(hex: 0x8fd0ff) : UIColor(hex: 0xb9a8ff)
+                Art.shared.set(body, "t-\(t.kind.rawValue)-\(lv)\(splitTag)-\(t.plot % 2)", fallback: "t-\(t.kind.rawValue)-\(fbLv)-\(t.plot % 2)")
+                plinthRim.isHidden = t.round == nil
+                plinthGem.isHidden = t.round == nil
+                plinthGem.fillColor = t.round == .ember ? UIColor(hex: 0xff8a3a) : t.round == .frost ? UIColor(hex: 0x8fd0ff) : UIColor(hex: 0xb9a8ff)
                 body.alpha = t.down ? 0.42 : 1
                 barrel?.alpha = t.down ? 0.42 : 1
-                tag.isHidden = !t.down
+                sleepBadge.isHidden = !t.down
+                masteryRing.isHidden = t.lv < 5
                 emit.isHidden = t.down
             }
             if let barrel {
-                // The painter squashes the aim into the 3/4 view before it turns the barrel.
                 let a = atan2(sin(t.aim) * 0.5, cos(t.aim))
                 let frame = Int(((t.aim / (.pi * 2) * 16).rounded()).truncatingRemainder(dividingBy: 16) + 16) % 16
                 Art.shared.set(barrel, "barrel-\(frame)")
@@ -1200,27 +1523,30 @@ final class BattleScene: SKScene {
                 } else { muzzle.isHidden = true }
             } else { muzzle.isHidden = true }
             switch t.kind {
-            case .beacon: Art.shared.set(lit, "te-beacon-\(lv)-\(Int(T * 1.8 * 6) % 6)")
+            case .beacon:
+                Art.shared.set(lit, "te-beacon-\(fbLv)-\(Int(T * 1.8 * 6) % 6)")
             case .roots:
-                Art.shared.set(lit, "te-roots-\(lv)-0"); Art.shared.set(hot, "te-roots-\(lv)-1")
+                Art.shared.set(lit, "te-roots-\(fbLv)-0"); Art.shared.set(hot, "te-roots-\(fbLv)-1")
                 hot.alpha = max(0, 1 - t.fired)
-            default: Art.shared.set(lit, "te-\(t.kind.rawValue)-\(lv)")
+            default:
+                Art.shared.set(lit, "te-\(t.kind.rawValue)-\(lv)\(splitTag)", fallback: "te-\(t.kind.rawValue)-\(fbLv)")
             }
             hot.isHidden = t.kind != .roots
             splitGlow.isHidden = t.split == nil
-            if t.split != nil { splitGlow.position = P(t.x, t.y - 120 * S); splitGlow.alpha = 0.25 + 0.1 * sin(T * 3) }
+            if t.split != nil { splitGlow.position = P(t.x, t.y - 120 * S); splitGlow.alpha = (t.lv >= 5 ? 0.34 : 0.25) + 0.1 * sin(T * 3) }
         }
 
         func remove() { base.removeFromParent(); emit.removeFromParent() }
     }
 
-    /// Wren: the ring of lantern light at her feet, her body and lantern, her bar and level.
+    /// Wren: lantern ring at her feet, mirrored facing sprite, carried bag gem pips, bar & level.
     final class HeroNode {
         let ring = SKShapeNode(ellipseOf: CGSize(width: 60, height: 22))
         let body: SKSpriteNode, lit: SKSpriteNode
         let swing = SKShapeNode()
         let bar = Bar(width: 46, color: UIColor(hex: 0x7fd06a))
         let level = SKLabelNode()
+        private var bagPips: [SKShapeNode] = []
         let double = SKShapeNode(ellipseOf: CGSize(width: 68, height: 40.8))
         let haste = SKShapeNode(ellipseOf: CGSize(width: 52, height: 31.2))
         let sunrise: SKSpriteNode
@@ -1237,9 +1563,16 @@ final class BattleScene: SKScene {
             haste.strokeColor = UIColor(255, 110, 80, 0.3); haste.lineWidth = 1.5; haste.blendMode = .add
             sunrise = SKSpriteNode(texture: art.glow); sunrise.color = UIColor(hex: 0xffd590); sunrise.colorBlendFactor = 1; sunrise.blendMode = .add; sunrise.size = CGSize(width: 220, height: 220)
             post.lineWidth = 1.5; post.strokeColor = UIColor(255, 214, 140, 0.35)
+            post.path = CGPath(ellipseIn: CGRect(x: -14, y: -6, width: 28, height: 12), transform: nil).copy(dashingWithPhase: 0, lengths: [3, 6])
             mark.lineWidth = 2
             level.horizontalAlignmentMode = .center; level.verticalAlignmentMode = .baseline
             base.addChild(ring); base.addChild(body); base.addChild(swing)
+            let pipPath = CGMutablePath()
+            pipPath.move(to: CGPoint(x: 0, y: 3.5)); pipPath.addLine(to: CGPoint(x: 3.5, y: 0)); pipPath.addLine(to: CGPoint(x: 0, y: -3.5)); pipPath.addLine(to: CGPoint(x: -3.5, y: 0)); pipPath.closeSubpath()
+            for _ in 0..<4 {
+                let pip = SKShapeNode(path: pipPath); pip.fillColor = UIColor(hex: 0xd49a38); pip.lineWidth = 0; pip.zPosition = 0.002; pip.isHidden = true
+                base.addChild(pip); bagPips.append(pip)
+            }
             emit.addChild(lit); emit.addChild(bar.root); emit.addChild(level); emit.addChild(double); emit.addChild(haste); emit.addChild(sunrise); emit.addChild(post); emit.addChild(mark)
             ring.zPosition = -0.001; swing.zPosition = 0.001
         }
@@ -1259,11 +1592,16 @@ final class BattleScene: SKScene {
             base.zPosition = Z.unit(h.y); emit.zPosition = Z.emit(h.y)
             ring.position = P(h.x, h.y + 2)
             body.position = P(h.x, h.y); lit.position = P(h.x, h.y)
+            let face: CGFloat = h.face < 0 ? -1 : 1
+            body.xScale = face; lit.xScale = face
+            for (i, pip) in bagPips.enumerated() {
+                pip.isHidden = i >= h.items.count
+                if !pip.isHidden { pip.position = P(h.x - 10 + Double(i) * 10, h.y + 13) }
+            }
             swing.isHidden = h.swing <= 0
             if h.swing > 0 {
                 let path = CGMutablePath()
                 let s0 = h.face > 0 ? -1.4 : Double.pi + 1.4, s1 = h.face > 0 ? 0.3 : Double.pi - 0.3
-                // Canvas angles run clockwise with y down; flip them for y up.
                 path.addArc(center: .zero, radius: 30, startAngle: -s0, endAngle: -s1, clockwise: h.face > 0)
                 swing.path = path; swing.position = P(h.x + h.face * 12, h.y - 30); swing.strokeColor = UIColor(220, 235, 250, min(1, h.swing * 3))
             }
@@ -1283,19 +1621,21 @@ final class BattleScene: SKScene {
             double.isHidden = still || h.double <= 0; double.position = P(h.x, h.y - 30)
             haste.isHidden = still || h.haste <= 0; haste.position = P(h.x, h.y)
             sunrise.isHidden = still || h.sunriseT <= 0; sunrise.position = P(h.x, h.y - 40); sunrise.alpha = 0.35 + 0.1 * sin(T * 6)
-            let away = hypot(h.anchorX - h.x, h.anchorY - h.y) > 20
+            let away = hypot2(h.anchorX - h.x, h.anchorY - h.y) > 20
             post.isHidden = still || !away
-            if away {
-                post.path = CGPath(ellipseIn: CGRect(x: -14, y: -6, width: 28, height: 12), transform: nil).copy(dashingWithPhase: 0, lengths: [3, 6])
-                post.position = P(h.anchorX, h.anchorY)
-            }
+            if away { post.position = P(h.anchorX, h.anchorY) }
         }
     }
 
-    /// One stone plot's live marks: gear ring, the rust "+", the new-player rings and the selection ring.
+    /// One stone plot's live marks: submerged patch, rubble cluster & salvage arc, gear ring, "+" mark & selection ring.
     final class PlotNode {
         let root = SKNode()
         private let sunk = SKShapeNode(ellipseOf: CGSize(width: 68, height: 28))
+        private let submerged = SKShapeNode()
+        private let rubbleRoot = SKNode()
+        private var rubbleRocks: [SKShapeNode] = []
+        private let rubbleRim = SKShapeNode(ellipseOf: CGSize(width: 78, height: 32))
+        private let salvageArc = SKShapeNode()
         private let gearHolder = SKNode()
         private let gear = SKShapeNode()
         private let lowered = SKShapeNode(ellipseOf: CGSize(width: 68, height: 28))
@@ -1306,11 +1646,26 @@ final class BattleScene: SKScene {
         private let plus = Art.shared.sprite("plus")
         private let gearKind: SplitId?
 
-        init(plot p: PlotRt, index: Int) {
+        init(plot p: PlotRt, index: Int, lava: Bool) {
             gearKind = p.gear
             root.position = P(p.x, p.y); root.zPosition = Z.plots
             sunk.fillColor = UIColor(40, 52, 40, 0.9); sunk.strokeColor = UIColor(150, 180, 150, 0.25)
             root.addChild(sunk)
+            let subRect = CGPath(ellipseIn: CGRect(x: -32, y: -13, width: 64, height: 26), transform: nil)
+            submerged.path = subRect.copy(dashingWithPhase: 0, lengths: [4, 5])
+            submerged.fillColor = lava ? UIColor(80, 45, 30, 0.45) : UIColor(65, 108, 132, 0.48)
+            submerged.strokeColor = UIColor(220, 235, 245, 0.32); submerged.lineWidth = 1.2
+            root.addChild(submerged)
+            let specs: [(Double, Double, Double, Double)] = [(-9, 4, 26, 16), (10, 3, 24, 14), (1, 10, 22, 16)]
+            for (rx, ry, rw, rh) in specs {
+                let rock = SKShapeNode(ellipseOf: CGSize(width: rw, height: rh))
+                rock.position = CGPoint(x: rx, y: ry); rock.lineWidth = 0
+                rubbleRoot.addChild(rock); rubbleRocks.append(rock)
+            }
+            rubbleRim.strokeColor = UIColor(255, 220, 160, 0.55); rubbleRim.lineWidth = 1.4; rubbleRim.position = CGPoint(x: 0, y: 2)
+            salvageArc.strokeColor = UIColor(hex: 0x7fe698); salvageArc.lineWidth = 3; salvageArc.position = CGPoint(x: 0, y: 10)
+            rubbleRoot.addChild(rubbleRim); rubbleRoot.addChild(salvageArc)
+            root.addChild(rubbleRoot)
             if let g = p.gear {
                 gearHolder.position = CGPoint(x: 0, y: -2); gearHolder.yScale = 0.4
                 let path = CGMutablePath()
@@ -1333,10 +1688,25 @@ final class BattleScene: SKScene {
 
         func update(_ p: PlotRt, used: Bool, gearUp: Bool, hint: Bool, selected: Bool, plus showPlus: Bool, tidePearl: Bool, T: Double) {
             sunk.isHidden = !p.sunk
-            gearHolder.isHidden = p.sunk || gearKind == nil
-            lowered.isHidden = p.sunk || gearKind == nil || gearUp
+            submerged.isHidden = p.sunk || p.unlocked
+            gearHolder.isHidden = p.sunk || !p.unlocked || gearKind == nil
+            lowered.isHidden = p.sunk || !p.unlocked || gearKind == nil || gearUp
             if let g = gearKind { gear.zRotation = -T * (gearUp ? 0.6 : 0.15) * (g == .a ? 1 : -1) }
-            let open = !p.sunk && !used
+            if let rb = p.rubble, p.unlocked && !p.sunk {
+                rubbleRoot.isHidden = false
+                let col = rb.kind == .slag ? UIColor(hex: 0x4a352e) : rb.kind == .crane ? UIColor(hex: 0x585c62) : UIColor(hex: 0x645c50)
+                for rk in rubbleRocks { rk.fillColor = col }
+                rubbleRim.isHidden = !selected
+                if let hold = rb.holdSec, p.rubbleLeft < hold {
+                    let prog = max(0, min(1, 1 - p.rubbleLeft / hold))
+                    let ap = CGMutablePath()
+                    ap.addArc(center: .zero, radius: 20, startAngle: .pi / 2, endAngle: .pi / 2 - prog * .pi * 2, clockwise: true)
+                    salvageArc.path = ap; salvageArc.isHidden = false
+                } else { salvageArc.isHidden = true }
+            } else {
+                rubbleRoot.isHidden = true
+            }
+            let open = p.unlocked && p.rubble == nil && !p.sunk && !used
             tide.isHidden = !(open && tidePearl && p.nearWater)
             hintA.isHidden = !(open && hint); hintB.isHidden = hintA.isHidden
             sel.isHidden = !(open && selected)

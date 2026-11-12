@@ -7,9 +7,11 @@ struct TitleView: View {
     @EnvironmentObject var app: AppModel
     @Environment(\.upright) private var upright
     @State private var scene: BattleScene?
+    @State private var showGuide = false
 
     var body: some View {
         let c = app.save.cleared, next = app.nextStage
+        let altTotal = app.save.totalAltStars
         ZStack(alignment: .topTrailing) {
             LinearGradient(colors: [Ink.skyTop, Ink.skyLow], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             if let scene {
@@ -32,10 +34,11 @@ struct TitleView: View {
                             .buttonStyle(PaperButton(kind: .primary, big: true))
                         HStack(spacing: 10) {
                             Button("Skill trees") { app.screen = .trees }.buttonStyle(PaperButton(big: true))
+                            Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(big: true))
                             Button("Settings") { app.screen = .settings }.buttonStyle(PaperButton(big: true))
                         }
                     }
-                    Text("\(app.save.totalStars) of 60 stars won").font(Face.body(13)).foregroundStyle(Ink.inkFaint).padding(.top, 12)
+                    Text("\(app.save.totalStars) of 60 stars won\(altTotal > 0 ? " · \(altTotal) Variant B" : "")").font(Face.body(13)).foregroundStyle(Ink.inkFaint).padding(.top, 12)
                 }
                 .padding(24)
                 .background(Ink.paper)
@@ -49,6 +52,7 @@ struct TitleView: View {
             .frame(maxHeight: .infinity)
             SoundCorner().padding(12)
         }
+        .sheet(isPresented: $showGuide) { FieldGuideSheet() }
         .task { if scene == nil { await paintMap() } }
     }
 

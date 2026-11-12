@@ -51,6 +51,8 @@ struct PaperButton: ButtonStyle {
     var kind: Kind = .plain
     var big = false
     var poor = false
+    /// At least 44 points high, for the small buttons that sit alone where a thumb has to find them.
+    var tall = false
     @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -69,6 +71,7 @@ struct PaperButton: ButtonStyle {
             .foregroundStyle(fg)
             .padding(.horizontal, big ? 24 : 14)
             .padding(.vertical, big ? 12 : 8)
+            .frame(minHeight: tall ? 44 : nil)
             .background(RoundedRectangle(cornerRadius: 5).fill(bg))
             .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(edge, lineWidth: 1))
             .shadow(color: configuration.isPressed ? .clear : Ink.shadow, radius: 0, x: 0, y: 1)
@@ -78,21 +81,23 @@ struct PaperButton: ButtonStyle {
     }
 }
 
-/// A square icon button, 42 points, for the HUD and menu corners.
+/// A square icon button, 44 points minimum target, for the HUD and menu corners.
 struct IconButton: View {
     let icon: String
     var label: String
     var dim = false
+    var active = false
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            ArtIcon(name: icon, size: 20).foregroundStyle(dim ? Ink.inkDim : Ink.ink)
-                .frame(width: 42, height: 42)
-                .background(RoundedRectangle(cornerRadius: 5).fill(Ink.paperGlass))
-                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Ink.ruleStrong, lineWidth: 1))
+            ArtIcon(name: icon, size: 20).foregroundStyle(active ? Ink.accentInk : dim ? Ink.inkDim : Ink.ink)
+                .frame(width: 44, height: 44)
+                .background(RoundedRectangle(cornerRadius: 5).fill(active ? Ink.accent : Ink.paperGlass))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(active ? Ink.accentLo : Ink.ruleStrong, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+        .accessibilityAddTraits(active ? .isSelected : [])
     }
 }
 
@@ -168,6 +173,8 @@ struct Price: View {
 struct Segments<T: Hashable>: View {
     let items: [(T, String)]
     let selected: T
+    /// Each choice at least 44 points high, for pickers that stand alone outside a crowded menu.
+    var tall = false
     let pick: (T) -> Void
     var body: some View {
         HStack(spacing: 2) {
@@ -176,8 +183,11 @@ struct Segments<T: Hashable>: View {
                     Text(item.1).font(Face.body(14, item.0 == selected ? .heavy : .semibold)).lineLimit(1).minimumScaleFactor(0.8)
                         .foregroundStyle(item.0 == selected ? Ink.ink : Ink.inkDim)
                         .padding(.horizontal, items.count >= 4 ? 8 : 10).padding(.vertical, 6)
+                        .frame(minHeight: tall ? 44 : nil)
                         .background(RoundedRectangle(cornerRadius: 4).fill(item.0 == selected ? Ink.paper : .clear))
+                        .contentShape(Rectangle())
                 }.buttonStyle(.plain)
+                    .accessibilityAddTraits(item.0 == selected ? .isSelected : [])
             }
         }
         .padding(3)
