@@ -2,6 +2,10 @@ import Foundation
 
 /// Every fixed number in the game, loaded once from the bundled JSON.
 public struct GameData: Sendable {
+    public static let splitMasteryDmg = 1.24
+    public static let splitMasteryRange = 1.08
+
+    public let maxTowerLevel: Int
     public let towers: [TowerKind: TowerDef]
     public let towerOrder: [TowerKind]
     /// Damage bonus a beacon gives to towers in its light, by level.
@@ -17,16 +21,20 @@ public struct GameData: Sendable {
     public let itemOrder: [ItemId]
     public let itemSlots: Int
     public let sellItem: Double
+    public let courierSurcharge: Double
     public let runes: [RuneKind: RuneDef]
     public let runeOrder: [RuneKind]
     public let runeFirst: Double
     public let runeEvery: Double
+    public let runeLifetime: Double
+    public let runeWarnSec: Double
     public let trees: [TreeDef]
     public let nodes: [String: TreeNode]
     public let regions: [RegionDef]
     public let stages: [StageDef]
 
     private struct File: Decodable {
+        let maxTowerLevel: Int
         let towers: [TowerDef]
         let beaconBuff: [Double]
         let enemies: [EnemyDef]
@@ -36,8 +44,9 @@ public struct GameData: Sendable {
         let items: [ItemDef]
         let itemSlots: Int
         let sellItem: Double
+        let courierSurcharge: Double
         let runes: [RuneDef]
-        let runeFirst: Double, runeEvery: Double
+        let runeFirst: Double, runeEvery: Double, runeLifetime: Double, runeWarnSec: Double
         let trees: [TreeDef]
         let regions: [RegionDef]
         let stages: [StageDef]
@@ -45,6 +54,7 @@ public struct GameData: Sendable {
 
     public init(json: Data) throws {
         let f = try JSONDecoder().decode(File.self, from: json)
+        maxTowerLevel = f.maxTowerLevel
         towers = Dictionary(uniqueKeysWithValues: f.towers.map { ($0.kind, $0) })
         towerOrder = f.towers.map(\.kind)
         beaconBuff = f.beaconBuff
@@ -56,9 +66,11 @@ public struct GameData: Sendable {
         itemOrder = f.items.map(\.id)
         itemSlots = f.itemSlots
         sellItem = f.sellItem
+        courierSurcharge = f.courierSurcharge
         runes = Dictionary(uniqueKeysWithValues: f.runes.map { ($0.kind, $0) })
         runeOrder = f.runes.map(\.kind)
         runeFirst = f.runeFirst; runeEvery = f.runeEvery
+        runeLifetime = f.runeLifetime; runeWarnSec = f.runeWarnSec
         trees = f.trees
         nodes = Dictionary(uniqueKeysWithValues: f.trees.flatMap(\.nodes).map { ($0.id, $0) })
         regions = f.regions

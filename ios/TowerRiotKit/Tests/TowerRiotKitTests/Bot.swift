@@ -7,9 +7,9 @@ enum Bot {
         let stage: Int, won: Bool, lives: Int, waves: Int, level: Int, gold: Int, towers: Int, kills: Int, clock: Double
     }
 
-    static func play(_ id: Int, mods: Mods, seed: Int = 7, maxSeconds: Double = 1500) -> (Battle, Result) {
+    static func play(_ id: Int, mods: Mods, seed: Int = 7, maxSeconds: Double = 1500, variant: StageVariant = .standard, oaths: [OathId] = []) -> (Battle, Result) {
         let data = GameData.shared
-        let b = Battle(stage: data.stage(id), mods: mods, seed: seed)
+        let b = Battle(stage: data.stage(id), mods: mods, seed: seed, variant: variant, oaths: oaths)
         // Spread out: each pick favours plots that cover road no earlier pick covers.
         var samples: [Vec] = []
         for r in b.roads {
@@ -36,7 +36,7 @@ enum Bot {
         let shades = st.waves.contains { $0.groups.contains { $0.kind == .shade } }
         var air = 0, all = 0
         for w in st.waves { for g in w.groups { all += g.n; if data.enemy(g.kind).isFlying { air += g.n } } }
-        let airy = Double(air) / Double(all) > 0.18
+        let airy = Double(air) / Double(max(1, all)) > 0.18
         let base: [TowerKind] = airy
             ? [.watch, .pylon, .cannon, .beacon, .watch, .bell, .pylon, .watch, .cannon, .pylon, .watch, .roots]
             : shades
@@ -57,11 +57,18 @@ enum Bot {
             }
             if b.foes.count > 12 { b.castR() }
             if let boss = b.foes.first(where: { $0.def.isBoss }), b.hero.focus != boss.id { b.attackFoe(boss.id) }
+            if !b.switches.isEmpty && b.foes.count >= 6 {
+                for si in b.switches.indices { b.toggleSwitch(si) }
+            }
             for _ in 0..<6 {
                 let kind = rota[built % rota.count]
-                if let free = order.first(where: { i in !b.plots[i].sunk && !b.towers.contains { $0.plot == i } }), b.canBuild(plot: free, kind: kind) {
+                if let free = order.first(where: { i in !b.plots[i].sunk && b.plots[i].unlocked && b.plots[i].rubble == nil && !b.towers.contains { $0.plot == i } }), b.canBuild(plot: free, kind: kind) {
                     if let tw = b.build(plot: free, kind: kind), kind == .cannon { b.setMode(tw.id, .armored) }
                     built += 1
+                    continue
+                }
+                if let rubbleIdx = order.first(where: { b.canClearPlot($0) && b.gold >= (b.plots[$0].rubble?.cost ?? 0) + 90 }), b.towers.count >= 3 {
+                    b.clearPlot(rubbleIdx)
                     continue
                 }
                 let ups = b.towers.filter { $0.lv < 3 && b.upgradeCost($0) != nil }.stableSorted { b.upgradeCost($0)! < b.upgradeCost($1)! }
@@ -73,11 +80,11 @@ enum Bot {
                     }
                     break
                 }
-                if let gear = data.itemOrder.reversed().first(where: { b.canBuy($0) && Double(b.gold) >= data.item($0).cost + 60 }) {
+                if let gear = data.itemOrder.reversed().first(where: { b.canBuy($0) && b.gold >= b.itemCost($0) + 60 }) {
                     b.buy(gear); continue
                 }
-                let tempers = b.towers.filter { $0.lv >= 4 && b.upgradeCost($0) != nil }.stableSorted { b.upgradeCost($0)! < b.upgradeCost($1)! }
-                if let temper = tempers.first, b.gold >= b.upgradeCost(temper)! + 60 { b.upgrade(temper.id); continue }
+                let masteries = b.towers.filter { $0.lv == 4 && b.upgradeCost($0) != nil }.stableSorted { b.upgradeCost($0)! < b.upgradeCost($1)! }
+                if let mastery = masteries.first, b.gold >= b.upgradeCost(mastery)! + 60 { b.upgrade(mastery.id); continue }
                 break
             }
             b.step(0.5)
@@ -98,7 +105,9 @@ enum Bot {
         for tier in 0..<8 {
             for t in data.trees where t.after <= cl && tier < t.nodes.count {
                 let n = t.nodes[tier]
-                if (n.after ?? 0) <= cl && n.cost <= embers && (n.req == nil || bought.contains(n.req!)) && (n.excl == nil || !bought.contains(n.excl!)) {
+                let reqOk = (n.req ?? "").isEmpty || bought.contains(n.req!)
+                let exclOk = (n.excl ?? "").isEmpty || !bought.contains(n.excl!)
+                if (n.after ?? 0) <= cl && n.cost <= embers && reqOk && exclOk {
                     bought.append(n.id)
                     embers -= n.cost
                 }

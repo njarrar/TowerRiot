@@ -10,20 +10,25 @@ public final class RoadRt {
 
     public let def: Road
     public let path: Path
+    public internal(set) var active: Bool
+    public internal(set) var telegraph: Bool
+    public internal(set) var spawnOpen: Bool
     public internal(set) var closed = false
     /// Distance along the road where a tide or lava closure sits, if any.
     public internal(set) var closeAt: Double?
     public internal(set) var barrier: BarrierState?
     public internal(set) var belts: [BeltState] = []
 
-    init(def: Road, path: Path) { self.def = def; self.path = path }
+    init(def: Road, path: Path, active: Bool = true, telegraph: Bool = false, spawnOpen: Bool = true) {
+        self.def = def; self.path = path; self.active = active; self.telegraph = telegraph; self.spawnOpen = spawnOpen
+    }
 }
 
 public final class Foe {
     public let id: Int
     public let kind: EnemyKind
     public let def: EnemyDef
-    public let road: RoadRt
+    public internal(set) var road: RoadRt
     public internal(set) var d: Double
     public internal(set) var x: Double
     public internal(set) var y: Double
@@ -36,6 +41,7 @@ public final class Foe {
     public internal(set) var slow = 0.0
     public internal(set) var slowT = 0.0
     public internal(set) var rootT = 0.0
+    public internal(set) var staggerT = 0.0
     public internal(set) var freezeT = 0.0
     var freezeImmune = 0.0
     public internal(set) var burnT = 0.0
@@ -52,6 +58,7 @@ public final class Foe {
     var burstT = 0.0
     public internal(set) var hitT = 0.0
     public internal(set) var dead = false
+    var warpedMask = 0
 
     init(id: Int, kind: EnemyKind, def: EnemyDef, road: RoadRt, d: Double, at p: Path.Point, off: Double, hp: Double, speed: Double) {
         self.id = id; self.kind = kind; self.def = def; self.road = road; self.d = d
@@ -74,11 +81,14 @@ public final class Tower {
     public internal(set) var mode: TargetMode = .first
     public internal(set) var round: Rounds?
     public internal(set) var aim = 0.0
-    public let high: Bool
+    public internal(set) var high: Bool
     /// Gear plot lowered this wave: the tower sleeps.
     public internal(set) var down = false
     /// Seconds since its last attack, for the renderer.
     public internal(set) var fired = 9.0
+    var shotCount = 0
+    public internal(set) var dmgDealt = 0.0
+    public internal(set) var kills = 0
 
     init(id: Int, kind: TowerKind, plot: Int, x: Double, y: Double, spent: Int, high: Bool) {
         self.id = id; self.kind = kind; self.plot = plot; self.x = x; self.y = y; self.spent = spent; self.high = high
@@ -106,11 +116,46 @@ public struct Cloud { public let x: Double, y: Double, r: Double, dps: Double; p
 
 public struct PlotRt {
     public let x: Double, y: Double
-    public let high: Bool
-    public let nearWater: Bool
+    public internal(set) var high: Bool
+    public internal(set) var nearWater: Bool
     public internal(set) var sunk = false
     public let gear: SplitId?
+    public internal(set) var unlocked = true
+    public internal(set) var rubble: RubbleDef?
+    public internal(set) var rubbleLeft = 0.0
 }
+
+public struct WaterRt {
+    public let id: String?
+    public let w: Double
+    public let path: Path
+    public internal(set) var drained = false
+}
+
+public struct SwitchRt {
+    public let def: SwitchDef
+    public internal(set) var state = 0
+    public internal(set) var activeT = 0.0
+    public internal(set) var cdLeft = 0.0
+    public internal(set) var boosted = false
+}
+
+public struct PortalRt {
+    public let def: PortalDef
+    public let fromRoad: RoadRt
+    public let toRoad: RoadRt
+    public let fromD: Double
+    public let toD: Double
+    public let fromPos: Vec
+    public let toPos: Vec
+    public internal(set) var active = true
+    public internal(set) var count = 0
+}
+
+public struct DamageBreakdown: Equatable, Sendable {
+    public var towers = 0.0, hero = 0.0, skills = 0.0, status = 0.0
+}
+public enum AttributionBucket { case towers, hero, skills, status }
 
 public struct VentRt {
     public let x: Double, y: Double
@@ -149,7 +194,7 @@ public struct HeroState {
     public func cooldown(_ k: SkillKey) -> Double { cd[k] ?? 0 }
 }
 
-public struct RuneState { public let kind: RuneKind; public let x: Double, y: Double }
+public struct RuneState { public let kind: RuneKind; public let x: Double, y: Double; public internal(set) var ttl: Double }
 
 public enum BattleEvent {
     case wave(n: Int, hint: String)
@@ -180,8 +225,14 @@ public enum BattleEvent {
     case gear(up: SplitId)
     case sink(plot: Int)
     case night(on: Bool)
-    case interest(gold: Int)
     case early(gold: Int)
+    case riftWarn(road: String, wave: Int)
+    case riftOpen(road: String)
+    case clearPlot(plot: Int, free: Bool)
+    case switchFlip(id: String, label: String, state: Int)
+    case terraform(label: String)
+    case warp(fromX: Double, fromY: Double, toX: Double, toY: Double, kind: PortalDef.Kind)
+    case gateShock(x: Double, y: Double)
     case won(stars: Int)
     case lost
 }
@@ -195,4 +246,5 @@ public struct TowerStats {
     public let splash: Double
     public let shells: Int
     public let hitsFlying: Bool
+    public let buffs: [String]
 }

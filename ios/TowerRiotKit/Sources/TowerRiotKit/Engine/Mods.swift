@@ -15,6 +15,10 @@ public struct Mods: Sendable {
     public var rounds: [Rounds] = []
     public var shatter = false
     public var overload = false
+    public var burnShatter = false
+    public var roundInherit = false
+    public var runeAttune = false
+    public var gateShock = false
     public var rateAll = 0.0
     public var heroLevel = 0
     public var heroSkillPoints = 0
@@ -28,7 +32,6 @@ public struct Mods: Sendable {
     public var sell = 0.0
     public var early = 0.0
     public var ironGate = false
-    public var interest = 0.0
     /// Tidewyrm relic: towers built near water gain +15% range.
     public var tidePearl = false
     /// Towers, hero skills and shop items open so far.
@@ -53,6 +56,10 @@ public struct Mods: Sendable {
             case "round": if let r = e.round, !rounds.contains(r) { rounds.append(r) }
             case "shatter": shatter = true
             case "overload": overload = true
+            case "burnShatter": burnShatter = true
+            case "roundInherit": roundInherit = true
+            case "runeAttune": runeAttune = true
+            case "gateShock": gateShock = true; lives += 8
             case "ironGate": ironGate = true
             case "costMul": costMul += v
             case "heroLevel": heroLevel += Int(v)
@@ -70,14 +77,19 @@ public struct Mods: Sendable {
             case "gold": gold += Int(v)
             case "sell": sell += v
             case "early": early += v
-            case "interest": interest += v
-            default: break
+            default:
+                // The web engine adds `v` to whatever field the key names; a key this switch does not
+                // know would silently do nothing here, so fail loudly in debug builds.
+                assertionFailure("Mods: unknown tree effect key '\(e.k)' on node '\(n.id)'")
             }
+            if n.id == "ar-tempest" { rateAll += 0.08 }
+            if n.id == "wr-beacon" { sunrise += 2 }
         }
         // Relics from the four bosses.
         if cleared >= 5 { dmgAll += 0.1 }
         if cleared >= 10 { tidePearl = true }
         if cleared >= 15 { heroSkillPoints += 1 }
+        if cleared >= 20 { dmgAll += 0.1 }
         skillW = cleared >= 1
         skillR = cleared >= 7
         splits = cleared >= 8
