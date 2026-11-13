@@ -118,7 +118,9 @@ export class BattleScreen {
       h('div', { class: 'ps-acts' },
         h('button', { class: 'btn primary', onclick: () => this.togglePause() }, 'Resume'),
         h('button', { class: 'btn', onclick: () => this.host.onRetry(stageId, { variant: host.variant, oaths: host.oaths }) }, 'Restart'),
-        h('button', { class: 'btn leave', onclick: () => this.confirmExit() }, icon(LEAVE_ICON), 'Leave')));
+        h('button', { class: 'btn leave', onclick: () => this.confirmExit() }, icon(LEAVE_ICON), 'Leave'),
+        // Upright, the top strip has no room for sound, so it lives here.
+        this.hud.psSound = h('button', { class: 'btn icon sound ps-sound', title: 'Sound (M)', onclick: () => this.toggleSound() })));
     this.shopEl = h('div', { class: 'shop hidden', role: 'dialog', 'aria-label': 'Shop' });
     this.hintEl = h('div', { class: 'plot-hint hidden', 'aria-hidden': 'true', text: 'Build here' });
     this.el = h('section', { class: `screen battle ${host.leftHandHud ? 'left-hand' : ''}` },
@@ -194,6 +196,9 @@ export class BattleScreen {
       H.band.append(H.hero, H.skills, H.callWrap);
       H.over.append(H.stats, H.ctrl);
     }
+    // Upright: Auto joins the skills, and the adapt and resist pills move onto the map.
+    if (tall) { H.skills.append(H.autoBtn); H.extras.append(H.resist, H.adaptGauge); }
+    else { H.ctrl.prepend(H.autoBtn); H.stats.append(H.resist, H.adaptGauge); }
   }
 
   /* ------------------------------------------------------------------ loop */
@@ -412,7 +417,9 @@ export class BattleScreen {
     this.hud.colR = h('div', { class: 'col col-r' });
     this.hud.band = h('div', { class: 'band' });
     this.hud.over = h('div', { class: 'over' });
-    return h('div', { class: 'hud' }, this.hud.colL, this.hud.colR, this.hud.band, this.hud.over);
+    // Upright, the Hollow's adapt and resist pills sit on the map's foot, so the top strip never crowds.
+    this.hud.extras = h('div', { class: 'hud-extras' });
+    return h('div', { class: 'hud' }, this.hud.colL, this.hud.colR, this.hud.band, this.hud.over, this.hud.extras);
   }
 
   private updateHud(dt: number) {
@@ -663,11 +670,14 @@ export class BattleScreen {
   }
 
   private showSound() {
-    const on = this.host.audio.enabled, btn = this.hud.sound;
-    clear(btn); btn.append(icon(on ? SOUND_ICON : MUTE_ICON));
-    btn.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
-    btn.setAttribute('aria-pressed', String(!on));
-    btn.classList.toggle('off', !on);
+    const on = this.host.audio.enabled;
+    for (const btn of [this.hud.sound, this.hud.psSound]) {
+      if (!btn) continue;
+      clear(btn); btn.append(icon(on ? SOUND_ICON : MUTE_ICON));
+      btn.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
+      btn.setAttribute('aria-pressed', String(!on));
+      btn.classList.toggle('off', !on);
+    }
   }
 
   /** Top Pause Strip keeps the field unblurred and inspectable while paused. */

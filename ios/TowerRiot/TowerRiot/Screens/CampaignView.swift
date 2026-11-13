@@ -25,11 +25,28 @@ struct CampaignView: View {
     var body: some View {
         let s = app.save
         VStack(spacing: 0) {
-            TopBar(title: "The campaign", back: { app.screen = .title }) {
-                HStack(spacing: 8) {
-                    Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(tall: true))
-                    Button("Skill trees: \(s.embers.free) Embers") { app.screen = .trees }.buttonStyle(PaperButton(tall: true))
-                    SoundCorner()
+            if upright {
+                // Back, the title and sound on one row; the two links share the row under it in equal halves.
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button("Back") { app.screen = .title }.buttonStyle(PaperButton(tall: true))
+                        Text("The campaign").font(Face.title(20)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.6)
+                            .frame(maxWidth: .infinity)
+                        SoundCorner()
+                    }
+                    HStack(spacing: 8) {
+                        Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(tall: true, fill: true))
+                        Button("Skill trees: \(s.embers.free) Embers") { app.screen = .trees }.buttonStyle(PaperButton(tall: true, fill: true))
+                    }
+                }
+                .padding(.bottom, 10)
+            } else {
+                TopBar(title: "The campaign", back: { app.screen = .title }) {
+                    HStack(spacing: 8) {
+                        Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(tall: true))
+                        Button("Skill trees: \(s.embers.free) Embers") { app.screen = .trees }.buttonStyle(PaperButton(tall: true))
+                        SoundCorner()
+                    }
                 }
             }
             ScrollView(.horizontal, showsIndicators: false) {

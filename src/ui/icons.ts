@@ -105,6 +105,7 @@ export const ELEMENT_ICON: Record<string, string> = {
 /** A speaker with sound waves, and the same speaker struck through: sound on and muted. */
 export const SOUND_ICON = svg('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/>');
 export const MUTE_ICON = svg('<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>');
+export const GEAR_ICON = svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>');
 export const PAUSE_ICON = svg('<path d="M9 5v14M15 5v14"/>');
 export const PLAY_ICON = svg('<path d="M8 5v14l11-7z"/>');
 /** A door left ajar: leave the battle. */

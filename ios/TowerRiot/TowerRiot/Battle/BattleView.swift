@@ -16,47 +16,52 @@ struct BattleView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let safe = geo.safeAreaInsets
-            let w = geo.size.width + safe.leading + safe.trailing
-            let h = geo.size.height + safe.top + safe.bottom
-            let upright = h > w * 1.15 && w < 760
-            let sideRoom = (w - safe.leading - safe.trailing - h * 16 / 9) / 2
-            let side = !upright && sideRoom >= 64
-            let band: CGFloat = h < 480 ? 74 : 92
-            let top: CGFloat = upright ? safe.top + 56 : 0
-            // The part of the screen the map shows in.
-            let map: CGRect = {
-                if upright {
-                    // At least about two fifths of the map in view, so towers and foes stay big enough to tap.
-                    let mh = max(180, min(h - top - 210 - safe.bottom, w / (World.width * 0.42) * World.height))
-                    return CGRect(x: 0, y: top, width: w, height: mh)
-                }
-                if side { let mw = h * 16 / 9; return CGRect(x: (w - mw) / 2, y: 0, width: mw, height: h) }
-                let mh = min(h - band - safe.bottom, w * 9 / 16), mw = mh * 16 / 9
-                return CGRect(x: (w - mw) / 2, y: 0, width: mw, height: mh)
-            }()
-            // The whole map, which runs past the screen's sides when upright.
-            let scale = map.height / World.height
-            let _ = ctl.setView(scale: scale, halfWidth: min(World.width / 2, Double(map.width / scale / 2)))
-            let full: CGRect = upright
-                ? CGRect(x: map.midX - CGFloat(ctl.centre()) * scale, y: map.minY, width: World.width * scale, height: map.height)
-                : map
-            ZStack(alignment: .topLeading) {
-                Ink.paper3
-                SpriteView(scene: ctl.scene, preferredFramesPerSecond: 60, options: [.ignoresSiblingOrder])
-                    .frame(width: full.width, height: full.height)
-                    .offset(x: full.minX - map.minX)
-                    .frame(width: map.width, height: map.height, alignment: .topLeading)
-                    .clipped()
-                    .offset(x: map.minX, y: map.minY)
-                HudLayer(ctl: ctl, map: map, full: full, side: side, upright: upright, safe: safe, size: CGSize(width: w, height: h), band: band)
+        // The outer reader keeps the safe area, so it can say how big the island, notch and home bar are.
+        // The inner one ignores it and spans the whole screen. A reader that ignores the safe area reports zero insets.
+        GeometryReader { outer in
+            let safe = outer.safeAreaInsets
+            GeometryReader { geo in
+                screen(safe: safe, w: geo.size.width, h: geo.size.height)
             }
-            .frame(width: w, height: h)
-            .offset(x: -safe.leading, y: -safe.top)
+            .ignoresSafeArea()
         }
-        .ignoresSafeArea()
         .statusBarHidden(true)
+    }
+
+    @ViewBuilder private func screen(safe: EdgeInsets, w: CGFloat, h: CGFloat) -> some View {
+        let upright = h > w * 1.15 && w < 760
+        let sideRoom = (w - safe.leading - safe.trailing - h * 16 / 9) / 2
+        let side = !upright && sideRoom >= 64
+        let band: CGFloat = h < 480 ? 74 : 92
+        let top: CGFloat = upright ? safe.top + 56 : 0
+        // The part of the screen the map shows in.
+        let map: CGRect = {
+            if upright {
+                // At least about two fifths of the map in view, so towers and foes stay big enough to tap.
+                let mh = max(180, min(h - top - 210 - safe.bottom, w / (World.width * 0.42) * World.height))
+                return CGRect(x: 0, y: top, width: w, height: mh)
+            }
+            if side { let mw = h * 16 / 9; return CGRect(x: (w - mw) / 2, y: 0, width: mw, height: h) }
+            let mh = min(h - band - safe.bottom, w * 9 / 16), mw = mh * 16 / 9
+            return CGRect(x: (w - mw) / 2, y: 0, width: mw, height: mh)
+        }()
+        // The whole map, which runs past the screen's sides when upright.
+        let scale = map.height / World.height
+        let _ = ctl.setView(scale: scale, halfWidth: min(World.width / 2, Double(map.width / scale / 2)))
+        let full: CGRect = upright
+            ? CGRect(x: map.midX - CGFloat(ctl.centre()) * scale, y: map.minY, width: World.width * scale, height: map.height)
+            : map
+        ZStack(alignment: .topLeading) {
+            Ink.paper3
+            SpriteView(scene: ctl.scene, preferredFramesPerSecond: 60, options: [.ignoresSiblingOrder])
+                .frame(width: full.width, height: full.height)
+                .offset(x: full.minX - map.minX)
+                .frame(width: map.width, height: map.height, alignment: .topLeading)
+                .clipped()
+                .offset(x: map.minX, y: map.minY)
+            HudLayer(ctl: ctl, map: map, full: full, side: side, upright: upright, safe: safe, size: CGSize(width: w, height: h), band: band)
+        }
+        .frame(width: w, height: h)
     }
 }
 
@@ -79,19 +84,21 @@ private struct HudLayer: View {
         let b = ctl.battle
         ZStack(alignment: .topLeading) {
             if upright {
-                // Top strip: lives, gold, wave and the controls. Band below the map: Wren and the call button, then the skills.
-                HStack(alignment: .center, spacing: 8) {
+                // Top strip, under the island: lives, gold, wave, speed and pause. Auto sits with the skills and
+                // sound in the pause strip, so the strip fits a 375 point phone.
+                // Band below the map: Wren and the call button, then the skills.
+                HStack(alignment: .center, spacing: 6) {
                     if ctl.leftHandHud {
-                        ControlsView(ctl: ctl)
+                        ControlsView(ctl: ctl, compact: true)
                         Spacer(minLength: 0)
-                        StatsView(ctl: ctl, vertical: false)
+                        StatsView(ctl: ctl, vertical: false, part: .core)
                     } else {
-                        StatsView(ctl: ctl, vertical: false)
+                        StatsView(ctl: ctl, vertical: false, part: .core)
                         Spacer(minLength: 0)
-                        ControlsView(ctl: ctl)
+                        ControlsView(ctl: ctl, compact: true)
                     }
                 }
-                .padding(.horizontal, 8).padding(.bottom, 6)
+                .padding(.leading, 8 + safe.leading).padding(.trailing, 8 + safe.trailing).padding(.bottom, 6)
                 .frame(width: size.width, height: map.minY, alignment: .bottom)
                 .background(Ink.paper)
                 .overlay(Rectangle().fill(Ink.rule).frame(height: 1), alignment: .bottom)
@@ -107,7 +114,10 @@ private struct HudLayer: View {
                             CallView(ctl: ctl, compact: true)
                         }
                     }
-                    SkillsView(ctl: ctl, columns: false)
+                    HStack(spacing: 6) {
+                        SkillsView(ctl: ctl, columns: false)
+                        AutoTile(ctl: ctl)
+                    }
                 }
                 .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 10 + safe.bottom)
                 .frame(width: size.width, height: size.height - map.maxY, alignment: .top)
@@ -115,6 +125,11 @@ private struct HudLayer: View {
                 .overlay(Rectangle().fill(Ink.rule).frame(height: 1), alignment: .top)
                 .offset(y: map.maxY)
                 EdgeMarks(battle: b, map: map, full: full)
+                // The Hollow's adapt and resist pills, only while they matter, on the map's foot so the strip never grows.
+                StatsView(ctl: ctl, vertical: false, part: .extras)
+                    .frame(width: size.width - 16, alignment: ctl.leftHandHud ? .trailing : .leading)
+                    .offset(x: 8, y: map.maxY - 36)
+                    .allowsHitTesting(false)
             } else if side {
                 let leftW = max(0, map.minX - safe.leading)
                 let rightW = max(0, size.width - map.maxX - safe.trailing)
@@ -275,8 +290,11 @@ private struct Notch: Shape {
 /* ------------------------------------------------------------------ stats and controls */
 
 private struct StatsView: View {
+    enum Part { case all, core, extras }
     @ObservedObject var ctl: BattleController
     let vertical: Bool
+    /// Core is lives, gold and wave; extras are the Hollow's adapt and resist pills.
+    var part: Part = .all
 
     var body: some View {
         let b = ctl.battle
@@ -285,34 +303,38 @@ private struct StatsView: View {
         let res = Element.allCases.compactMap { e -> (Element, Double)? in let v = b.resist[e] ?? 0; return v > 0 && e != .hero ? (e, v) : nil }
         let layout = vertical ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6)) : AnyLayout(HStackLayout(spacing: 6))
         layout {
-            Pill {
-                Image(systemName: "heart.fill").font(.system(size: 13)).foregroundStyle(Ink.life)
-                Text("\(b.lives)").font(Face.body(16, .heavy))
-                HStack(spacing: 0) { ForEach(0..<3, id: \.self) { i in Text("★").font(.system(size: 11)).foregroundStyle(i < held ? Ink.gold : Ink.ruleStrong) } }
-            }
-            .accessibilityLabel("Lives \(b.lives). Keep \(starLives(b.startLives).three) for 3 stars.")
-            Pill { Price(n: b.gold, size: 16) }
-            Pill {
-                Image(systemName: "flag.fill").font(.system(size: 12)).foregroundStyle(Ink.inkDim)
-                Text("\(max(1, b.wave))/\(b.totalWaves)").font(Face.body(16, .heavy))
-            }
-            // Shown as on the web: only on stages where the Hollow can adapt, and only once one element leads.
-            if let el = adapt.top, adapt.share >= 0.28, b.stage.region > 0 || b.stage.adaptEvery != nil {
-                let hot = adapt.share > adapt.threshold
+            if part != .extras {
                 Pill {
-                    ArtIcon(name: "el-\(el.rawValue)", size: 14).foregroundStyle(hot ? Ink.hollow : Ink.inkDim)
-                    Text("\(Int(jsRound(adapt.share * 100)))%/42%").font(Face.body(12, .heavy))
-                        .foregroundStyle(hot ? Ink.hollow : Ink.inkDim)
+                    Image(systemName: "heart.fill").font(.system(size: 13)).foregroundStyle(Ink.life)
+                    Text("\(b.lives)").font(Face.body(16, .heavy))
+                    HStack(spacing: 0) { ForEach(0..<3, id: \.self) { i in Text("★").font(.system(size: 11)).foregroundStyle(i < held ? Ink.gold : Ink.ruleStrong) } }
                 }
-                .accessibilityLabel("Hollow Adaptation meter: \(Int(jsRound(adapt.share * 100)))% \(Words.element[el] ?? "") damage, threshold 42%")
-            }
-            ForEach(res, id: \.0) { e, v in
+                .accessibilityLabel("Lives \(b.lives). Keep \(starLives(b.startLives).three) for 3 stars.")
+                Pill { Price(n: b.gold, size: 16) }
                 Pill {
-                    ArtIcon(name: "el-\(e.rawValue)", size: 14).foregroundStyle(Ink.hollow)
-                    if vertical { Text(Words.elementTitle[e] ?? "").font(Face.body(12, .bold)).foregroundStyle(Ink.inkDim) }
-                    Text("\(Int((v * 100).rounded()))%").font(Face.body(13, .heavy)).foregroundStyle(Ink.hollow)
+                    Image(systemName: "flag.fill").font(.system(size: 12)).foregroundStyle(Ink.inkDim)
+                    Text("\(max(1, b.wave))/\(b.totalWaves)").font(Face.body(16, .heavy))
                 }
-                .accessibilityLabel("The Hollow takes \(Int((v * 100).rounded()))% less \(Words.element[e] ?? "") damage")
+            }
+            if part != .core {
+                // Shown as on the web: only on stages where the Hollow can adapt, and only once one element leads.
+                if let el = adapt.top, adapt.share >= 0.28, b.stage.region > 0 || b.stage.adaptEvery != nil {
+                    let hot = adapt.share > adapt.threshold
+                    Pill {
+                        ArtIcon(name: "el-\(el.rawValue)", size: 14).foregroundStyle(hot ? Ink.hollow : Ink.inkDim)
+                        Text("\(Int(jsRound(adapt.share * 100)))%/42%").font(Face.body(12, .heavy))
+                            .foregroundStyle(hot ? Ink.hollow : Ink.inkDim)
+                    }
+                    .accessibilityLabel("Hollow Adaptation meter: \(Int(jsRound(adapt.share * 100)))% \(Words.element[el] ?? "") damage, threshold 42%")
+                }
+                ForEach(res, id: \.0) { e, v in
+                    Pill {
+                        ArtIcon(name: "el-\(e.rawValue)", size: 14).foregroundStyle(Ink.hollow)
+                        if vertical { Text(Words.elementTitle[e] ?? "").font(Face.body(12, .bold)).foregroundStyle(Ink.inkDim) }
+                        Text("\(Int((v * 100).rounded()))%").font(Face.body(13, .heavy)).foregroundStyle(Ink.hollow)
+                    }
+                    .accessibilityLabel("The Hollow takes \(Int((v * 100).rounded()))% less \(Words.element[e] ?? "") damage")
+                }
             }
         }
         .foregroundStyle(Ink.ink)
@@ -320,10 +342,11 @@ private struct StatsView: View {
 }
 
 private struct Pill<Content: View>: View {
+    @Environment(\.upright) private var upright
     @ViewBuilder let content: Content
     var body: some View {
         HStack(spacing: 5) { content }
-            .padding(.horizontal, 9).padding(.vertical, 5)
+            .padding(.horizontal, upright ? 7 : 9).padding(.vertical, 5)
             .background(Capsule().fill(Ink.paperGlass))
             .overlay(Capsule().strokeBorder(Ink.rule, lineWidth: 1))
             .fixedSize()
@@ -332,17 +355,21 @@ private struct Pill<Content: View>: View {
 
 private struct ControlsView: View {
     @ObservedObject var ctl: BattleController
+    /// Only speed and pause, for the upright strip.
+    var compact = false
     var body: some View {
         let b = ctl.battle
         HStack(spacing: 6) {
-            Button { ctl.toggleAutoNext() } label: {
-                Text("Auto").font(Face.body(12, .heavy)).lineLimit(1).minimumScaleFactor(0.6)
-                    .foregroundStyle(ctl.autoNext ? Ink.accentInk : Ink.inkDim)
-                    .frame(width: 44, height: 44)
-                    .background(RoundedRectangle(cornerRadius: 5).fill(ctl.autoNext ? Ink.accent : Ink.paperGlass))
-                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(ctl.autoNext ? Ink.accentLo : Ink.ruleStrong, lineWidth: 1))
-            }.buttonStyle(.plain).accessibilityLabel("Auto-call next wave").accessibilityAddTraits(ctl.autoNext ? .isSelected : [])
-            IconButton(icon: ctl.soundOn ? "sound" : "mute", label: ctl.soundOn ? "Mute sound" : "Turn sound on", dim: !ctl.soundOn) { ctl.toggleSound() }
+            if !compact {
+                Button { ctl.toggleAutoNext() } label: {
+                    Text("Auto").font(Face.body(12, .heavy)).lineLimit(1).minimumScaleFactor(0.6)
+                        .foregroundStyle(ctl.autoNext ? Ink.accentInk : Ink.inkDim)
+                        .frame(width: 44, height: 44)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(ctl.autoNext ? Ink.accent : Ink.paperGlass))
+                        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(ctl.autoNext ? Ink.accentLo : Ink.ruleStrong, lineWidth: 1))
+                }.buttonStyle(.plain).accessibilityLabel("Auto-call next wave").accessibilityAddTraits(ctl.autoNext ? .isSelected : [])
+                IconButton(icon: ctl.soundOn ? "sound" : "mute", label: ctl.soundOn ? "Mute sound" : "Turn sound on", dim: !ctl.soundOn) { ctl.toggleSound() }
+            }
             Button { ctl.cycleSpeed() } label: {
                 Text("\(Int(b.speed))x").font(Face.body(16, .heavy)).foregroundStyle(Ink.ink)
                     .frame(width: 44, height: 44)
@@ -351,6 +378,26 @@ private struct ControlsView: View {
             }.buttonStyle(.plain).accessibilityLabel("Game speed")
             IconButton(icon: b.paused ? "play" : "pause", label: b.paused ? "Resume" : "Pause", active: b.paused) { ctl.togglePause() }
         }
+    }
+}
+
+/// Auto-call as a tile beside the skills, for the upright band.
+private struct AutoTile: View {
+    @ObservedObject var ctl: BattleController
+    var body: some View {
+        Button { ctl.toggleAutoNext() } label: {
+            VStack(spacing: 2) {
+                Text("Auto").font(Face.body(13, .heavy))
+                Text(ctl.autoNext ? "on" : "off").font(Face.body(10, .bold)).opacity(0.85)
+            }
+            .foregroundStyle(ctl.autoNext ? Ink.accentInk : Ink.inkDim)
+            .frame(width: 58, height: 58)
+            .background(RoundedRectangle(cornerRadius: 7).fill(ctl.autoNext ? Ink.accent : Ink.paperGlass))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(ctl.autoNext ? Ink.accentLo : Ink.ruleStrong, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Auto-call next wave")
+        .accessibilityAddTraits(ctl.autoNext ? .isSelected : [])
     }
 }
 
@@ -834,6 +881,7 @@ private struct Veil<Content: View>: View {
 /// Top pause strip: lets players pan, inspect towers, switches and rubble unobstructed.
 private struct PauseStrip: View {
     @ObservedObject var ctl: BattleController
+    @Environment(\.upright) private var upright
     var body: some View {
         HStack(spacing: 10) {
             // The hint drops away when the strip would not fit, as on an upright phone.
@@ -845,6 +893,10 @@ private struct PauseStrip: View {
             Button("Resume") { ctl.togglePause() }.buttonStyle(PaperButton(kind: .primary, tall: true))
             Button { ctl.requestExit() } label: { HStack(spacing: 5) { ArtIcon(name: "leave", size: 15); Text("Leave") } }
                 .buttonStyle(PaperButton(tall: true))
+            // Upright, sound lives here: the strip on top has no room for it.
+            if upright {
+                IconButton(icon: ctl.soundOn ? "sound" : "mute", label: ctl.soundOn ? "Mute sound" : "Turn sound on", dim: !ctl.soundOn) { ctl.toggleSound() }
+            }
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
         .paperCard(Ink.paperGlass, radius: 7)

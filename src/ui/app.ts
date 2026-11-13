@@ -12,7 +12,7 @@ import {
 } from '../game/save';
 import { Audio } from '../audio/sfx';
 import { h, clear, icon, trapFocus } from './dom';
-import { foeIcon, heroIcon, SKILL_ICON, towerIcon, LOCK_ICON, SOUND_ICON, MUTE_ICON } from './icons';
+import { foeIcon, heroIcon, SKILL_ICON, towerIcon, LOCK_ICON, SOUND_ICON, MUTE_ICON, GEAR_ICON } from './icons';
 import { BattleScreen } from './battle';
 import { Battle, starLives } from '../game/sim';
 import { Scene, W as MAP_W, H as MAP_H } from '../render/scene';
@@ -103,7 +103,9 @@ export class App {
     const c = cleared(this.save), next = Math.min(20, c + 1);
     const map = h('canvas', { class: 'title-map', 'aria-hidden': 'true' });
     const altS = totalAltStars(this.save);
-    const el = h('section', { class: 'screen title' }, map, this.soundButton('title-sound'),
+    // On a narrow phone Settings leaves the button rows and becomes the gear beside the sound button.
+    const gear = h('button', { class: 'btn icon title-gear', 'aria-label': 'Settings', title: 'Settings', onclick: () => this.settings() }, icon(GEAR_ICON));
+    const el = h('section', { class: 'screen title' }, map, this.soundButton('title-sound'), gear,
       h('div', { class: 'title-inner' },
         h('div', { class: 'title-panel' },
           h('h1', { class: 'logo', text: 'TowerRiot' }),
@@ -112,7 +114,7 @@ export class App {
             h('button', { class: 'btn primary big', onclick: () => this.campaign() }, c > 0 ? `Continue: stage ${next}` : 'Play'),
             h('button', { class: 'btn big', onclick: () => this.trees() }, 'Skill trees'),
             h('button', { class: 'btn big', onclick: () => this.openGuide() }, 'Field guide'),
-            h('button', { class: 'btn big', onclick: () => this.settings() }, 'Settings')),
+            h('button', { class: 'btn big title-settings', onclick: () => this.settings() }, 'Settings')),
           h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars won${altS > 0 ? ` · ${altS} Variant B stars` : ''}` }))));
     this.mount(el);
     requestAnimationFrame(() => setTimeout(() => { if (map.isConnected) this.paintTitleMap(map, next); }, 30));
@@ -258,8 +260,9 @@ export class App {
         h('button', { class: 'btn', onclick: () => this.title() }, 'Back'),
         h('h2', { text: 'The campaign' }),
         h('div', { class: 'bar-end' },
-          h('button', { class: 'btn', onclick: () => this.openGuide(() => this.campaign(focus)) }, 'Field guide'),
-          h('button', { class: 'btn', onclick: () => this.trees() }, `Skill trees: ${Math.max(0, e.free)} Embers`),
+          h('div', { class: 'camp-links' },
+            h('button', { class: 'btn', onclick: () => this.openGuide(() => this.campaign(focus)) }, 'Field guide'),
+            h('button', { class: 'btn', onclick: () => this.trees() }, `Skill trees: ${Math.max(0, e.free)} Embers`)),
           this.soundButton())),
       relicShelf,
       h('div', { class: 'campaign-body' }, regions, card)));
