@@ -59,12 +59,21 @@ public final class Foe {
     public internal(set) var hitT = 0.0
     public internal(set) var dead = false
     var warpedMask = 0
+    /// Seconds left in a Cinder Hound's lunge.
+    public internal(set) var lungeT = 0.0
+    /// Glasshide panes left, seconds until the next grows back, and a short gap so one burst breaks one pane.
+    public internal(set) var panes = 0
+    var paneT = 0.0
+    var paneCd = 0.0
+    /// Inside a Herald's aura this tick.
+    public internal(set) var warded = false
 
     init(id: Int, kind: EnemyKind, def: EnemyDef, road: RoadRt, d: Double, at p: Path.Point, off: Double, hp: Double, speed: Double) {
         self.id = id; self.kind = kind; self.def = def; self.road = road; self.d = d
         x = p.x; y = p.y; dir = p.dir; self.off = off; self.hp = hp; max = hp; self.speed = speed
         underT = def.traits?.burrow?[1] ?? def.traits?.dive?.every ?? 0
-        abilityT = def.traits?.summon?.every ?? 2
+        abilityT = def.traits?.summon?.every ?? def.traits?.lunge?.every ?? def.traits?.stamp?.every ?? 2
+        panes = def.traits?.panes?.n ?? 0
     }
 }
 
@@ -87,6 +96,8 @@ public final class Tower {
     /// Seconds since its last attack, for the renderer.
     public internal(set) var fired = 9.0
     var shotCount = 0
+    /// Seconds left stunned by a Hollow Ram's stamp.
+    public internal(set) var stunT = 0.0
     public internal(set) var dmgDealt = 0.0
     public internal(set) var kills = 0
 
@@ -233,6 +244,9 @@ public enum BattleEvent {
     case terraform(label: String)
     case warp(fromX: Double, fromY: Double, toX: Double, toY: Double, kind: PortalDef.Kind)
     case gateShock(x: Double, y: Double)
+    case stamp(x: Double, y: Double, r: Double)
+    case pane(x: Double, y: Double, left: Int)
+    case lunge(x: Double, y: Double)
     case won(stars: Int)
     case lost
 }

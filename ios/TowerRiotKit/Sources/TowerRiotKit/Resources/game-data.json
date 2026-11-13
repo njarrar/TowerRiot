@@ -341,7 +341,8 @@
    "dps": 6,
    "bar": 30,
    "size": 1,
-   "blurb": "Slow and soft. Comes in crowds."
+   "blurb": "Slow and soft. Comes in crowds.",
+   "answer": "Any tower. A Forge cannon clears the crowds."
   },
   {
    "kind": "skitter",
@@ -356,7 +357,8 @@
    "takes": {
     "fire": 0.7
    },
-   "blurb": "Very fast and frail. Fire struggles to catch it."
+   "blurb": "Very fast and frail. Fire struggles to catch it.",
+   "answer": "Watch tower or Storm pylon. A Frost bell slows the rush."
   },
   {
    "kind": "shell",
@@ -372,7 +374,8 @@
     "pierce": 0.5,
     "fire": 1.25
    },
-   "blurb": "Heavy shell. Bolts do half damage, fire cracks it."
+   "blurb": "Heavy shell. Bolts do half damage, fire cracks it.",
+   "answer": "Forge cannon. Bolts do half."
   },
   {
    "kind": "moth",
@@ -385,7 +388,8 @@
    "bar": 62,
    "size": 0.9,
    "flying": true,
-   "blurb": "Flies. Cannons and roots cannot reach it, Wren cannot block it."
+   "blurb": "Flies. Cannons and roots cannot reach it, Wren cannot block it.",
+   "answer": "Watch tower, Storm pylon or Frost bell. Cannons and roots miss it."
   },
   {
    "kind": "warden",
@@ -403,7 +407,8 @@
    "traits": {
     "shield": 110
    },
-   "blurb": "Shields foes near it. Lightning hurts it most."
+   "blurb": "Shields foes near it. Lightning hurts it most.",
+   "answer": "Storm pylon on it first, then the foes it shields."
   },
   {
    "kind": "mender",
@@ -418,7 +423,8 @@
    "traits": {
     "heal": 0.06
    },
-   "blurb": "Heals foes around it. Kill it first."
+   "blurb": "Heals foes around it. Kill it first.",
+   "answer": "Kill it first: a Watch tower or Wren."
   },
   {
    "kind": "shade",
@@ -433,7 +439,8 @@
    "traits": {
     "stealth": true
    },
-   "blurb": "Unseen until a Beacon or Wren lights it."
+   "blurb": "Unseen until a Beacon or Wren lights it.",
+   "answer": "A Beacon or Wren to show it, then any tower."
   },
   {
    "kind": "splitter",
@@ -451,7 +458,8 @@
      "n": 3
     }
    },
-   "blurb": "Bursts into three Skitters when it dies."
+   "blurb": "Bursts into three Skitters when it dies.",
+   "answer": "Forge cannon or Storm pylon for the Skitters it leaves."
   },
   {
    "kind": "sapper",
@@ -469,7 +477,8 @@
    "traits": {
     "sapper": true
    },
-   "blurb": "Chews through wrecks and walls to open new roads."
+   "blurb": "Chews through wrecks and walls to open new roads.",
+   "answer": "Root garden, and kill it before it reaches the wreck."
   },
   {
    "kind": "burrower",
@@ -490,7 +499,8 @@
      3
     ]
    },
-   "blurb": "Digs under the road where nothing can reach it."
+   "blurb": "Digs under the road where nothing can reach it.",
+   "answer": "Root garden or Frost bell to catch it above ground."
   },
   {
    "kind": "ashmoth",
@@ -507,7 +517,8 @@
     "fire": 0,
     "frost": 1.3
    },
-   "blurb": "Flies and cannot burn. Frost brings it down."
+   "blurb": "Flies and cannot burn. Frost brings it down.",
+   "answer": "Frost bell, Watch tower or Storm pylon. Fire does nothing."
   },
   {
    "kind": "elite",
@@ -526,7 +537,125 @@
    "traits": {
     "armor": 4
    },
-   "blurb": "Armored. Every hit loses a few points. Big hits win."
+   "blurb": "Armored. Every hit loses a few points. Big hits win.",
+   "answer": "Big hits: Rail, Siege mortar or Longbow."
+  },
+  {
+   "kind": "husk",
+   "name": "Husk",
+   "hp": 70,
+   "speed": 46,
+   "gold": 5,
+   "leak": 1,
+   "dps": 8,
+   "bar": 32,
+   "size": 1.05,
+   "traits": {
+    "armor": 2
+   },
+   "blurb": "A Grub cased in ash. Chip shots barely scratch it; blasts and lightning still work.",
+   "answer": "Forge cannon or Storm pylon."
+  },
+  {
+   "kind": "hound",
+   "name": "Cinder Hound",
+   "hp": 75,
+   "speed": 64,
+   "gold": 7,
+   "leak": 1,
+   "dps": 10,
+   "bar": 30,
+   "size": 1.05,
+   "takes": {
+    "fire": 0.5,
+    "frost": 1.25
+   },
+   "traits": {
+    "lunge": {
+     "every": 4,
+     "dur": 1.2,
+     "mult": 2.2
+    }
+   },
+   "blurb": "Lunges at double speed every few seconds. A slowed or held Hound cannot lunge.",
+   "answer": "Frost bell or Root garden to stop the lunge, plus Watch tower or Storm pylon."
+  },
+  {
+   "kind": "glasshide",
+   "name": "Glasshide",
+   "hp": 150,
+   "speed": 36,
+   "gold": 14,
+   "leak": 2,
+   "dps": 14,
+   "bar": 54,
+   "size": 1.35,
+   "traits": {
+    "panes": {
+     "n": 3,
+     "regrow": 2.5
+    }
+   },
+   "blurb": "Three glass panes each stop one hit. Strip them with fast hits, then land the big ones.",
+   "answer": "Fast hits to break panes (Repeater, Tesla crown, Spore pod, Frost bell), then big hits."
+  },
+  {
+   "kind": "veilmoth",
+   "name": "Veil Moth",
+   "hp": 44,
+   "speed": 70,
+   "gold": 8,
+   "leak": 1,
+   "dps": 0,
+   "bar": 62,
+   "size": 0.95,
+   "flying": true,
+   "traits": {
+    "stealth": true,
+    "veil": true
+   },
+   "blurb": "Flies unseen. Only a Beacon or Wren's lantern shows it to your towers.",
+   "answer": "A Beacon on its flight line, plus Watch tower, Frost bell or Storm pylon."
+  },
+  {
+   "kind": "ram",
+   "name": "Hollow Ram",
+   "hp": 520,
+   "speed": 22,
+   "gold": 40,
+   "leak": 4,
+   "dps": 30,
+   "bar": 80,
+   "size": 2.1,
+   "traits": {
+    "armor": 5,
+    "stamp": {
+     "every": 6,
+     "r": 110,
+     "stun": 1.5
+    }
+   },
+   "blurb": "Stamps and stuns towers near it. Pin it with roots or frost so it cannot stamp.",
+   "answer": "Root garden or Glacier to pin it, plus Rail, Longbow or Siege mortar."
+  },
+  {
+   "kind": "herald",
+   "name": "Herald",
+   "hp": 260,
+   "speed": 32,
+   "gold": 25,
+   "leak": 2,
+   "dps": 16,
+   "bar": 64,
+   "size": 1.4,
+   "traits": {
+    "aura": {
+     "r": 120,
+     "cut": 0.35
+    }
+   },
+   "blurb": "Foes near it shrug off your most used element. Mix elements, or let Wren take it.",
+   "answer": "Mix elements, or send Wren."
   },
   {
    "kind": "mireking",
@@ -549,7 +678,8 @@
      "every": 5
     }
    },
-   "blurb": "Drags the swamp with him and spits out Grubs."
+   "blurb": "Drags the swamp with him and spits out Grubs.",
+   "answer": "Steady damage, and clear the Grubs he spits out."
   },
   {
    "kind": "tidewyrm",
@@ -574,7 +704,8 @@
      "dur": 3
     }
    },
-   "blurb": "Dives under the tide to heal. Hit it while it is up."
+   "blurb": "Dives under the tide to heal. Hit it while it is up.",
+   "answer": "Storm pylon while it is above water."
   },
   {
    "kind": "colossus",
@@ -593,7 +724,8 @@
     ],
     "plated": 0.35
    },
-   "blurb": "Brass plates turn most damage. Chill it and the plates crack."
+   "blurb": "Brass plates turn most damage. Chill it and the plates crack.",
+   "answer": "Frost bell to crack the plates, then everything."
   },
   {
    "kind": "queen",
@@ -618,7 +750,8 @@
      "every": 7
     }
    },
-   "blurb": "Rewrites the map as she falls. Three phases."
+   "blurb": "Rewrites the map as she falls. Three phases.",
+   "answer": "A full mix. She calls Shades, so keep a Beacon."
   }
  ],
  "hero": {
@@ -5751,7 +5884,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.95,
+   "hpMul": 2.2,
    "roads": [
     {
      "id": "main",
@@ -5956,12 +6089,12 @@
    },
    "waves": [
     {
-     "hint": "Grubs down the drop-shaft",
+     "hint": "Husks down the drop-shaft",
      "groups": [
       {
-       "kind": "grub",
-       "n": 18,
-       "gap": 0.6,
+       "kind": "husk",
+       "n": 13,
+       "gap": 0.72,
        "delay": 0
       }
      ]
@@ -5976,9 +6109,9 @@
        "delay": 0
       },
       {
-       "kind": "grub",
-       "n": 14,
-       "gap": 0.7,
+       "kind": "husk",
+       "n": 10,
+       "gap": 0.84,
        "delay": 1
       }
      ]
@@ -6032,9 +6165,9 @@
        "delay": 2
       },
       {
-       "kind": "grub",
-       "n": 16,
-       "gap": 0.6,
+       "kind": "husk",
+       "n": 11,
+       "gap": 0.72,
        "delay": 3
       }
      ]
@@ -6121,7 +6254,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.76,
+   "hpMul": 1.45,
    "roads": [
     {
      "id": "main",
@@ -6384,9 +6517,9 @@
      "hint": "The garden wakes",
      "groups": [
       {
-       "kind": "grub",
-       "n": 16,
-       "gap": 0.7,
+       "kind": "husk",
+       "n": 11,
+       "gap": 0.84,
        "delay": 0,
        "spawn": "w"
       }
@@ -6403,9 +6536,9 @@
        "spawn": "w"
       },
       {
-       "kind": "grub",
-       "n": 10,
-       "gap": 0.8,
+       "kind": "husk",
+       "n": 7,
+       "gap": 0.96,
        "delay": 0,
        "spawn": "n"
       }
@@ -6524,9 +6657,9 @@
        "spawn": "n"
       },
       {
-       "kind": "grub",
-       "n": 16,
-       "gap": 0.5,
+       "kind": "husk",
+       "n": 11,
+       "gap": 0.6,
        "delay": 2,
        "spawn": "w"
       }
@@ -6610,7 +6743,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.18,
+   "hpMul": 1.1,
    "roads": [
     {
      "id": "upper",
@@ -6871,16 +7004,16 @@
      "hint": "Steam rising",
      "groups": [
       {
-       "kind": "grub",
-       "n": 12,
-       "gap": 0.8,
+       "kind": "husk",
+       "n": 8,
+       "gap": 0.96,
        "delay": 0,
        "spawn": "a"
       },
       {
-       "kind": "grub",
-       "n": 12,
-       "gap": 0.8,
+       "kind": "husk",
+       "n": 8,
+       "gap": 0.96,
        "delay": 1,
        "spawn": "b"
       }
@@ -7113,7 +7246,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 0.88,
+   "hpMul": 0.8,
    "roads": [
     {
      "id": "top",
@@ -7399,22 +7532,22 @@
      "hint": "Three bays start",
      "groups": [
       {
-       "kind": "grub",
-       "n": 8,
+       "kind": "husk",
+       "n": 6,
        "gap": 0.9,
        "delay": 0,
        "spawn": "t"
       },
       {
-       "kind": "grub",
-       "n": 8,
+       "kind": "husk",
+       "n": 6,
        "gap": 0.9,
        "delay": 1,
        "spawn": "m"
       },
       {
-       "kind": "grub",
-       "n": 8,
+       "kind": "husk",
+       "n": 6,
        "gap": 0.9,
        "delay": 2,
        "spawn": "b"
@@ -7503,9 +7636,9 @@
        "spawn": "b"
       },
       {
-       "kind": "grub",
-       "n": 20,
-       "gap": 0.5,
+       "kind": "husk",
+       "n": 14,
+       "gap": 0.6,
        "delay": 0,
        "spawn": "m"
       }
@@ -7882,9 +8015,9 @@
      "hint": "The anvil perimeter",
      "groups": [
       {
-       "kind": "grub",
-       "n": 20,
-       "gap": 0.5,
+       "kind": "husk",
+       "n": 14,
+       "gap": 0.6,
        "delay": 0
       }
      ]
@@ -7993,7 +8126,7 @@
    "region": 3,
    "lava": true,
    "twist": "Diagonal caldera bridges cycling under magma shifts. Seal the center Obsidian Gate or anticipate the Wave 6 ash portal.",
-   "newFoe": "Burrower swarm",
+   "newFoe": "Cinder Hound",
    "unlocks": "Shop item: Ember spear",
    "startGold": 960,
    "lives": 20,
@@ -8005,7 +8138,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 0.9,
+   "hpMul": 1,
    "roads": [
     {
      "id": "top",
@@ -8351,23 +8484,34 @@
    },
    "waves": [
     {
-     "hint": "Ash on the wind",
+     "hint": "The pass smokes",
      "groups": [
       {
-       "kind": "grub",
-       "n": 20,
-       "gap": 0.5,
+       "kind": "husk",
+       "n": 10,
+       "gap": 0.8,
        "delay": 0
       }
      ]
     },
     {
-     "hint": "Burrower swarm",
+     "hint": "Cinder Hounds",
+     "groups": [
+      {
+       "kind": "hound",
+       "n": 6,
+       "gap": 1.2,
+       "delay": 0
+      }
+     ]
+    },
+    {
+     "hint": "Burrowers",
      "groups": [
       {
        "kind": "burrower",
-       "n": 14,
-       "gap": 0.7,
+       "n": 8,
+       "gap": 0.9,
        "delay": 0
       }
      ]
@@ -8377,31 +8521,26 @@
      "groups": [
       {
        "kind": "ashmoth",
-       "n": 20,
-       "gap": 0.45,
+       "n": 18,
+       "gap": 0.5,
        "delay": 0
       }
      ]
     },
     {
-     "hint": "Iron",
+     "hint": "Hounds and iron",
      "groups": [
+      {
+       "kind": "hound",
+       "n": 10,
+       "gap": 0.7,
+       "delay": 0
+      },
       {
        "kind": "elite",
-       "n": 8,
-       "gap": 1.8,
-       "delay": 0
-      }
-     ]
-    },
-    {
-     "hint": "Splitters",
-     "groups": [
-      {
-       "kind": "splitter",
-       "n": 14,
-       "gap": 0.8,
-       "delay": 0
+       "n": 6,
+       "gap": 2,
+       "delay": 3
       }
      ]
     },
@@ -8421,9 +8560,9 @@
        "delay": 2
       },
       {
-       "kind": "grub",
-       "n": 20,
-       "gap": 0.4,
+       "kind": "hound",
+       "n": 10,
+       "gap": 0.55,
        "delay": 3
       }
      ]
@@ -8433,9 +8572,15 @@
      "groups": [
       {
        "kind": "shade",
-       "n": 24,
+       "n": 20,
        "gap": 0.5,
        "delay": 0
+      },
+      {
+       "kind": "hound",
+       "n": 6,
+       "gap": 0.8,
+       "delay": 6
       }
      ]
     },
@@ -8444,8 +8589,8 @@
      "groups": [
       {
        "kind": "burrower",
-       "n": 24,
-       "gap": 0.5,
+       "n": 12,
+       "gap": 0.7,
        "delay": 0
       },
       {
@@ -8467,20 +8612,20 @@
       },
       {
        "kind": "elite",
-       "n": 12,
-       "gap": 1.4,
+       "n": 9,
+       "gap": 1.6,
        "delay": 2
       },
       {
-       "kind": "ashmoth",
-       "n": 24,
-       "gap": 0.4,
+       "kind": "hound",
+       "n": 12,
+       "gap": 0.5,
        "delay": 8
       },
       {
        "kind": "burrower",
-       "n": 16,
-       "gap": 0.6,
+       "n": 10,
+       "gap": 0.7,
        "delay": 14
       }
      ]
@@ -8493,7 +8638,7 @@
    "region": 3,
    "lava": true,
    "twist": "NE→W→SE horseshoe around a collapsing high ridge. Wave 4 cracks a steep scree slide while avalanches bury plots.",
-   "newFoe": "Iron swarm",
+   "newFoe": "Glasshide",
    "unlocks": "Shop item: Dawn mantle",
    "startGold": 720,
    "lives": 20,
@@ -8505,7 +8650,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.63,
+   "hpMul": 1,
    "high": [
     [
      345,
@@ -8785,9 +8930,9 @@
      "hint": "Onto the ridge",
      "groups": [
       {
-       "kind": "grub",
-       "n": 24,
-       "gap": 0.45,
+       "kind": "husk",
+       "n": 16,
+       "gap": 0.6,
        "delay": 0
       }
      ]
@@ -8808,8 +8953,8 @@
      "groups": [
       {
        "kind": "ashmoth",
-       "n": 24,
-       "gap": 0.4,
+       "n": 20,
+       "gap": 0.45,
        "delay": 0
       }
      ]
@@ -8818,10 +8963,16 @@
      "hint": "Rockslide scree opens!",
      "groups": [
       {
-       "kind": "burrower",
-       "n": 20,
-       "gap": 0.6,
+       "kind": "glasshide",
+       "n": 4,
+       "gap": 3,
        "delay": 0
+      },
+      {
+       "kind": "burrower",
+       "n": 12,
+       "gap": 0.7,
+       "delay": 4
       }
      ]
     },
@@ -8837,19 +8988,25 @@
      ]
     },
     {
-     "hint": "Wardens",
+     "hint": "Glass behind the shield",
      "groups": [
       {
        "kind": "warden",
-       "n": 4,
+       "n": 3,
        "gap": 4,
        "delay": 0
       },
       {
-       "kind": "skitter",
-       "n": 24,
-       "gap": 0.25,
+       "kind": "glasshide",
+       "n": 6,
+       "gap": 2.4,
        "delay": 2
+      },
+      {
+       "kind": "hound",
+       "n": 16,
+       "gap": 0.5,
+       "delay": 6
       }
      ]
     },
@@ -8875,9 +9032,15 @@
      "groups": [
       {
        "kind": "shade",
-       "n": 30,
-       "gap": 0.4,
+       "n": 24,
+       "gap": 0.45,
        "delay": 0
+      },
+      {
+       "kind": "glasshide",
+       "n": 6,
+       "gap": 2.4,
+       "delay": 4
       }
      ]
     },
@@ -8903,25 +9066,31 @@
      "groups": [
       {
        "kind": "warden",
-       "n": 5,
+       "n": 4,
        "gap": 3,
        "delay": 0
       },
       {
-       "kind": "splitter",
-       "n": 20,
-       "gap": 0.6,
-       "delay": 3
+       "kind": "glasshide",
+       "n": 8,
+       "gap": 2,
+       "delay": 2
+      },
+      {
+       "kind": "hound",
+       "n": 18,
+       "gap": 0.45,
+       "delay": 8
       },
       {
        "kind": "ashmoth",
-       "n": 30,
-       "gap": 0.35,
-       "delay": 10
+       "n": 24,
+       "gap": 0.4,
+       "delay": 12
       },
       {
        "kind": "mender",
-       "n": 8,
+       "n": 6,
        "gap": 2,
        "delay": 16
       }
@@ -8935,7 +9104,7 @@
    "region": 3,
    "lava": true,
    "twist": "A centre rift feeds two opposite spirals, to a north-east and a south-west Keep. The Rift Divert sends the whole horde down one spiral at a time, and Wave 5 cools a third bridge.",
-   "newFoe": "Everything doubled",
+   "newFoe": "Veil Moth",
    "unlocks": "Shop item: Second dawn",
    "startGold": 760,
    "lives": 20,
@@ -8947,7 +9116,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1.32,
+   "hpMul": 1,
    "roads": [
     {
      "id": "north",
@@ -9235,9 +9404,9 @@
      "hint": "Center rift opens",
      "groups": [
       {
-       "kind": "grub",
-       "n": 24,
-       "gap": 0.4,
+       "kind": "husk",
+       "n": 16,
+       "gap": 0.55,
        "delay": 0
       }
      ]
@@ -9265,18 +9434,18 @@
      ]
     },
     {
-     "hint": "Ash moths",
+     "hint": "Veil Moths",
      "groups": [
       {
-       "kind": "ashmoth",
-       "n": 18,
-       "gap": 0.4,
+       "kind": "veilmoth",
+       "n": 6,
+       "gap": 1.2,
        "delay": 0
       },
       {
-       "kind": "grub",
-       "n": 12,
-       "gap": 0.5,
+       "kind": "husk",
+       "n": 10,
+       "gap": 0.6,
        "delay": 2
       }
      ]
@@ -9291,9 +9460,9 @@
        "delay": 0
       },
       {
-       "kind": "grub",
-       "n": 10,
-       "gap": 0.5,
+       "kind": "glasshide",
+       "n": 6,
+       "gap": 2.4,
        "delay": 2
       }
      ]
@@ -9312,6 +9481,12 @@
        "n": 6,
        "gap": 2,
        "delay": 2
+      },
+      {
+       "kind": "hound",
+       "n": 12,
+       "gap": 0.6,
+       "delay": 4
       }
      ]
     },
@@ -9320,15 +9495,21 @@
      "groups": [
       {
        "kind": "shade",
-       "n": 24,
-       "gap": 0.45,
+       "n": 18,
+       "gap": 0.5,
        "delay": 0
       },
       {
+       "kind": "veilmoth",
+       "n": 10,
+       "gap": 0.7,
+       "delay": 3
+      },
+      {
        "kind": "elite",
-       "n": 8,
+       "n": 6,
        "gap": 1.5,
-       "delay": 4
+       "delay": 6
       }
      ]
     },
@@ -9337,14 +9518,14 @@
      "groups": [
       {
        "kind": "elite",
-       "n": 16,
-       "gap": 0.9,
+       "n": 12,
+       "gap": 1,
        "delay": 0
       },
       {
-       "kind": "skitter",
-       "n": 30,
-       "gap": 0.2,
+       "kind": "hound",
+       "n": 20,
+       "gap": 0.35,
        "delay": 2
       }
      ]
@@ -9359,22 +9540,28 @@
        "delay": 0
       },
       {
-       "kind": "splitter",
-       "n": 14,
+       "kind": "glasshide",
+       "n": 8,
+       "gap": 2,
+       "delay": 2
+      },
+      {
+       "kind": "veilmoth",
+       "n": 12,
        "gap": 0.6,
-       "delay": 3
+       "delay": 8
       },
       {
        "kind": "ashmoth",
-       "n": 20,
-       "gap": 0.4,
-       "delay": 10
+       "n": 16,
+       "gap": 0.45,
+       "delay": 12
       },
       {
        "kind": "mender",
        "n": 6,
        "gap": 2.5,
-       "delay": 14
+       "delay": 16
       }
      ]
     }
@@ -9386,7 +9573,7 @@
    "region": 3,
    "lava": true,
    "twist": "Four-corner radial crucible converging on the Center Keep. Rifts awaken wave by wave while the Hollow adapts every wave.",
-   "newFoe": "All of them",
+   "newFoe": "Hollow Ram",
    "unlocks": "Capstones in every tree",
    "startGold": 1120,
    "lives": 20,
@@ -9399,7 +9586,7 @@
     "beacon"
    ],
    "adaptEvery": 1,
-   "hpMul": 0.92,
+   "hpMul": 0.7,
    "roads": [
     {
      "id": "nw",
@@ -9688,16 +9875,16 @@
      "hint": "Two corners breach",
      "groups": [
       {
-       "kind": "grub",
-       "n": 14,
-       "gap": 0.9,
+       "kind": "husk",
+       "n": 10,
+       "gap": 0.8,
        "delay": 0,
        "spawn": "nw"
       },
       {
-       "kind": "grub",
-       "n": 14,
-       "gap": 0.9,
+       "kind": "husk",
+       "n": 10,
+       "gap": 0.8,
        "delay": 1,
        "spawn": "s"
       }
@@ -9714,9 +9901,9 @@
        "spawn": "nw"
       },
       {
-       "kind": "skitter",
-       "n": 10,
-       "gap": 0.4,
+       "kind": "hound",
+       "n": 8,
+       "gap": 0.7,
        "delay": 0,
        "spawn": "s"
       }
@@ -9726,28 +9913,28 @@
      "hint": "North-East corner tears open!",
      "groups": [
       {
-       "kind": "shade",
-       "n": 10,
-       "gap": 0.8,
-       "delay": 0,
-       "spawn": "n"
-      },
-      {
-       "kind": "burrower",
-       "n": 6,
-       "gap": 1.2,
+       "kind": "ram",
+       "n": 1,
+       "gap": 7,
        "delay": 0,
        "spawn": "nw"
+      },
+      {
+       "kind": "shade",
+       "n": 8,
+       "gap": 0.8,
+       "delay": 2,
+       "spawn": "n"
       }
      ]
     },
     {
-     "hint": "Ash and splitters",
+     "hint": "Veils and splitters",
      "groups": [
       {
-       "kind": "ashmoth",
-       "n": 16,
-       "gap": 0.5,
+       "kind": "veilmoth",
+       "n": 12,
+       "gap": 0.6,
        "delay": 0,
        "spawn": "nw"
       },
@@ -9792,37 +9979,37 @@
        "spawn": "s"
       },
       {
-       "kind": "grub",
-       "n": 24,
-       "gap": 0.3,
+       "kind": "husk",
+       "n": 16,
+       "gap": 0.45,
        "delay": 4,
        "spawn": "nw"
       }
      ]
     },
     {
-     "hint": "Menders",
+     "hint": "Rams and Menders",
      "groups": [
       {
-       "kind": "mender",
-       "n": 4,
-       "gap": 3,
+       "kind": "ram",
+       "n": 2,
+       "gap": 8,
        "delay": 0,
-       "spawn": "n"
+       "spawn": "nw"
       },
       {
        "kind": "mender",
        "n": 4,
        "gap": 3,
-       "delay": 0,
-       "spawn": "s"
+       "delay": 2,
+       "spawn": "nw"
       },
       {
        "kind": "elite",
        "n": 12,
        "gap": 1.4,
        "delay": 0,
-       "spawn": "nw"
+       "spawn": "s"
       }
      ]
     },
@@ -9844,9 +10031,9 @@
        "spawn": "sw"
       },
       {
-       "kind": "burrower",
+       "kind": "glasshide",
        "n": 6,
-       "gap": 1.2,
+       "gap": 2.4,
        "delay": 0,
        "spawn": "n"
       }
@@ -9856,16 +10043,16 @@
      "hint": "Moth storm",
      "groups": [
       {
-       "kind": "moth",
-       "n": 24,
-       "gap": 0.4,
+       "kind": "veilmoth",
+       "n": 10,
+       "gap": 0.7,
        "delay": 0,
        "spawn": "n"
       },
       {
        "kind": "ashmoth",
-       "n": 24,
-       "gap": 0.4,
+       "n": 20,
+       "gap": 0.45,
        "delay": 0,
        "spawn": "s"
       }
@@ -9876,15 +10063,15 @@
      "groups": [
       {
        "kind": "elite",
-       "n": 12,
-       "gap": 1,
+       "n": 10,
+       "gap": 1.1,
        "delay": 0,
        "spawn": "nw"
       },
       {
-       "kind": "elite",
-       "n": 12,
-       "gap": 1,
+       "kind": "ram",
+       "n": 2,
+       "gap": 8,
        "delay": 0,
        "spawn": "sw"
       },
@@ -9902,36 +10089,43 @@
      "groups": [
       {
        "kind": "warden",
-       "n": 4,
+       "n": 3,
        "gap": 4,
        "delay": 0,
        "spawn": "nw"
       },
       {
-       "kind": "splitter",
-       "n": 16,
-       "gap": 0.7,
+       "kind": "ram",
+       "n": 2,
+       "gap": 8,
        "delay": 0,
        "spawn": "sw"
       },
       {
+       "kind": "hound",
+       "n": 14,
+       "gap": 0.5,
+       "delay": 4,
+       "spawn": "sw"
+      },
+      {
        "kind": "shade",
-       "n": 30,
-       "gap": 0.3,
+       "n": 24,
+       "gap": 0.35,
        "delay": 0,
        "spawn": "s"
       },
       {
-       "kind": "ashmoth",
-       "n": 24,
-       "gap": 0.4,
+       "kind": "veilmoth",
+       "n": 12,
+       "gap": 0.6,
        "delay": 0,
        "spawn": "n"
       },
       {
-       "kind": "mender",
-       "n": 8,
-       "gap": 2,
+       "kind": "glasshide",
+       "n": 6,
+       "gap": 2.4,
        "delay": 10,
        "spawn": "nw"
       }
@@ -9957,7 +10151,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 0.75,
+   "hpMul": 0.55,
    "high": [
     [
      485,
@@ -10307,16 +10501,16 @@
      "hint": "Her heralds",
      "groups": [
       {
-       "kind": "grub",
-       "n": 24,
-       "gap": 0.4,
+       "kind": "husk",
+       "n": 14,
+       "gap": 0.6,
        "delay": 0,
        "spawn": "nw"
       },
       {
-       "kind": "grub",
-       "n": 12,
-       "gap": 0.5,
+       "kind": "hound",
+       "n": 6,
+       "gap": 0.8,
        "delay": 0,
        "spawn": "ne"
       }
@@ -10334,8 +10528,8 @@
       },
       {
        "kind": "burrower",
-       "n": 8,
-       "gap": 1,
+       "n": 6,
+       "gap": 1.2,
        "delay": 0,
        "spawn": "ne"
       }
@@ -10346,22 +10540,22 @@
      "groups": [
       {
        "kind": "ashmoth",
-       "n": 18,
-       "gap": 0.45,
+       "n": 14,
+       "gap": 0.5,
        "delay": 0,
        "spawn": "nw"
       },
       {
-       "kind": "moth",
-       "n": 14,
-       "gap": 0.5,
+       "kind": "veilmoth",
+       "n": 8,
+       "gap": 0.7,
        "delay": 0,
        "spawn": "ne"
       },
       {
-       "kind": "grub",
-       "n": 12,
-       "gap": 0.5,
+       "kind": "husk",
+       "n": 10,
+       "gap": 0.6,
        "delay": 4,
        "spawn": "nw"
       }
@@ -10371,15 +10565,22 @@
      "hint": "Inner nave fractures!",
      "groups": [
       {
-       "kind": "splitter",
-       "n": 20,
-       "gap": 0.6,
+       "kind": "herald",
+       "n": 2,
+       "gap": 6,
        "delay": 0,
        "spawn": "nw"
       },
       {
+       "kind": "husk",
+       "n": 14,
+       "gap": 0.55,
+       "delay": 2,
+       "spawn": "nw"
+      },
+      {
        "kind": "mender",
-       "n": 6,
+       "n": 4,
        "gap": 2,
        "delay": 0,
        "spawn": "ne"
@@ -10391,16 +10592,23 @@
      "groups": [
       {
        "kind": "warden",
-       "n": 4,
+       "n": 3,
        "gap": 4,
        "delay": 0,
        "spawn": "nw"
       },
       {
-       "kind": "elite",
-       "n": 10,
-       "gap": 1.4,
+       "kind": "ram",
+       "n": 2,
+       "gap": 8,
        "delay": 0,
+       "spawn": "ne"
+      },
+      {
+       "kind": "elite",
+       "n": 8,
+       "gap": 1.5,
+       "delay": 6,
        "spawn": "ne"
       }
      ]
@@ -10416,14 +10624,21 @@
        "spawn": "nw"
       },
       {
-       "kind": "burrower",
-       "n": 8,
-       "gap": 0.9,
+       "kind": "herald",
+       "n": 2,
+       "gap": 6,
        "delay": 0,
        "spawn": "ne"
       },
       {
-       "kind": "grub",
+       "kind": "glasshide",
+       "n": 8,
+       "gap": 2.2,
+       "delay": 4,
+       "spawn": "ne"
+      },
+      {
+       "kind": "hound",
        "n": 10,
        "gap": 0.5,
        "delay": 3,
@@ -10443,22 +10658,29 @@
       },
       {
        "kind": "warden",
-       "n": 4,
+       "n": 3,
        "gap": 5,
        "delay": 4,
        "spawn": "ne"
       },
       {
+       "kind": "herald",
+       "n": 2,
+       "gap": 6,
+       "delay": 10,
+       "spawn": "ne"
+      },
+      {
        "kind": "elite",
-       "n": 12,
-       "gap": 1.5,
+       "n": 10,
+       "gap": 1.6,
        "delay": 12,
        "spawn": "nw"
       },
       {
-       "kind": "ashmoth",
-       "n": 18,
-       "gap": 0.5,
+       "kind": "veilmoth",
+       "n": 10,
+       "gap": 0.7,
        "delay": 20,
        "spawn": "ne"
       },

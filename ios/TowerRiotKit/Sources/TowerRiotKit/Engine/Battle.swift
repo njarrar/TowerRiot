@@ -226,6 +226,13 @@ public final class Battle {
         return (top, share, 0.42)
     }
 
+    /// A Herald's aura cuts damage from the element the player leans on most right now.
+    private lazy var heraldCut: Double = data.enemy(.herald).traits?.aura?.cut ?? 0
+    public func heraldEl() -> Element? {
+        let s = adaptationShare()
+        return s.share > 0 ? s.top : nil
+    }
+
     /// The element the Hollow would harden against if it adapted now, if any.
     public func adaptLean() -> Element? {
         let s = adaptationShare()
@@ -995,6 +1002,7 @@ public final class Battle {
 
     private func updateFoes(_ dt: Double) {
         let wardens = foes.filter { ($0.def.traits?.shield ?? 0) != 0 && !$0.dead }
+        let heralds = foes.filter { $0.def.traits?.aura != nil && !$0.dead && !$0.under }
         let beacons = towers.filter { $0.kind == .beacon && !$0.down }
         let beaconRange = data.tower(.beacon).range
         var blocking = 0
@@ -1014,6 +1022,11 @@ public final class Battle {
             f.vulnT = max(0, f.vulnT - dt)
             f.burstT = max(0, f.burstT - dt)
             f.hitT = max(0, f.hitT - dt)
+            f.paneCd = max(0, f.paneCd - dt)
+            if let pn = tr?.panes, f.panes < pn.n {
+                f.paneT -= dt
+                if f.paneT <= 0 { f.panes += 1; f.paneT = pn.regrow }
+            }
             if f.burnT > 0 {
                 f.burnT -= dt
                 damage(f, f.burnDps * dt, .element(.fire), byHero: false, quiet: true, bucket: .status)
@@ -1038,6 +1051,26 @@ public final class Battle {
                 if f.abilityT <= 0 {
                     f.abilityT = sm.every
                     for k in 0..<sm.n { spawn(sm.kind, at: (f.road, max(0, f.d - 20 - Double(k) * 18))) }
+                }
+            }
+            let held = f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0
+            if let lg = tr?.lunge {
+                f.lungeT = max(0, f.lungeT - dt)
+                if f.slow > 0 || held || f.blocked { f.lungeT = 0 }
+                f.abilityT -= dt
+                if f.abilityT <= 0 {
+                    f.abilityT = lg.every
+                    if f.slow <= 0 && !held && !f.blocked { f.lungeT = lg.dur; events.append(.lunge(x: f.x, y: f.y)) }
+                }
+            }
+            if let st = tr?.stamp {
+                f.abilityT -= dt
+                if f.abilityT <= 0 {
+                    f.abilityT = st.every
+                    if !held {
+                        for t in towers where ell(t.x - f.x, t.y - f.y) < st.r { t.stunT = max(t.stunT, st.stun) }
+                        events.append(.stamp(x: f.x, y: f.y, r: st.r))
+                    }
                 }
             }
             if let heal = tr?.heal, heal != 0 {
@@ -1065,11 +1098,12 @@ public final class Battle {
             }
 
             f.shielded = (tr?.shield ?? 0) == 0 && wardens.contains { ell($0.x - f.x, $0.y - f.y) < ($0.def.traits?.shield ?? 0) }
+            f.warded = tr?.aura == nil && heralds.contains { ell($0.x - f.x, $0.y - f.y) < ($0.def.traits?.aura?.r ?? 0) }
             if tr?.stealth == true {
                 let seen = (!hero.dead && hypot2(hero.x - f.x, hero.y - f.y) < sight)
                     || hero.sunriseT > 0
                     || inLighthouse(f.x, f.y)
-                    || towers.contains { ell($0.x - f.x, $0.y - f.y) < Battle.towerSight }
+                    || (tr?.veil != true && towers.contains { ell($0.x - f.x, $0.y - f.y) < Battle.towerSight })
                     || beacons.contains { ell($0.x - f.x, $0.y - f.y) < beaconRange[min($0.lv, 3) - 1] }
                 f.hidden = !seen
             } else {
@@ -1088,6 +1122,7 @@ public final class Battle {
             var mul = f.slow > 0 ? 1 - f.slow : 1
             if f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked { mul = 0 }
             if f.burstT > 0 { mul *= 1.6 }
+            if f.lungeT > 0, let lg = tr?.lunge { mul *= lg.mult }
             if let activeBrake = switches.first(where: { $0.def.mode == .belt && $0.activeT > 0 && $0.def.targetRoad == f.road.def.id }) {
                 mul *= activeBrake.def.beltMult ?? 0.55
             } else {
@@ -1170,6 +1205,20 @@ public final class Battle {
     @discardableResult
     func damage(_ f: Foe, _ amount: Double, _ src: DamageSource, byHero: Bool, quiet: Bool = false, crit: Bool = false, sourceTower: Tower? = nil, bucket: AttributionBucket? = nil, armorPierceExtra: Double = 0) -> Double {
         if !reachable(f, byHero: true) || amount <= 0 { return 0 }
+        if f.panes > 0 {
+            // Each hit breaks one pane and does no harm. Burns and vents only scratch the glass;
+            // a spore cloud breaks a pane now and then.
+            let tick = bucket == .status
+            if tick && src != .element(.nature) { return 0 }
+            if f.paneCd > 0 { return 0 }
+            f.panes -= 1
+            f.paneCd = tick ? 0.6 : 0.12
+            f.paneT = f.def.traits?.panes?.regrow ?? 2.5
+            events.append(.pane(x: f.x, y: f.y - f.def.bar * 0.6, left: f.panes))
+            return 0
+        }
+        var amount = amount
+        if f.warded, case .element(let el) = src, el != .hero, el == heraldEl() { amount *= 1 - heraldCut }
         var m = 1.0
         var dmgEl: Element?
         if case .element(let el) = src {
@@ -1381,6 +1430,7 @@ public final class Battle {
     private func updateTowers(_ dt: Double) {
         for t in towers {
             t.fired += dt
+            if t.stunT > 0 { t.stunT = max(0, t.stunT - dt); continue }
             if t.kind == .beacon || t.down { continue }
             let s = stats(t)
             t.cd -= dt

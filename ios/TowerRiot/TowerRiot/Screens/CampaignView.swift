@@ -25,11 +25,28 @@ struct CampaignView: View {
     var body: some View {
         let s = app.save
         VStack(spacing: 0) {
-            TopBar(title: "The campaign", back: { app.screen = .title }) {
-                HStack(spacing: 8) {
-                    Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(tall: true))
-                    Button("Skill trees: \(s.embers.free) Embers") { app.screen = .trees }.buttonStyle(PaperButton(tall: true))
-                    SoundCorner()
+            if upright {
+                // Back, the title and sound on one row; the two links share the row under it in equal halves.
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button("Back") { app.screen = .title }.buttonStyle(PaperButton(tall: true))
+                        Text("The campaign").font(Face.title(20)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.6)
+                            .frame(maxWidth: .infinity)
+                        SoundCorner()
+                    }
+                    HStack(spacing: 8) {
+                        Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(tall: true, fill: true))
+                        Button("Skill trees: \(s.embers.free) Embers") { app.screen = .trees }.buttonStyle(PaperButton(tall: true, fill: true))
+                    }
+                }
+                .padding(.bottom, 10)
+            } else {
+                TopBar(title: "The campaign", back: { app.screen = .title }) {
+                    HStack(spacing: 8) {
+                        Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(tall: true))
+                        Button("Skill trees: \(s.embers.free) Embers") { app.screen = .trees }.buttonStyle(PaperButton(tall: true))
+                        SoundCorner()
+                    }
                 }
             }
             ScrollView(.horizontal, showsIndicators: false) {
@@ -243,7 +260,7 @@ private struct StageCard: View {
                         Divider().overlay(Ink.rule)
                         // Grouped so the column never holds more than ten views in a row.
                         Group {
-                            Fact("New foe", newFoe.map { "\($0.name): \($0.blurb)" } ?? st.newFoe)
+                            Fact("New foe", newFoe.map { "\($0.name): \($0.blurb) Answer: \($0.answer)" } ?? st.newFoe)
                             Fact("Unlocks", st.unlocks)
                             HStack(alignment: .top) {
                                 Text("Towers").font(Face.body(13)).foregroundStyle(Ink.inkFaint).frame(width: 64, alignment: .leading)
@@ -337,7 +354,7 @@ struct FieldGuideSheet: View {
                         .frame(width: 44, height: 44)
                 }.buttonStyle(.plain).accessibilityLabel("Close")
             }
-            Segments(items: [(Tab.foes, "16 Foes"), (.towers, "6 Towers"), (.items, "\(app.data.itemOrder.count) Items"), (.hero, "Wren & Skills")], selected: tab, tall: true) { tab = $0 }
+            Segments(items: [(Tab.foes, "\(EnemyKind.allCases.count) Foes"), (.towers, "6 Towers"), (.items, "\(app.data.itemOrder.count) Items"), (.hero, "Wren & Skills")], selected: tab, tall: true) { tab = $0 }
             ScrollView {
                 VStack(spacing: 8) {
                     switch tab {
@@ -348,7 +365,7 @@ struct FieldGuideSheet: View {
                                                    f.traits?.armor.map { "Armor \(Int($0))" }, f.traits?.stealth == true ? "Stealth" : nil,
                                                    f.traits?.heal != nil ? "Healer" : nil]
                             let tagLine = tags.compactMap { $0 }.joined(separator: " · ")
-                            GuideRow(icon: "icon-foe-\(k.rawValue)", title: f.name, sub: "\(tagLine) · \(Int(f.hp)) HP · \(Int(f.gold))g · \(f.leak) life", desc: f.blurb)
+                            GuideRow(icon: "icon-foe-\(k.rawValue)", title: f.name, sub: "\(tagLine) · \(Int(f.hp)) HP · \(Int(f.gold))g · \(f.leak) life", desc: "\(f.blurb) Answer: \(f.answer)")
                         }
                     case .towers:
                         ForEach(app.data.towerOrder, id: \.self) { k in

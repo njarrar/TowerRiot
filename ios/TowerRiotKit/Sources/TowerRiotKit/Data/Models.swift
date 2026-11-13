@@ -25,6 +25,7 @@ public struct RubbleDef: Codable, Equatable, Sendable {
 
 public enum EnemyKind: String, Codable, CaseIterable, Sendable {
     case grub, skitter, shell, moth, warden, mender, shade, splitter, sapper, burrower, ashmoth, elite
+    case husk, hound, glasshide, veilmoth, ram, herald
     case mireking, tidewyrm, colossus, queen
 }
 
@@ -65,6 +66,10 @@ public struct Traits: Codable, Sendable {
     public struct Split: Codable, Sendable { public let kind: EnemyKind; public let n: Int }
     public struct Summon: Codable, Sendable { public let kind: EnemyKind; public let n: Int; public let every: Double }
     public struct Dive: Codable, Sendable { public let every: Double; public let dur: Double }
+    public struct Lunge: Codable, Sendable { public let every: Double; public let dur: Double; public let mult: Double }
+    public struct Panes: Codable, Sendable { public let n: Int; public let regrow: Double }
+    public struct Stamp: Codable, Sendable { public let every: Double; public let r: Double; public let stun: Double }
+    public struct Aura: Codable, Sendable { public let r: Double; public let cut: Double }
     public let shield: Double?
     public let heal: Double?
     public let stealth: Bool?
@@ -76,6 +81,16 @@ public struct Traits: Codable, Sendable {
     public let plated: Double?
     public let summon: Summon?
     public let dive: Dive?
+    /// Every `every` seconds it runs at `mult` speed for `dur` seconds, unless slowed, held or frozen.
+    public let lunge: Lunge?
+    /// Glass panes: each hit breaks one pane and does no harm. A lost pane grows back after `regrow` seconds.
+    public let panes: Panes?
+    /// Every `every` seconds it stamps: towers within `r` px stop for `stun` seconds, unless it is held.
+    public let stamp: Stamp?
+    /// Only Wren's lantern, a Beacon, the lighthouse or Sunrise reveal it.
+    public let veil: Bool?
+    /// Foes within `r` px take `cut` less damage from the element used most this wave.
+    public let aura: Aura?
     public let phases: [Double]?
     public let boss: Bool?
 }
@@ -94,6 +109,8 @@ public struct EnemyDef: Codable, Sendable {
     public let size: Double
     public let traits: Traits?
     public let blurb: String
+    /// The towers that beat it, for the field guide and the first time it shows up.
+    public let answer: String
 
     public var isFlying: Bool { flying ?? false }
     public var isBoss: Bool { traits?.boss ?? false }

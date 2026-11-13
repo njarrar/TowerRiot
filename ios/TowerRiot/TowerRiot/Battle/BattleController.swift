@@ -200,9 +200,20 @@ final class BattleController: ObservableObject {
             case let .riftWarn(_, wv): showBanner("New breach forming", "Watch the marked path before Wave \(wv).", 2.6)
             case .riftOpen: sound.play(.wave); showBanner("Rift torn open", "A new lane has activated on the field!", 2.4)
             case let .terraform(label): sound.play(.boss); showBanner("Ground shifts", label, 3.0, now: true)
+            case .stamp: sound.play(.boom)
+            case .pane: sound.play(.bell)
             case .gateShock: sound.play(.sunrise); showBanner("Bastion bell!", "The Keep shockwave stuns intruders at the gate.", 2.2)
             case .level: sound.play(.level); lvlT = 0.9; levelFlash = true; if autoSkills { b.autoLearn() }
-            case let .wave(n, hint): sound.play(.wave); showBanner("Wave \(n) of \(b.totalWaves)", hint, 2)
+            case let .wave(n, hint):
+                sound.play(.wave); showBanner("Wave \(n) of \(b.totalWaves)", hint, 2)
+                // The first time a new foe walks in, name it and say what beats it.
+                if n >= 1 && n <= b.stage.waves.count {
+                    for g in b.stage.waves[n - 1].groups where isNewFoe(g.kind) && !data.enemy(g.kind).isBoss {
+                        metFoes.insert(g.kind)
+                        let d = data.enemy(g.kind)
+                        showBanner("New foe: \(d.name)", d.answer, 3.6)
+                    }
+                }
             case let .adapt(el, resist): showBanner("The Hollow adapts", "It hardens against \(Words.element[el] ?? el.rawValue): \(Int((resist * 100).rounded()))% less damage. Mix your towers.", 3.4)
             case let .shift(label, on): showBanner(on ? label : "The way is open again", on ? "Foes on that road wait at the edge. Others go round." : "", 2.6)
             case .barrier: showBanner("The wreck gives way", "The beach road is open. Foes will use it now.", 3)
@@ -224,6 +235,16 @@ final class BattleController: ObservableObject {
             }
         }
     }
+
+    /// New foes already introduced in this fight.
+    private var metFoes = Set<EnemyKind>()
+    /// The stage where each foe first walks in.
+    private lazy var firstStage: [EnemyKind: Int] = {
+        var out: [EnemyKind: Int] = [:]
+        for st in data.stages { for w in st.waves { for g in w.groups where out[g.kind] == nil { out[g.kind] = st.id } } }
+        return out
+    }()
+    func isNewFoe(_ kind: EnemyKind) -> Bool { firstStage[kind] == battle.stage.id && !metFoes.contains(kind) }
 
     private func scheduleEnd(won: Bool, stars: Int) {
         guard !ended && !resultScheduled else { return }

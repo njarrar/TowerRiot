@@ -53,6 +53,8 @@ struct PaperButton: ButtonStyle {
     var poor = false
     /// At least 44 points high, for the small buttons that sit alone where a thumb has to find them.
     var tall = false
+    /// Stretch to the width it is given, for buttons that share a row in equal parts.
+    var fill = false
     @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -71,7 +73,7 @@ struct PaperButton: ButtonStyle {
             .foregroundStyle(fg)
             .padding(.horizontal, big ? 24 : 14)
             .padding(.vertical, big ? 12 : 8)
-            .frame(minHeight: tall ? 44 : nil)
+            .frame(maxWidth: fill ? .infinity : nil, minHeight: tall ? 44 : nil)
             .background(RoundedRectangle(cornerRadius: 5).fill(bg))
             .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(edge, lineWidth: 1))
             .shadow(color: configuration.isPressed ? .clear : Ink.shadow, radius: 0, x: 0, y: 1)

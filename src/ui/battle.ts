@@ -5,9 +5,9 @@ import {
   ACTION_ARM_MS, HERO_GRAB_RADIUS, InputResolver, type HitTarget,
 } from '../game/input-resolver';
 import { Scene, W as MAP_W, type View } from '../render/scene';
-import { SHIFTING_EARTH_REFUND, stageById, type OathId, type StageVariant } from '../game/data/stages';
+import { FIRST_STAGE, SHIFTING_EARTH_REFUND, stageById, type OathId, type StageVariant } from '../game/data/stages';
 import { MAX_TOWER_LEVEL, TOWERS, type Rounds, type TowerKind } from '../game/data/towers';
-import { ENEMIES } from '../game/data/enemies';
+import { ENEMIES, type EnemyKind } from '../game/data/enemies';
 import { ATTUNE, HERO, SKILLS, SNARE, type SkillKey } from '../game/data/hero';
 import { ITEMS, ITEM_ORDER, ITEM_SLOTS, RUNES, type ItemId } from '../game/data/shop';
 import type { Mods } from '../game/mods';
@@ -70,6 +70,8 @@ export class BattleScreen {
   private menu: HTMLElement;
   private banner: HTMLElement;
   private pauseStrip: HTMLElement;
+  /** New foes already introduced in this fight. */
+  private metFoes = new Set<EnemyKind>();
   private bannerT = 0;
   private bannerQ: { title: string; sub: string; secs: number }[] = [];
   private lvlT = 0;
@@ -118,7 +120,9 @@ export class BattleScreen {
       h('div', { class: 'ps-acts' },
         h('button', { class: 'btn primary', onclick: () => this.togglePause() }, 'Resume'),
         h('button', { class: 'btn', onclick: () => this.host.onRetry(stageId, { variant: host.variant, oaths: host.oaths }) }, 'Restart'),
-        h('button', { class: 'btn leave', onclick: () => this.confirmExit() }, icon(LEAVE_ICON), 'Leave')));
+        h('button', { class: 'btn leave', onclick: () => this.confirmExit() }, icon(LEAVE_ICON), 'Leave'),
+        // Upright, the top strip has no room for sound, so it lives here.
+        this.hud.psSound = h('button', { class: 'btn icon sound ps-sound', title: 'Sound (M)', onclick: () => this.toggleSound() })));
     this.shopEl = h('div', { class: 'shop hidden', role: 'dialog', 'aria-label': 'Shop' });
     this.hintEl = h('div', { class: 'plot-hint hidden', 'aria-hidden': 'true', text: 'Build here' });
     this.el = h('section', { class: `screen battle ${host.leftHandHud ? 'left-hand' : ''}` },
@@ -194,6 +198,9 @@ export class BattleScreen {
       H.band.append(H.hero, H.skills, H.callWrap);
       H.over.append(H.stats, H.ctrl);
     }
+    // Upright: Auto joins the skills, and the adapt and resist pills move onto the map.
+    if (tall) { H.skills.append(H.autoBtn); H.extras.append(H.resist, H.adaptGauge); }
+    else { H.ctrl.prepend(H.autoBtn); H.stats.append(H.resist, H.adaptGauge); }
   }
 
   /* ------------------------------------------------------------------ loop */
@@ -228,6 +235,8 @@ export class BattleScreen {
         case 'pulse': a.play('bell'); break;
         case 'arc': a.play('zap'); break;
         case 'root': a.play('root'); break;
+        case 'stamp': a.play('boom'); break;
+        case 'pane': a.play('bell'); break;
         case 'kill': a.play('coin'); break;
         case 'heroHit': a.play('hero'); break;
         case 'leak': a.play('leak'); this.leakBy.set(e.kind, (this.leakBy.get(e.kind) ?? 0) + e.lives); break;
@@ -243,7 +252,17 @@ export class BattleScreen {
         case 'terraform': a.play('boss'); this.showBanner('Ground shifts', e.label, 3.0, true); break;
         case 'gateShock': a.play('sunrise'); this.showBanner('Bastion bell!', 'The Keep shockwave stuns intruders at the gate.', 2.2); break;
         case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
-        case 'wave': a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2); break;
+        case 'wave': {
+          a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2);
+          // The first time a new foe walks in, name it and say what beats it.
+          const w = b.stage.waves[e.n - 1];
+          for (const g of w?.groups ?? []) {
+            if (!this.isNewFoe(g.kind) || ENEMIES[g.kind].traits?.boss) continue;
+            this.metFoes.add(g.kind);
+            this.showBanner(`New foe: ${ENEMIES[g.kind].name}`, ENEMIES[g.kind].answer, 3.6);
+          }
+          break;
+        }
         case 'adapt': this.showBanner('The Hollow adapts', `It hardens against ${ELEMENT_NAME[e.el] ?? e.el}: ${Math.round(e.resist * 100)}% less damage. Mix your towers.`, 3.4); break;
         case 'shift': this.showBanner(e.on ? e.label : 'The way is open again', e.on ? 'Foes on that road wait at the edge. Others go round.' : '', 2.6); break;
         case 'barrier': this.showBanner('The wreck gives way', 'The beach road is open. Foes will use it now.', 3); break;
@@ -294,13 +313,19 @@ export class BattleScreen {
       el.append(h('div', { class: 'nw-note nw-breach', text: `New breach opens (${nw.openingRoads.join(', ')})` }));
     }
     el.append(h('div', { class: 'nw-foes' }, ...nw.foes.map(f => {
-      const d = ENEMIES[f.kind];
-      return h('span', { class: `nw-foe ${d.flying ? 'fly' : ''}`, title: `${d.name}: ${d.blurb}` },
-        h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), d.flying ? icon(WING_ICON, 'svg-ico nw-wing') : null, h('span', { class: 'nw-name', text: d.name }));
+      const d = ENEMIES[f.kind], fresh = this.isNewFoe(f.kind);
+      return h('span', { class: `nw-foe ${d.flying ? 'fly' : ''} ${fresh ? 'new' : ''}`, title: `${d.name}: ${d.blurb} ${d.answer}` },
+        h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), d.flying ? icon(WING_ICON, 'svg-ico nw-wing') : null, h('span', { class: 'nw-name', text: d.name }),
+        fresh ? h('i', { class: 'nw-new', text: 'New' }) : null);
     })));
     if (adapts) el.append(h('div', { class: 'nw-note' },
       h('span', { class: 'nw-full', text: lean ? `The Hollow adapts this wave, against your ${ELEMENT_NAME[lean]}.` : 'The Hollow adapts this wave.' }),
       h('span', { class: 'nw-short', text: lean ? `Adapts: ${ELEMENT_NAME[lean]}` : 'Adapts' })));
+  }
+
+  /** A foe this stage brings in for the first time in the campaign, not yet met in this fight. */
+  private isNewFoe(kind: EnemyKind): boolean {
+    return FIRST_STAGE[kind] === this.battle.stage.id && !this.metFoes.has(kind);
   }
 
   private showBanner(title: string, sub: string, secs: number, now = false) {
@@ -412,7 +437,9 @@ export class BattleScreen {
     this.hud.colR = h('div', { class: 'col col-r' });
     this.hud.band = h('div', { class: 'band' });
     this.hud.over = h('div', { class: 'over' });
-    return h('div', { class: 'hud' }, this.hud.colL, this.hud.colR, this.hud.band, this.hud.over);
+    // Upright, the Hollow's adapt and resist pills sit on the map's foot, so the top strip never crowds.
+    this.hud.extras = h('div', { class: 'hud-extras' });
+    return h('div', { class: 'hud' }, this.hud.colL, this.hud.colR, this.hud.band, this.hud.over, this.hud.extras);
   }
 
   private updateHud(dt: number) {
@@ -663,11 +690,14 @@ export class BattleScreen {
   }
 
   private showSound() {
-    const on = this.host.audio.enabled, btn = this.hud.sound;
-    clear(btn); btn.append(icon(on ? SOUND_ICON : MUTE_ICON));
-    btn.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
-    btn.setAttribute('aria-pressed', String(!on));
-    btn.classList.toggle('off', !on);
+    const on = this.host.audio.enabled;
+    for (const btn of [this.hud.sound, this.hud.psSound]) {
+      if (!btn) continue;
+      clear(btn); btn.append(icon(on ? SOUND_ICON : MUTE_ICON));
+      btn.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
+      btn.setAttribute('aria-pressed', String(!on));
+      btn.classList.toggle('off', !on);
+    }
   }
 
   /** Top Pause Strip keeps the field unblurred and inspectable while paused. */

@@ -90,6 +90,19 @@ Set each tower to aim at the foe furthest along, the strongest, the most armored
 | Ash moth | Flies and cannot burn. Frost brings it down. |
 | Iron Shellback | Armored. Small hits barely scratch it. |
 
+The Ashen Rift (stages 11 to 20) brings six more, each asking for a different mix of towers:
+
+| Foe | Watch out | What beats it |
+|---|---|---|
+| Husk | A Grub cased in ash. Chip shots barely scratch it. | Forge cannon or Storm pylon |
+| Cinder Hound | Lunges at double speed every few seconds. | Frost bell or Root garden stop the lunge |
+| Glasshide | Three glass panes each stop one hit, then grow back. | Fast hits to break the panes, then big hits |
+| Veil Moth | Flies unseen. Plain tower sight does not show it. | A Beacon on its flight line |
+| Hollow Ram | Stamps and stuns towers near it. | Roots or frost to pin it, then big hits |
+| Herald | Foes near it shrug off your most used element. | Mix elements, or send Wren |
+
+The first time a new foe walks in, a banner names it and says what beats it, and the next-wave card marks it **New**.
+
 And four bosses, one at the end of each region: **The Mire King**, **The Tidewyrm**, **The Brass Colossus** and **The Hollow Queen**. Each one changes the map as its health falls. At half health the Mire King smashes an inner causeway to the Keep, the Tidewyrm drowns the north pass, and the Colossus breaks straight through the anvil. The Queen does it twice, at two thirds and at one third.
 
 ![Lighthouse Rock](docs/images/battle-lighthouse.jpg)
@@ -280,6 +293,8 @@ The November 2026 overhaul:
 - **Difficulty:** stages 1 to 6 are easy, then it rises. Losing your last life is always a loss, even if the last foe falls on the same tick.
 - **Settings:** tap to move, tap to aim, auto-call once the field is clear, a left-handed HUD.
 - **Easier to tap:** buttons, chips, tabs and levers take taps across 44 px. Dialogs keep keyboard focus inside. The lighthouse beam stops when motion is reduced. Pen input works.
+- **Phones held upright clear the Dynamic Island:** the battle bar starts below the island and fits a 375 point phone (lives, gold, wave, speed, pause), Auto sits with the skills, sound moves to the pause strip, and the band sits on the home bar. On the title screen Settings is a gear, so no button label gets cut. The campaign's links share a row of their own. On iPhone, held sideways, the HUD now clears the island too.
+- **Six new foes in the Ashen Rift:** Husks, Cinder Hounds, Glasshides, Veil Moths, Hollow Rams and Heralds replace plain Grubs and Skitters in stages 11 to 20, so each late stage asks for a new tower mix. The field guide and the stage card say what beats each foe.
 - **iOS fixes:** no stuck slow motion after a cancelled aim, taps near Wren reach the towers and plots around her, the left-handed HUD works in every layout, and a win counts even if you leave during the result screen.
 
 ## Design notes

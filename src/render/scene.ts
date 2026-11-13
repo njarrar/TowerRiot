@@ -335,6 +335,17 @@ export class Scene {
           this.fx.push({ k: 'ring', x: e.fromX, y: e.fromY, r: 0, max: 46, life: 0.55, c: '90,210,255' });
           this.fx.push({ k: 'ring', x: e.toX, y: e.toY, r: 0, max: 54, life: 0.65, c: '255,150,70' });
           break;
+        case 'stamp':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: e.r, life: 0.7, c: '120,230,190' });
+          this.shake = Math.max(this.shake, 5);
+          for (let i = 0; i < 10; i++) { const a = R() * TAU, v = 50 + R() * 90; this.parts.push({ x: e.x + Math.cos(a) * 20, y: e.y, vx: Math.cos(a) * v, vy: -40 - R() * 60, life: 0.7, max: 0.7, c: '#4a4238', s: 2.6, kind: 'chip', grav: 1 }); }
+          break;
+        case 'pane':
+          for (let i = 0; i < 9; i++) { const a = R() * TAU, v = 50 + R() * 80; this.parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5 - 60, life: 0.55, max: 0.55, c: '#e6f4fa', s: 2.2, kind: 'chip', grav: 1 }); }
+          break;
+        case 'lunge':
+          for (let i = 0; i < 4; i++) this.parts.push({ x: e.x + (R() - 0.5) * 14, y: e.y - 4, vx: (R() - 0.5) * 24, vy: -18, life: 0.6, max: 0.6, c: 'rgba(110,96,84,', s: 4, kind: 'smoke' });
+          break;
         case 'gateShock':
           this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 180, life: 0.85, c: '255,215,120' });
           this.shake = Math.max(this.shake, 6);
@@ -861,6 +872,13 @@ export class Scene {
       g.fillStyle = '#e8d4a6'; g.beginPath(); g.arc(t.x - 1, t.y - 26, 4.5, 0.6, TAU - 0.6); g.fill();
       g.restore();
     }
+    if (t.stunT > 0) {
+      // Stunned by a Ram's stamp: grit circles the tower's head until it shakes free.
+      const S2 = Scene.towerScale(t), hy = t.y - 120 * S2, a0 = t.stunT * 5;
+      g.save(); g.fillStyle = '#d8ccb4';
+      for (let k = 0; k < 3; k++) { const a = a0 + k * TAU / 3; g.beginPath(); g.arc(t.x + Math.cos(a) * 14, hy + Math.sin(a) * 4, 2.4, 0, TAU); g.fill(); }
+      g.restore();
+    }
   }
 
   private drawTowerEmit(b: Battle, t: Tower, T: number) {
@@ -922,7 +940,7 @@ export class Scene {
     // Wings beat: seen from the front, a flap reads as the wings folding in and opening out.
     const flap = (k: number) => { g.save(); g.translate(bx, by); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -by); };
     const mothY = by + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
-    paintFoe(g, f.kind, bx, by, pass, seed, face, legs, { chilled: f.slowT > 0 || f.freezeT > 0, T, flap, mothY });
+    paintFoe(g, f.kind, bx, by, pass, seed, face, legs, { chilled: f.slowT > 0 || f.freezeT > 0, T, flap, mothY, panes: f.panes });
     // The green glow in their seams: the one strong colour the Hollow owns.
     if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
     g.restore();
@@ -1118,6 +1136,8 @@ export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: numb
 
 export interface FoePaintOpts {
   chilled?: boolean;
+  /** Glasshide panes still standing (3 when left out). */
+  panes?: number;
   T?: number;
   flap?: (k: number) => void;
   mothY?: number;
@@ -1125,7 +1145,7 @@ export interface FoePaintOpts {
   alt?: number;
 }
 
-/** Paints any of the 16 Hollow enemy kinds with distinct silhouettes, crests, and readable role accents. */
+/** Paints any of the 22 Hollow enemy kinds with distinct silhouettes, crests, and readable role accents. */
 export function paintFoe(
   g: CanvasRenderingContext2D,
   kind: EnemyKind,
@@ -1292,6 +1312,130 @@ export function paintFoe(
       if (opts.flap) g.restore();
       if (pass === 'emit') {
         g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, mothY - 4, 24, '#ff7a3a', 0.45); g.restore();
+      }
+      break;
+    case 'husk':
+      L.grub(g, bx, by, 0.46, pass, seed + 11, face, legs);
+      // Overlapping plates of cracked ash on its back, green light in the cracks.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        for (const [px, pw] of [[-12, 10], [-2, 11], [8, 9]]) {
+          g.fillStyle = '#56524c'; g.beginPath(); g.ellipse(px, -13, pw, 6.5, -0.15, Math.PI, TAU); g.fill();
+          g.strokeStyle = '#2a2724'; g.lineWidth = 1; g.stroke();
+        }
+        g.strokeStyle = '#4fe0b0'; g.lineWidth = 1.1;
+        g.beginPath(); g.moveTo(-15, -15); g.lineTo(-10, -17); g.lineTo(-6, -14); g.moveTo(1, -18); g.lineTo(4, -15); g.lineTo(9, -17); g.stroke();
+        g.restore();
+      } else {
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx - dir * 4, by - 16, 12, '#4fe0b0', 0.3); g.restore();
+      }
+      break;
+    case 'hound':
+      // Long, low frame of charred stone on four legs; a green seam runs down its back.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        L.shadow(g, 0, 1, 22, 4, 0.5);
+        g.strokeStyle = '#1b1714'; g.lineWidth = 3; g.lineCap = 'round';
+        for (let k = 0; k < 4; k++) {
+          const lx = -14 + k * 9, sw = legs !== undefined ? Math.sin(legs * 2 + k * 1.7) * 4 : 0;
+          g.beginPath(); g.moveTo(lx, -9); g.lineTo(lx + sw, 0); g.stroke();
+        }
+        const bg = g.createLinearGradient(0, -20, 0, -6);
+        bg.addColorStop(0, '#4a4440'); bg.addColorStop(1, '#221e1b');
+        g.fillStyle = bg;
+        g.beginPath(); g.moveTo(-22, -10); g.quadraticCurveTo(-18, -20, -2, -19); g.quadraticCurveTo(14, -19, 20, -15);
+        g.lineTo(27, -14); g.lineTo(22, -8); g.quadraticCurveTo(0, -5, -22, -10); g.closePath(); g.fill();
+        g.strokeStyle = '#4fe0b0'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(-18, -16); g.quadraticCurveTo(0, -20, 18, -15); g.stroke();
+        g.restore();
+      } else {
+        g.save(); g.globalCompositeOperation = 'lighter';
+        L.glow(g, bx, by - 16, 16, '#4fe0b0', 0.3);
+        L.glow(g, bx - dir * 20, by - 12, 8, '#ff8a3a', 0.35 + 0.15 * Math.sin(T * 11));
+        g.restore();
+      }
+      break;
+    case 'glasshide': {
+      L.shellback(g, bx, by, 0.54, pass, seed + 8, face, 0, legs);
+      // Up to three tall glass panes on its back, like a shield; each one gone is one hit taken.
+      const n = opts.panes ?? 3;
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        for (let i = 0; i < 3; i++) {
+          const px = -12 + i * 11, ph = 26 - Math.abs(i - 1) * 5;
+          if (i < n) {
+            const pg = g.createLinearGradient(px, -20 - ph, px + 8, -18);
+            pg.addColorStop(0, 'rgba(226,240,246,.85)'); pg.addColorStop(1, 'rgba(150,186,200,.5)');
+            g.fillStyle = pg;
+            g.beginPath(); g.moveTo(px - 4, -18); g.lineTo(px - 2, -18 - ph); g.lineTo(px + 6, -16 - ph); g.lineTo(px + 5, -17); g.closePath(); g.fill();
+            g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px - 2, -18 - ph); g.lineTo(px + 6, -16 - ph); g.stroke();
+            g.strokeStyle = '#2b3236'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(px - 4, -18); g.lineTo(px - 2, -18 - ph); g.stroke();
+          } else {
+            g.fillStyle = 'rgba(170,200,210,.6)'; g.beginPath(); g.moveTo(px - 4, -18); g.lineTo(px - 2, -24); g.lineTo(px + 2, -21); g.lineTo(px + 5, -17); g.closePath(); g.fill();
+          }
+        }
+        g.restore();
+      } else if (n > 0) {
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 30, 18 + n * 4, '#cfeef6', 0.16 + n * 0.04); g.restore();
+      }
+      break;
+    }
+    case 'veilmoth':
+      // A moth in torn gauze: even when seen it reads as half there.
+      if (opts.flap) opts.flap(0.35);
+      g.save(); g.globalAlpha *= 0.75;
+      L.moth(g, bx, mothY, 0.38, pass, seed + 13, alt);
+      g.restore();
+      if (pass === 'base') {
+        g.save(); g.translate(bx, mothY);
+        g.strokeStyle = 'rgba(214,226,222,.55)'; g.lineWidth = 1;
+        for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) {
+          g.beginPath(); g.moveTo(sd * (6 + k * 6), -8 - k * 2); g.quadraticCurveTo(sd * (10 + k * 6), 2, sd * (8 + k * 7), 8 + k * 2); g.stroke();
+        }
+        g.restore();
+      }
+      if (opts.flap) g.restore();
+      if (pass === 'emit') {
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, mothY - 4, 20, '#7cf0c4', 0.3); g.restore();
+      }
+      break;
+    case 'ram':
+      L.shellback(g, bx, by, 0.95, pass, seed + 17, face, opts.chilled ? 1 : 0, legs);
+      // A bowed head of iron and stone with curled horns; a green crack across the brow, no face.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        const hg = g.createLinearGradient(30, -44, 58, -10);
+        hg.addColorStop(0, '#5c5a58'); hg.addColorStop(1, '#2a2826');
+        g.fillStyle = hg;
+        g.beginPath(); g.moveTo(26, -40); g.quadraticCurveTo(52, -46, 60, -26); g.quadraticCurveTo(62, -10, 50, -6); g.lineTo(30, -10); g.closePath(); g.fill();
+        g.strokeStyle = '#1e1c1a'; g.lineWidth = 5; g.lineCap = 'round';
+        g.beginPath(); g.arc(34, -38, 11, Math.PI * 1.1, Math.PI * 2.4); g.stroke();
+        g.strokeStyle = '#4fe0b0'; g.lineWidth = 1.6;
+        g.beginPath(); g.moveTo(40, -34); g.lineTo(46, -30); g.lineTo(51, -33); g.lineTo(57, -27); g.stroke();
+        g.restore();
+      } else {
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 48, by - 30, 22, '#4fe0b0', 0.42); g.restore();
+      }
+      break;
+    case 'herald':
+      // Tall and robed, hood empty; carries a lantern staff that burns green. Its aura shows as a faint ring.
+      if (pass === 'base') {
+        g.save(); g.translate(bx, by); g.scale(face, 1);
+        L.shadow(g, 0, 1, 16, 4, 0.55);
+        const rg = g.createLinearGradient(0, -52, 0, 0);
+        rg.addColorStop(0, '#3a3530'); rg.addColorStop(1, '#1c1916');
+        g.fillStyle = rg;
+        const sway = legs !== undefined ? Math.sin(legs) * 2 : 0;
+        g.beginPath(); g.moveTo(-6, -48); g.quadraticCurveTo(-14, -20, -15 + sway, 0); g.lineTo(13 + sway, 0); g.quadraticCurveTo(11, -22, 6, -48); g.closePath(); g.fill();
+        g.beginPath(); g.ellipse(0, -52, 8, 9, 0, 0, TAU); g.fill();
+        g.fillStyle = '#0b0a09'; g.beginPath(); g.ellipse(2, -51, 4.5, 6, 0, 0, TAU); g.fill();
+        g.strokeStyle = '#4fe0b0'; g.lineWidth = 1; g.beginPath(); g.moveTo(-2, -40); g.lineTo(0, -12); g.stroke();
+        g.strokeStyle = '#2a2016'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(14, -2); g.lineTo(16, -62); g.stroke();
+        g.fillStyle = '#1e1a16'; g.fillRect(12, -72, 8, 10);
+        g.fillStyle = '#7cf0c4'; g.fillRect(14, -70, 4, 6);
+        g.restore();
+      } else {
+        ringGlow(g, bx, by - 6, 120 / Y_SQUASH * 0.6, '110,235,190', 0.18 + 0.06 * Math.sin(T * 2.5));
+        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 16, by - 67, 20, '#7cf0c4', 0.6 + 0.1 * Math.sin(T * 7)); g.restore();
       }
       break;
     case 'mireking':
@@ -1462,8 +1606,9 @@ function gaitOf(f: Foe): GaitKind {
   if (f.def.flying) return 'fly';
   if (f.def.traits?.boss) return 'stomp';
   switch (f.kind) {
-    case 'skitter': return 'scuttle';
-    case 'shell': case 'sapper': case 'elite': case 'warden': return 'plod';
+    case 'skitter': case 'hound': return 'scuttle';
+    case 'shell': case 'sapper': case 'elite': case 'warden': case 'glasshide': case 'herald': return 'plod';
+    case 'ram': return 'stomp';
     default: return 'crawl';
   }
 }

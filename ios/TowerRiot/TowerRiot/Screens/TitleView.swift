@@ -29,13 +29,26 @@ struct TitleView: View {
                         .frame(maxWidth: 340, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 14)
-                    VStack(alignment: .leading, spacing: 10) {
-                        Button(c > 0 ? "Continue: stage \(next)" : "Play") { app.screen = .campaign(focus: nil) }
-                            .buttonStyle(PaperButton(kind: .primary, big: true))
-                        HStack(spacing: 10) {
-                            Button("Skill trees") { app.screen = .trees }.buttonStyle(PaperButton(big: true))
-                            Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(big: true))
-                            Button("Settings") { app.screen = .settings }.buttonStyle(PaperButton(big: true))
+                    if upright {
+                        // Too narrow for three buttons in a row: Continue takes the width, two share the next row,
+                        // and Settings is the gear in the corner.
+                        VStack(spacing: 10) {
+                            Button(c > 0 ? "Continue: stage \(next)" : "Play") { app.screen = .campaign(focus: nil) }
+                                .buttonStyle(PaperButton(kind: .primary, big: true, fill: true))
+                            HStack(spacing: 10) {
+                                Button("Skill trees") { app.screen = .trees }.buttonStyle(PaperButton(big: true, fill: true))
+                                Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(big: true, fill: true))
+                            }
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Button(c > 0 ? "Continue: stage \(next)" : "Play") { app.screen = .campaign(focus: nil) }
+                                .buttonStyle(PaperButton(kind: .primary, big: true))
+                            HStack(spacing: 10) {
+                                Button("Skill trees") { app.screen = .trees }.buttonStyle(PaperButton(big: true))
+                                Button("Field guide") { showGuide = true }.buttonStyle(PaperButton(big: true))
+                                Button("Settings") { app.screen = .settings }.buttonStyle(PaperButton(big: true))
+                            }
                         }
                     }
                     Text("\(app.save.totalStars) of 60 stars won\(altTotal > 0 ? " · \(altTotal) Variant B" : "")").font(Face.body(13)).foregroundStyle(Ink.inkFaint).padding(.top, 12)
@@ -50,7 +63,11 @@ struct TitleView: View {
                 Spacer(minLength: 0)
             }
             .frame(maxHeight: .infinity)
-            SoundCorner().padding(12)
+            HStack(spacing: 8) {
+                if upright { SettingsCorner() }
+                SoundCorner()
+            }
+            .padding(12)
         }
         .sheet(isPresented: $showGuide) { FieldGuideSheet() }
         .task { if scene == nil { await paintMap() } }
@@ -83,6 +100,21 @@ struct SoundCorner: View {
     var body: some View {
         let on = app.save.settings.sound
         IconButton(icon: on ? "sound" : "mute", label: on ? "Mute sound" : "Turn sound on", dim: !on) { app.toggleSound() }
+    }
+}
+
+/// The gear in a menu corner: opens Settings when the menu has no room for a Settings button.
+struct SettingsCorner: View {
+    @EnvironmentObject var app: AppModel
+    var body: some View {
+        Button { app.screen = .settings } label: {
+            Image(systemName: "gearshape").font(.system(size: 19, weight: .semibold)).foregroundStyle(Ink.ink)
+                .frame(width: 44, height: 44)
+                .background(RoundedRectangle(cornerRadius: 5).fill(Ink.paperGlass))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Ink.ruleStrong, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Settings")
     }
 }
 

@@ -105,6 +105,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .bar-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 16px; }
 .bar-top > :first-child { justify-self: start; }
 .bar-end { display: flex; gap: 8px; align-items: center; }
+.camp-links { display: flex; gap: 8px; }
+.title-gear { display: none; position: absolute; z-index: 2; top: calc(12px + var(--safe-t)); right: calc(64px + var(--safe-r)); background: var(--paper-glass); }
 /* Sound: a speaker in a corner of every menu and in the battle controls. Muted, it is struck through and dimmed. */
 .btn.icon.sound.off { color: var(--ink-dim); }
 .title-sound { position: absolute; z-index: 2; top: calc(12px + var(--safe-t)); right: calc(12px + var(--safe-r)); background: var(--paper-glass); }
@@ -249,6 +251,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .nw-foe { display: flex; align-items: center; gap: 3px; font-size: 0.82rem; white-space: nowrap; color: var(--ink); }
 .nw-foe img { width: 26px; height: 26px; margin: -4px 0; }
 .nw-foe b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.nw-new { font-style: normal; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 0 5px; margin-left: 2px; }
 .nw-foe .nw-name { color: var(--ink-dim); font-weight: 600; }
 .nw-wing { width: 14px; height: 14px; color: var(--ink-dim); }
 .nw-note { font-size: 0.74rem; font-weight: 700; color: var(--hollow); }
@@ -580,7 +583,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 /* Phone held upright: a strip on top (lives, gold, wave, controls), the map in the middle, and a deep band below
    with Wren and the call button on one row and the four skills under them. The map slides sideways under a drag. */
 .battle[data-layout='tall'] .hud .over { left: 0; top: 0; width: 100%; height: var(--wy); background: var(--paper); border-bottom: 1px solid var(--rule); }
-.battle[data-layout='tall'] .hud .over .hud-stats { left: calc(8px + var(--safe-l)); right: 150px; top: auto; bottom: 8px; flex-wrap: nowrap; overflow: hidden; }
+.battle[data-layout='tall'] .hud .over .hud-stats { left: calc(8px + var(--safe-l)); right: calc(112px + var(--safe-r)); top: auto; bottom: 8px; flex-wrap: nowrap; overflow: hidden; }
 .battle[data-layout='tall'] .hud .over .hud-ctrl { top: auto; bottom: 7px; }
 .battle[data-layout='tall'] .stat { padding: 3px 8px 3px 5px; font-size: 0.9rem; }
 .battle[data-layout='tall'] .hud .band { flex-wrap: wrap; align-content: center; justify-content: space-between; gap: 10px 10px; padding-top: 10px; }
@@ -589,6 +592,16 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .battle[data-layout='tall'] .band .hud-call { order: 2; flex: 0 1 auto; margin-left: 0; flex-direction: column; align-items: stretch; gap: 6px; max-width: 54%; }
 .battle[data-layout='tall'] .band .skills { order: 3; flex: 1 1 100%; }
 .battle[data-layout='tall'] .band .skill { height: 60px; }
+/* Upright: speed and pause stay on the strip; Auto joins the skills as a fifth tile, sound moves to the pause strip,
+   and the Hollow's adapt and resist pills sit on the map's foot. */
+.battle[data-layout='tall'] .hud-ctrl .sound { display: none; }
+.battle[data-layout='tall'] .band .skills { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.battle[data-layout='tall'] .skills .auto-wave { height: 60px; width: auto; min-width: 0; }
+.hud-extras { display: none; }
+.battle[data-layout='tall'] .hud-extras { display: flex; gap: 6px; align-items: center; position: absolute; left: calc(8px + var(--safe-l)); top: calc(var(--wy) + var(--wh) - 38px); pointer-events: none; }
+.battle[data-layout='tall'] .hud-extras > * { background: var(--paper-glass); }
+.pause-strip .ps-sound { display: none; }
+.battle[data-layout='tall'] .pause-strip .ps-sound { display: inline-flex; }
 .battle[data-layout='tall'] .call { text-align: center; padding: 8px 12px; }
 .battle[data-layout='tall'] .banner { max-width: calc(100vw - 24px); top: calc(var(--wy) + 8px); }
 .battle[data-layout='tall'] .banner.low { top: auto; }
@@ -618,4 +631,16 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
   .bar-top h2 { grid-row: 2; grid-column: 1 / -1; }
   .bar-top .bar-end { justify-self: end; }
   .tree { grid-template-columns: minmax(0, 1fr); }
+  /* Campaign: Back, title and sound on one row; the two links share the row under it. */
+  .campaign .bar-top { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .campaign .bar-top h2 { grid-row: 1; grid-column: 2; }
+  .campaign .bar-end { display: contents; }
+  .campaign .bar-end > .sound { grid-row: 1; grid-column: 3; }
+  .campaign .camp-links { grid-row: 2; grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
+  .campaign .camp-links .btn { min-width: 0; padding-inline: 8px; }
+  /* Title: Continue takes the width, two buttons share the next row, and Settings becomes the gear. */
+  .title-gear { display: inline-flex; align-items: center; justify-content: center; }
+  .title-btns { display: grid; grid-template-columns: 1fr 1fr; width: 100%; justify-self: stretch; }
+  .title-btns .btn.primary { grid-column: 1 / -1; min-width: 0; }
+  .title-btns .title-settings { display: none; }
 }

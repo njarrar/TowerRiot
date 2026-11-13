@@ -33,7 +33,8 @@ enum Bot {
             for (j, q) in samples.enumerated() where ell(q.x - p.x, q.y - p.y) < 210 { seen[j] += 1 }
         }
         let st = b.stage
-        let shades = st.waves.contains { $0.groups.contains { $0.kind == .shade } }
+        let shades = st.waves.contains { $0.groups.contains { data.enemy($0.kind).traits?.stealth == true } }
+        let control = st.waves.contains { $0.groups.contains { let tr = data.enemy($0.kind).traits; return tr?.lunge != nil || tr?.stamp != nil } }
         var air = 0, all = 0
         for w in st.waves { for g in w.groups { all += g.n; if data.enemy(g.kind).isFlying { air += g.n } } }
         let airy = Double(air) / Double(max(1, all)) > 0.18
@@ -42,7 +43,7 @@ enum Bot {
             : shades
             ? [.watch, .cannon, .beacon, .bell, .pylon, .watch, .cannon, .roots, .pylon, .watch, .cannon, .pylon]
             : [.watch, .cannon, .bell, .pylon, .watch, .cannon, .roots, .beacon, .pylon, .watch, .cannon, .pylon]
-        let rota = base.filter { st.towers.contains($0) }
+        let rota = ((control ? [.watch, .bell] : []) + base).filter { st.towers.contains($0) }
         var built = 0
         b.callWave()
         var t = 0.0

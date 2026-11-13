@@ -12,7 +12,7 @@ import {
 } from '../game/save';
 import { Audio } from '../audio/sfx';
 import { h, clear, icon, trapFocus } from './dom';
-import { foeIcon, heroIcon, SKILL_ICON, towerIcon, LOCK_ICON, SOUND_ICON, MUTE_ICON } from './icons';
+import { foeIcon, heroIcon, SKILL_ICON, towerIcon, LOCK_ICON, SOUND_ICON, MUTE_ICON, GEAR_ICON } from './icons';
 import { BattleScreen } from './battle';
 import { Battle, starLives } from '../game/sim';
 import { Scene, W as MAP_W, H as MAP_H } from '../render/scene';
@@ -103,7 +103,9 @@ export class App {
     const c = cleared(this.save), next = Math.min(20, c + 1);
     const map = h('canvas', { class: 'title-map', 'aria-hidden': 'true' });
     const altS = totalAltStars(this.save);
-    const el = h('section', { class: 'screen title' }, map, this.soundButton('title-sound'),
+    // On a narrow phone Settings leaves the button rows and becomes the gear beside the sound button.
+    const gear = h('button', { class: 'btn icon title-gear', 'aria-label': 'Settings', title: 'Settings', onclick: () => this.settings() }, icon(GEAR_ICON));
+    const el = h('section', { class: 'screen title' }, map, this.soundButton('title-sound'), gear,
       h('div', { class: 'title-inner' },
         h('div', { class: 'title-panel' },
           h('h1', { class: 'logo', text: 'TowerRiot' }),
@@ -112,7 +114,7 @@ export class App {
             h('button', { class: 'btn primary big', onclick: () => this.campaign() }, c > 0 ? `Continue: stage ${next}` : 'Play'),
             h('button', { class: 'btn big', onclick: () => this.trees() }, 'Skill trees'),
             h('button', { class: 'btn big', onclick: () => this.openGuide() }, 'Field guide'),
-            h('button', { class: 'btn big', onclick: () => this.settings() }, 'Settings')),
+            h('button', { class: 'btn big title-settings', onclick: () => this.settings() }, 'Settings')),
           h('p', { class: 'fine', text: `${totalStars(this.save)} of 60 stars won${altS > 0 ? ` · ${altS} Variant B stars` : ''}` }))));
     this.mount(el);
     requestAnimationFrame(() => setTimeout(() => { if (map.isConnected) this.paintTitleMap(map, next); }, 30));
@@ -188,7 +190,7 @@ export class App {
         h('dl', {},
           h('dt', { text: 'New foe' }), h('dd', { class: 'foe-dd' },
             newFoe ? h('img', { class: 'mini', src: foeIcon(newFoe.kind, 36), alt: newFoe.name }) : null,
-            h('span', { text: newFoe ? `${newFoe.name}: ${newFoe.blurb}` : raw.newFoe })),
+            h('span', { text: newFoe ? `${newFoe.name}: ${newFoe.blurb} Answer: ${newFoe.answer}` : raw.newFoe })),
           h('dt', { text: 'Unlocks' }), h('dd', { text: raw.unlocks }),
           h('dt', { text: 'Towers' }), h('dd', {}, ...raw.towers.map(k => h('img', { class: 'mini', src: towerIcon(k, 40), alt: TOWERS[k].name, title: TOWERS[k].name }))),
           h('dt', { text: 'Waves' }), h('dd', { text: `${raw.waves.length}, starting gold ${raw.startGold}` }),
@@ -258,8 +260,9 @@ export class App {
         h('button', { class: 'btn', onclick: () => this.title() }, 'Back'),
         h('h2', { text: 'The campaign' }),
         h('div', { class: 'bar-end' },
-          h('button', { class: 'btn', onclick: () => this.openGuide(() => this.campaign(focus)) }, 'Field guide'),
-          h('button', { class: 'btn', onclick: () => this.trees() }, `Skill trees: ${Math.max(0, e.free)} Embers`),
+          h('div', { class: 'camp-links' },
+            h('button', { class: 'btn', onclick: () => this.openGuide(() => this.campaign(focus)) }, 'Field guide'),
+            h('button', { class: 'btn', onclick: () => this.trees() }, `Skill trees: ${Math.max(0, e.free)} Embers`)),
           this.soundButton())),
       relicShelf,
       h('div', { class: 'campaign-body' }, regions, card)));
@@ -300,7 +303,8 @@ export class App {
           const tags = [f.flying ? 'Flying' : 'Ground', f.traits?.boss ? 'Boss' : null, f.traits?.armor ? `Armor ${f.traits.armor}` : null, f.traits?.stealth ? 'Stealth' : null, f.traits?.heal ? 'Healer' : null].filter(Boolean).join(' · ');
           list.append(h('div', { class: 'guide-card' },
             h('img', { src: foeIcon(f.kind as EnemyKind, 60), alt: f.name }),
-            h('div', {}, h('b', { text: f.name }), h('small', { text: `${tags} · ${f.hp} HP · ${f.gold}g · ${f.leak} life` }), h('p', { text: f.blurb }))));
+            h('div', {}, h('b', { text: f.name }), h('small', { text: `${tags} · ${f.hp} HP · ${f.gold}g · ${f.leak} life` }), h('p', { text: f.blurb }),
+              h('p', { class: 'answer' }, h('b', { text: 'Answer: ' }), f.answer))));
         }
       } else if (this.guideTab === 'towers') {
         for (const k of TOWER_ORDER) {
