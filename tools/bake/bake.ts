@@ -85,7 +85,7 @@ function towerPics(out: (Pic | null)[]) {
 type FoeDraw = (g: G, pass: Pass, legs: number | undefined) => void;
 const SEED = 44;
 /** Each kind as the web scene paints it (see paintFoe), facing right, at its art scale. */
-const FOES: Partial<Record<EnemyKind | 'colossusf' | 'queen', { fn: FoeDraw; walk: boolean; s: number }>> = {
+const FOES: Partial<Record<EnemyKind | 'colossusf' | 'glasshide0' | 'queen', { fn: FoeDraw; walk: boolean; s: number }>> = {
   grub: { fn: (g, p, l) => paintFoe(g, 'grub', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
   skitter: { fn: (g, p, l) => paintFoe(g, 'skitter', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
   mender: { fn: (g, p, l) => paintFoe(g, 'mender', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
@@ -96,8 +96,15 @@ const FOES: Partial<Record<EnemyKind | 'colossusf' | 'queen', { fn: FoeDraw; wal
   sapper: { fn: (g, p, l) => paintFoe(g, 'sapper', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
   elite: { fn: (g, p, l) => paintFoe(g, 'elite', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
   warden: { fn: (g, p, l) => paintFoe(g, 'warden', 0, 0, p, 66, 1, l), walk: true, s: 2 },
+  husk: { fn: (g, p, l) => paintFoe(g, 'husk', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  hound: { fn: (g, p, l) => paintFoe(g, 'hound', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  glasshide: { fn: (g, p, l) => paintFoe(g, 'glasshide', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  glasshide0: { fn: (g, p, l) => paintFoe(g, 'glasshide', 0, 0, p, SEED, 1, l, { panes: 0 }), walk: true, s: 2 },
+  ram: { fn: (g, p, l) => paintFoe(g, 'ram', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
+  herald: { fn: (g, p, l) => paintFoe(g, 'herald', 0, 0, p, SEED, 1, l), walk: true, s: 2 },
   moth: { fn: (g, p) => paintFoe(g, 'moth', 0, 0, p, SEED, 1), walk: false, s: 2 },
   ashmoth: { fn: (g, p) => paintFoe(g, 'ashmoth', 0, 0, p, SEED, 1), walk: false, s: 2 },
+  veilmoth: { fn: (g, p) => paintFoe(g, 'veilmoth', 0, 0, p, SEED, 1), walk: false, s: 2 },
   mireking: { fn: (g, p, l) => paintFoe(g, 'mireking', 0, 0, p, 41, 1, l), walk: true, s: 1.5 },
   tidewyrm: { fn: (g, p, l) => paintFoe(g, 'tidewyrm', 0, 0, p, 47, 1, l), walk: true, s: 1.5 },
   colossus: { fn: (g, p, l) => paintFoe(g, 'colossus', 0, 0, p, 61, 1, l, { chilled: false }), walk: true, s: 1.5 },
@@ -221,7 +228,7 @@ async function grounds() {
 async function icons() {
   const url = (src: string) => new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
   for (const k of TOWER_ORDER as TowerKind[]) await window.save(`icon-tower-${k}.png`, towerIcon(k, 128));
-  for (const k of Object.keys(FOES)) if (k !== 'colossusf') await window.save(`icon-foe-${k}.png`, foeIcon(k as EnemyKind, 96));
+  for (const k of Object.keys(FOES)) if (k !== 'colossusf' && k !== 'glasshide0') await window.save(`icon-foe-${k}.png`, foeIcon(k as EnemyKind, 96));
   await window.save('icon-hero.png', heroIcon(64));
   // Line icons, black on clear: the app tints them.
   const line: Record<string, string> = {

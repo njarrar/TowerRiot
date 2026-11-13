@@ -251,6 +251,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .nw-foe { display: flex; align-items: center; gap: 3px; font-size: 0.82rem; white-space: nowrap; color: var(--ink); }
 .nw-foe img { width: 26px; height: 26px; margin: -4px 0; }
 .nw-foe b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.nw-new { font-style: normal; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 0 5px; margin-left: 2px; }
 .nw-foe .nw-name { color: var(--ink-dim); font-weight: 600; }
 .nw-wing { width: 14px; height: 14px; color: var(--ink-dim); }
 .nw-note { font-size: 0.74rem; font-weight: 700; color: var(--hollow); }

@@ -1,4 +1,5 @@
 import type { Vec } from '../path';
+import type { EnemyKind } from './enemies';
 import type { TowerKind } from './towers';
 import { waves, type WaveDef } from './waves';
 
@@ -717,7 +718,7 @@ const s11: StageDef = {
   id: 11, name: 'Conveyor Hall', region: 2,
   twist: 'Three vertical drop-shafts with fast belts. Pull the Foundry Brake to slow the center belt, or clear jammed cranes.',
   newFoe: 'Mender', unlocks: 'Shop item: Cleaving spear',
-  startGold: 520, lives: 20, towers: ALL, hpMul: 1.95,
+  startGold: 520, lives: 20, towers: ALL, hpMul: 2.2,
   roads: [{ id: 'main', spawn: 'w', w: 50, ctrl: [[355, -40], [355, 220], [355, 550], [495, 610], [640, 550], [640, 350], [640, 155], [782, 110], [925, 155], [925, 380], [925, 620]] }],
   waters: [],
   plots: [
@@ -738,12 +739,12 @@ const s11: StageDef = {
     reverseRoads: ['main'], heroStart: [355, 280], portalOpenAtWave: 2,
   },
   waves: waves([
-    ['Grubs down the drop-shaft', '18 grub /0.6'],
-    ['Menders enter the forge', '3 mender /4, 14 grub +1 /0.7'],
+    ['Husks down the drop-shaft', '13 husk /0.72'],
+    ['Menders enter the forge', '3 mender /4, 10 husk +1 /0.84'],
     ['Skitters at speed', '30 skitter /0.3'],
     ['Iron shells', '8 shell /1.8'],
     ['Overhead chute active!', '10 splitter /1'],
-    ['Wardens on the line', '2 warden /6, 3 mender +2 /4, 16 grub +3 /0.6'],
+    ['Wardens on the line', '2 warden /6, 3 mender +2 /4, 11 husk +3 /0.72'],
     ['Moths in the rafters', '24 moth /0.45'],
     ['Shift change', '10 shell /1.4, 6 mender +3 /3, 30 skitter +10 /0.25'],
     ['Full output', '4 warden /5, 12 splitter +2 /1, 20 moth +8 /0.5, 6 mender +12 /3'],
@@ -754,7 +755,7 @@ const s12: StageDef = {
   id: 12, name: 'Gear Garden', region: 2,
   twist: 'Dual interlocking cogwheels with A/B gears. Flip the Pinion Clutch at center to redirect spurs once Wave 5 unlocks.',
   newFoe: 'Burrower', unlocks: 'Bulwark tree',
-  startGold: 560, lives: 20, towers: ALL, hpMul: 1.76,
+  startGold: 560, lives: 20, towers: ALL, hpMul: 1.45,
   roads: [
     { id: 'main', spawn: 'w', w: 48, ctrl: [[-40, 370], [180, 375], [225, 535], [410, 600], [590, 520], [640, 360], [690, 200], [870, 120], [1055, 185], [1095, 355], [1035, 525], [1165, 580]] },
     { id: 'top',  spawn: 'n', w: 44, ctrl: [[640, -40], [640, 130], [640, 360], [690, 520], [870, 590], [1035, 525], [1165, 580]] },
@@ -778,14 +779,14 @@ const s12: StageDef = {
     swapGears: true, openAtWave: { spur: 2 },
   },
   waves: waves([
-    ['The garden wakes', '16 grub @w /0.7'],
-    ['Burrowers dig in', '4 burrower @w /2, 10 grub @n /0.8'],
+    ['The garden wakes', '11 husk @w /0.84'],
+    ['Burrowers dig in', '4 burrower @w /2, 7 husk @n /0.96'],
     ['Two fronts', '20 skitter @w /0.35, 10 skitter @n /0.5'],
     ['Shells and menders', '6 shell @w /2, 2 mender @n /5'],
     ['West spur engages!', '8 burrower @w /1.4, 5 burrower @n /1.8'],
     ['Splitters', '10 splitter @w /1.1, 4 splitter @n /2'],
     ['Moths', '16 moth @w /0.5, 10 moth @n /0.6'],
-    ['Wardens', '2 warden @w /6, 1 warden @n, 16 grub @w +2 /0.5'],
+    ['Wardens', '2 warden @w /6, 1 warden @n, 11 husk @w +2 /0.6'],
     ['Iron and earth', '10 shell @w /1.4, 7 burrower @n /1.2, 4 mender @w +6 /3'],
     ['The garden turns', '3 warden @w /5, 6 burrower @n /1.4, 11 splitter @w +6 /1, 14 moth @n +10 /0.6'],
   ]),
@@ -795,7 +796,7 @@ const s13: StageDef = {
   id: 13, name: 'Steam Vents', region: 2,
   twist: 'Two central rifts split outward to opposing West and East gates! Stand Wren on steam vents for 2x blast tempo.',
   newFoe: 'Ash moth', unlocks: 'Shop item: Brass lantern',
-  startGold: 580, lives: 20, towers: ALL, hpMul: 1.18,
+  startGold: 580, lives: 20, towers: ALL, hpMul: 1.1,
   roads: [
     { id: 'upper', spawn: 'a', w: 48, ctrl: [[590, -40], [585, 160], [390, 170], [315, 290], [515, 385], [375, 520], [190, 500], [115, 365]] },
     { id: 'lower', spawn: 'b', w: 48, ctrl: [[690, 760], [695, 560], [890, 550], [965, 430], [765, 335], [905, 200], [1090, 220], [1165, 355]] },
@@ -816,7 +817,7 @@ const s13: StageDef = {
     openAtWave: { pipe: 2 }, adaptEvery: 2,
   },
   waves: waves([
-    ['Steam rising', '12 grub @a /0.8, 12 grub @b /0.8 +1'],
+    ['Steam rising', '8 husk @a /0.96, 8 husk @b /0.96 +1'],
     ['Ash moths', '8 ashmoth @a /0.9, 8 ashmoth @b /0.9 +2'],
     ['Burrowers', '6 burrower @a /1.4, 6 burrower @b /1.4 +1'],
     ['Shells', '5 shell @a /2, 5 shell @b /2 +1'],
@@ -832,7 +833,7 @@ const s14: StageDef = {
   id: 14, name: 'Assembly Line', region: 2,
   twist: 'Tri-bay diagonal lanes feed the NW Crucible. Use rail switches to force long loops; clear cranes & brace for Wave 5 drop chutes.',
   newFoe: 'Iron Shellback', unlocks: 'Shop item: Spear of dawn',
-  startGold: 620, lives: 20, towers: ALL, hpMul: 0.88,
+  startGold: 620, lives: 20, towers: ALL, hpMul: 0.8,
   roads: [
     { id: 'top',      spawn: 't', w: 46, ctrl: [[980, -40], [960, 130], [740, 175], [540, 260], [330, 225], [150, 175]] },
     { id: 'mid',      spawn: 'm', w: 46, ctrl: [[1320, 360], [1020, 360], [740, 360], [540, 260], [330, 225], [150, 175]] },
@@ -860,11 +861,11 @@ const s14: StageDef = {
     reverseRoads: ['top', 'mid', 'mid_loop', 'bot'], heroStart: [760, 260],
   },
   waves: waves([
-    ['Three bays start', '8 grub @t, 8 grub @m +1, 8 grub @b +2'],
+    ['Three bays start', '6 husk @t, 6 husk @m +1, 6 husk @b +2'],
     ['Iron off the line', '2 elite @m /4, 10 skitter @t /0.5, 10 skitter @b /0.5'],
     ['Burrowers', '6 burrower @t /1.4, 6 burrower @b /1.4 +1'],
     ['Ash moths', '12 ashmoth @m /0.6, 6 elite @m +4 /2.5'],
-    ['Drop chute opens!', '3 mender @t /4, 3 mender @b /4, 20 grub @m /0.5'],
+    ['Drop chute opens!', '3 mender @t /4, 3 mender @b /4, 14 husk @m /0.6'],
     ['Splitters', '8 splitter @t /1.1, 8 splitter @b /1.1'],
     ['Heavy line', '8 elite @m /2, 2 warden @t /6'],
     ['Full shift', '6 elite @t /2, 6 elite @b /2, 20 ashmoth @m +4 /0.5, 4 mender @m +8 /3'],
@@ -901,7 +902,7 @@ const s15: StageDef = {
     night: true, openAtWave: { mid_cut: 3 },
   },
   waves: waves([
-    ['The anvil perimeter', '20 grub /0.5'],
+    ['The anvil perimeter', '14 husk /0.6'],
     ['Iron Shellbacks', '6 elite /2'],
     ['Ash moths', '20 ashmoth /0.5'],
     ['Burrowers and menders', '10 burrower /1, 4 mender +2 /3'],
@@ -916,8 +917,8 @@ const s15: StageDef = {
 const s16: StageDef = {
   id: 16, name: 'Ember Pass', region: 3, lava: true,
   twist: 'Diagonal caldera bridges cycling under magma shifts. Seal the center Obsidian Gate or anticipate the Wave 6 ash portal.',
-  newFoe: 'Burrower swarm', unlocks: 'Shop item: Ember spear',
-  startGold: 960, lives: 20, towers: ALL, hpMul: 0.9,
+  newFoe: 'Cinder Hound', unlocks: 'Shop item: Ember spear',
+  startGold: 960, lives: 20, towers: ALL, hpMul: 1.0,
   roads: [
     { id: 'top', spawn: 'w', w: 46, ctrl: [[190, 760], [175, 520], [160, 290], [380, 130], [660, 130], [950, 165], [1125, 175]] },
     { id: 'mid', spawn: 'w', w: 46, ctrl: [[190, 760], [240, 570], [450, 490], [640, 360], [830, 230], [1000, 195], [1125, 175]] },
@@ -946,23 +947,23 @@ const s16: StageDef = {
     night: true, reverseRoads: ['top', 'mid', 'bot'], heroStart: [420, 520],
   },
   waves: waves([
-    ['Ash on the wind', '20 grub /0.5'],
-    ['Burrower swarm', '14 burrower /0.7'],
-    ['Ash moths', '20 ashmoth /0.45'],
-    ['Iron', '8 elite /1.8'],
-    ['Splitters', '14 splitter /0.8'],
-    ['Ash portal tears open!', '3 warden /5, 4 mender +2 /3, 20 grub +3 /0.4'],
-    ['Shades through the smoke', '24 shade /0.5'],
-    ['Deep burrow', '24 burrower /0.5, 6 elite +6 /2'],
-    ['The pass burns', '4 warden /4, 12 elite +2 /1.4, 24 ashmoth +8 /0.4, 16 burrower +14 /0.6'],
+    ['The pass smokes', '10 husk /0.8'],
+    ['Cinder Hounds', '6 hound /1.2'],
+    ['Burrowers', '8 burrower /0.9'],
+    ['Ash moths', '18 ashmoth /0.5'],
+    ['Hounds and iron', '10 hound /0.7, 6 elite +3 /2'],
+    ['Ash portal tears open!', '3 warden /5, 4 mender +2 /3, 10 hound +3 /0.55'],
+    ['Shades through the smoke', '20 shade /0.5, 6 hound +6 /0.8'],
+    ['Deep burrow', '12 burrower /0.7, 6 elite +6 /2'],
+    ['The pass burns', '4 warden /4, 9 elite +2 /1.6, 12 hound +8 /0.5, 10 burrower +14 /0.7'],
   ]),
 };
 
 const s17: StageDef = {
   id: 17, name: 'Avalanche Ridge', region: 3, lava: true,
   twist: 'NE→W→SE horseshoe around a collapsing high ridge. Wave 4 cracks a steep scree slide while avalanches bury plots.',
-  newFoe: 'Iron swarm', unlocks: 'Shop item: Dawn mantle',
-  startGold: 720, lives: 20, towers: ALL, hpMul: 1.63,
+  newFoe: 'Glasshide', unlocks: 'Shop item: Dawn mantle',
+  startGold: 720, lives: 20, towers: ALL, hpMul: 1.0,
   high: [[345, 210], [1280, 210], [1280, 505], [345, 505], [260, 360], [345, 210]],
   roads: [
     { id: 'main',  spawn: 'w', w: 50, ctrl: [[1320, 125], [960, 125], [560, 120], [270, 140], [160, 265], [155, 450], [280, 565], [580, 580], [920, 580], [1165, 585]] },
@@ -987,24 +988,24 @@ const s17: StageDef = {
     reverseRoads: ['main', 'scree'], heroStart: [640, 220],
   },
   waves: waves([
-    ['Onto the ridge', '24 grub /0.45'],
+    ['Onto the ridge', '16 husk /0.6'],
     ['Iron swarm', '10 elite /1.4'],
-    ['Ash moths', '24 ashmoth /0.4'],
-    ['Rockslide scree opens!', '20 burrower /0.6'],
+    ['Ash moths', '20 ashmoth /0.45'],
+    ['Rockslide scree opens!', '4 glasshide /3, 12 burrower +4 /0.7'],
     ['Splitters', '16 splitter /0.7'],
-    ['Wardens', '4 warden /4, 24 skitter +2 /0.25'],
+    ['Glass behind the shield', '3 warden /4, 6 glasshide +2 /2.4, 16 hound +6 /0.5'],
     ['Lava tube erupts!', '6 mender /2, 12 elite +2 /1.2'],
-    ['Shades in the cinder', '30 shade /0.4'],
+    ['Shades in the cinder', '24 shade /0.45, 6 glasshide +4 /2.4'],
     ['Rockfall', '16 elite /1, 20 burrower +6 /0.5'],
-    ['The ridge breaks', '5 warden /3, 20 splitter +3 /0.6, 30 ashmoth +10 /0.35, 8 mender +16 /2'],
+    ['The ridge breaks', '4 warden /3, 8 glasshide +2 /2, 18 hound +8 /0.45, 24 ashmoth +12 /0.4, 6 mender +16 /2'],
   ]),
 };
 
 const s18: StageDef = {
   id: 18, name: 'Mirror Lake', region: 3, lava: true,
   twist: 'A centre rift feeds two opposite spirals, to a north-east and a south-west Keep. The Rift Divert sends the whole horde down one spiral at a time, and Wave 5 cools a third bridge.',
-  newFoe: 'Everything doubled', unlocks: 'Shop item: Second dawn',
-  startGold: 760, lives: 20, towers: ALL, hpMul: 1.32,
+  newFoe: 'Veil Moth', unlocks: 'Shop item: Second dawn',
+  startGold: 760, lives: 20, towers: ALL, hpMul: 1.0,
   roads: [
     { id: 'north', spawn: 'w', w: 48, ctrl: [[640, 360], [740, 360], [820, 480], [990, 515], [1065, 365], [960, 215], [1155, 175]] },
     { id: 'south', spawn: 'w', w: 48, ctrl: [[640, 360], [540, 360], [460, 240], [290, 205], [215, 355], [320, 505], [125, 545]] },
@@ -1031,23 +1032,23 @@ const s18: StageDef = {
     reverseRoads: ['north', 'south', 'cross'],
   },
   waves: waves([
-    ['Center rift opens', '24 grub /0.4'],
+    ['Center rift opens', '16 husk /0.55'],
     ['Twins', '10 splitter /0.9'],
     ['Iron', '12 elite /1.2'],
-    ['Ash moths', '18 ashmoth /0.4, 12 grub +2 /0.5'],
-    ['North lake cools into a bridge!', '14 burrower /0.7, 10 grub +2 /0.5'],
-    ['Wardens', '4 warden /3, 6 mender +2 /2'],
-    ['Reflection portal wakes!', '24 shade /0.45, 8 elite +4 /1.5'],
-    ['Mirror storm', '16 elite /0.9, 30 skitter +2 /0.2'],
-    ['Double image', '4 warden /4, 14 splitter +3 /0.6, 20 ashmoth +10 /0.4, 6 mender +14 /2.5'],
+    ['Veil Moths', '6 veilmoth /1.2, 10 husk +2 /0.6'],
+    ['North lake cools into a bridge!', '14 burrower /0.7, 6 glasshide +2 /2.4'],
+    ['Wardens', '4 warden /3, 6 mender +2 /2, 12 hound +4 /0.6'],
+    ['Reflection portal wakes!', '18 shade /0.5, 10 veilmoth +3 /0.7, 6 elite +6 /1.5'],
+    ['Mirror storm', '12 elite /1, 20 hound +2 /0.35'],
+    ['Double image', '4 warden /4, 8 glasshide +2 /2, 12 veilmoth +8 /0.6, 16 ashmoth +12 /0.45, 6 mender +16 /2.5'],
   ]),
 };
 
 const s19: StageDef = {
   id: 19, name: 'The Hollow Gate', region: 3, lava: true,
   twist: 'Four-corner radial crucible converging on the Center Keep. Rifts awaken wave by wave while the Hollow adapts every wave.',
-  newFoe: 'All of them', unlocks: 'Capstones in every tree',
-  startGold: 1120, lives: 20, towers: ALL, adaptEvery: 1, hpMul: 0.92,
+  newFoe: 'Hollow Ram', unlocks: 'Capstones in every tree',
+  startGold: 1120, lives: 20, towers: ALL, adaptEvery: 1, hpMul: 0.7,
   roads: [
     { id: 'nw', spawn: 'nw', w: 44, ctrl: [[-40, 140], [210, 145], [350, 255], [500, 285], [640, 360]] },
     { id: 's',  spawn: 's',  w: 44, ctrl: [[1320, 580], [1070, 575], [930, 465], [780, 435], [640, 360]] },
@@ -1070,16 +1071,16 @@ const s19: StageDef = {
     openAtWave: { n: 1, sw: 1 },
   },
   waves: waves([
-    ['Two corners breach', '14 grub @nw, 14 grub @s +1'],
-    ['Iron on the ramps', '6 elite @nw /2, 10 skitter @s /0.4'],
-    ['North-East corner tears open!', '10 shade @n /0.8, 6 burrower @nw /1.2'],
-    ['Ash and splitters', '16 ashmoth @nw /0.5, 10 splitter @n /1'],
-    ['South-West breaches: all 4 active!', '1 warden @nw, 1 warden @sw, 1 warden @n, 1 warden @s, 24 grub @nw +4 /0.3'],
-    ['Menders', '4 mender @n /3, 4 mender @s /3, 12 elite @nw /1.4'],
-    ['Burrow & warp portal', '8 burrower @nw /1, 8 burrower @sw /1, 6 burrower @n /1.2'],
-    ['Moth storm', '24 moth @n /0.4, 24 ashmoth @s /0.4'],
-    ['Iron tide', '12 elite @nw /1, 12 elite @sw /1, 3 warden @n +4 /4'],
-    ['The Gate opens', '4 warden @nw /4, 16 splitter @sw /0.7, 30 shade @s /0.3, 24 ashmoth @n /0.4, 8 mender @nw +10 /2'],
+    ['Two corners breach', '10 husk @nw /0.8, 10 husk @s +1 /0.8'],
+    ['Iron on the ramps', '6 elite @nw /2, 8 hound @s /0.7'],
+    ['North-East corner tears open!', '1 ram @nw, 8 shade @n +2 /0.8'],
+    ['Veils and splitters', '12 veilmoth @nw /0.6, 10 splitter @n /1'],
+    ['South-West breaches: all 4 active!', '1 warden @nw, 1 warden @sw, 1 warden @n, 1 warden @s, 16 husk @nw +4 /0.45'],
+    ['Rams and Menders', '2 ram @nw /8, 4 mender @nw +2 /3, 12 elite @s /1.4'],
+    ['Burrow & warp portal', '8 burrower @nw /1, 8 burrower @sw /1, 6 glasshide @n /2.4'],
+    ['Moth storm', '10 veilmoth @n /0.7, 20 ashmoth @s /0.45'],
+    ['Iron tide', '10 elite @nw /1.1, 2 ram @sw /8, 3 warden @n +4 /4'],
+    ['The Gate opens', '3 warden @nw /4, 2 ram @sw /8, 14 hound @sw +4 /0.5, 24 shade @s /0.35, 12 veilmoth @n /0.6, 6 glasshide @nw +10 /2.4'],
   ]),
 };
 
@@ -1087,7 +1088,7 @@ const s20: StageDef = {
   id: 20, name: 'The Hollow Queen', region: 3, lava: true,
   twist: 'Final boss. 4 Cathedral naves around a central Royal Altar. At Wave 4 inner naves crack open; each Queen phase breaks a new path & floods the floor.',
   newFoe: 'The Hollow Queen', unlocks: 'The ending',
-  startGold: 1320, lives: 20, towers: ALL, hpMul: 0.75,
+  startGold: 1320, lives: 20, towers: ALL, hpMul: 0.55,
   high: [[485, 145], [795, 145], [825, 290], [755, 390], [525, 390], [455, 290], [485, 145]],
   roads: [
     { id: 'high',     spawn: 'nw', w: 44, ctrl: [[240, -40], [210, 130], [160, 290], [220, 480], [420, 575], [640, 625]] },
@@ -1113,13 +1114,13 @@ const s20: StageDef = {
     openAtWave: { mid: 2 }, adaptEvery: 2, night: true,
   },
   waves: waves([
-    ['Her heralds', '24 grub @nw /0.4, 12 grub @ne /0.5'],
-    ['Iron court', '8 elite @nw /1.5, 8 burrower @ne /1'],
-    ['Ash wings', '18 ashmoth @nw /0.45, 14 moth @ne /0.5, 12 grub @nw +4 /0.5'],
-    ['Inner nave fractures!', '20 splitter @nw /0.6, 6 mender @ne /2'],
-    ['The guard', '4 warden @nw /4, 10 elite @ne /1.4'],
-    ['Shadows', '14 shade @nw /0.6, 8 burrower @ne /0.9, 10 grub @nw +3 /0.5'],
-    ['The Hollow Queen', '1 queen @nw, 4 warden @ne +4 /5, 12 elite @nw +12 /1.5, 18 ashmoth @ne +20 /0.5, 6 mender @nw +30 /3'],
+    ['Her heralds', '14 husk @nw /0.6, 6 hound @ne /0.8'],
+    ['Iron court', '8 elite @nw /1.5, 6 burrower @ne /1.2'],
+    ['Ash wings', '14 ashmoth @nw /0.5, 8 veilmoth @ne /0.7, 10 husk @nw +4 /0.6'],
+    ['Inner nave fractures!', '2 herald @nw /6, 14 husk @nw +2 /0.55, 4 mender @ne /2'],
+    ['The guard', '3 warden @nw /4, 2 ram @ne /8, 8 elite @ne +6 /1.5'],
+    ['Shadows', '14 shade @nw /0.6, 2 herald @ne /6, 8 glasshide @ne +4 /2.2, 10 hound @nw +3 /0.5'],
+    ['The Hollow Queen', '1 queen @nw, 3 warden @ne +4 /5, 2 herald @ne +10 /6, 10 elite @nw +12 /1.6, 10 veilmoth @ne +20 /0.7, 6 mender @nw +30 /3'],
   ]),
 };
 
@@ -1137,3 +1138,10 @@ export function spawnsOf(st: StageDef): Map<string, Road[]> {
   for (const r of st.roads) m.set(r.spawn, [...(m.get(r.spawn) ?? []), r]);
   return m;
 }
+
+/** The first stage whose waves send each foe, so a foe can be marked new the first time the player meets it. */
+export const FIRST_STAGE: Partial<Record<EnemyKind, number>> = (() => {
+  const out: Partial<Record<EnemyKind, number>> = {};
+  for (const st of STAGES) for (const w of st.waves) for (const g of w.groups) out[g.kind] ??= st.id;
+  return out;
+})();

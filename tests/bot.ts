@@ -52,7 +52,9 @@ export function playStage(id: number, mods?: Mods, seed = 7, maxSeconds = 1500, 
     if (hits > bestHit) { bestHit = hits; chokePt = s; }
   }
 
-  const shades = b.stage.waves.some(w => w.groups.some(g => g.kind === 'shade'));
+  const shades = b.stage.waves.some(w => w.groups.some(g => ENEMIES[g.kind].traits?.stealth));
+  // Hounds and Rams need something that slows or holds them, early.
+  const control = b.stage.waves.some(w => w.groups.some(g => ENEMIES[g.kind].traits?.lunge || ENEMIES[g.kind].traits?.stamp));
   let air = 0, all = 0;
   for (const w of b.stage.waves) for (const g of w.groups) { const hp = g.n; all += hp; if (ENEMIES[g.kind].flying) air += hp; }
   const airy = air / Math.max(1, all) > 0.18;
@@ -61,7 +63,7 @@ export function playStage(id: number, mods?: Mods, seed = 7, maxSeconds = 1500, 
     : shades
       ? ['watch', 'cannon', 'beacon', 'bell', 'pylon', 'watch', 'cannon', 'roots', 'pylon', 'watch', 'cannon', 'pylon']
       : ['watch', 'cannon', 'bell', 'pylon', 'watch', 'cannon', 'roots', 'beacon', 'pylon', 'watch', 'cannon', 'pylon'];
-  const rota: TowerKind[] = base.filter(k => b.stage.towers.includes(k));
+  const rota: TowerKind[] = (control ? ['watch', 'bell', ...base] as TowerKind[] : base).filter(k => b.stage.towers.includes(k));
   let built = 0;
   let pinned = false;
 

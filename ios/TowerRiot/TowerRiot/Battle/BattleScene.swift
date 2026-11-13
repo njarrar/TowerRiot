@@ -523,6 +523,13 @@ final class BattleScene: SKScene {
             case .level: addFx(.ring, b.hero.x, b.hero.y, r: 0, max: 70, life: 1, color: UIColor(255, 215, 140))
             case let .phase(_, x, y): addFx(.ring, x, y, r: 0, max: 360, life: 1, color: UIColor(120, 230, 200)); shake = 10
             case let .dive(x, y, _): addFx(.splash, x, y, r: 0, max: 0.8, life: 0.8)
+            case let .stamp(x, y, r):
+                addFx(.ring, x, y, r: 0, max: r, life: 0.7, color: UIColor(120, 230, 190)); shake = max(shake, 5)
+                for _ in 0..<10 { let a = R() * TAU, v = 50 + R() * 90; parts.append(Part(x: x + cos(a) * 20, y: y, vx: cos(a) * v, vy: -40 - R() * 60, life: 0.7, max: 0.7, color: UIColor(hex: 0x4a4238), s: 2.6, kind: .chip, grav: true)) }
+            case let .pane(x, y, _):
+                for _ in 0..<9 { let a = R() * TAU, v = 50 + R() * 80; parts.append(Part(x: x, y: y, vx: cos(a) * v, vy: sin(a) * v * 0.5 - 60, life: 0.55, max: 0.55, color: UIColor(hex: 0xe6f4fa), s: 2.2, kind: .chip, grav: true)) }
+            case let .lunge(x, y):
+                for _ in 0..<4 { parts.append(Part(x: x + (R() - 0.5) * 14, y: y - 4, vx: (R() - 0.5) * 24, vy: -18, life: 0.6, max: 0.6, color: UIColor(110, 96, 84), s: 4, kind: .smoke)) }
             case let .build(_, x, y), let .upgrade(_, x, y):
                 for _ in 0..<12 { let a = R() * TAU; parts.append(Part(x: x + cos(a) * 20, y: y + sin(a) * 8, vx: cos(a) * 30, vy: -20 - R() * 30, life: 0.8, max: 0.8, color: UIColor(150, 140, 120), s: 6, kind: .smoke)) }
             case .heroDown: float(b.hero.x, b.hero.y - 80, "Wren falls", UIColor(hex: 0xff8a7a), big: true)
@@ -793,8 +800,9 @@ final class BattleScene: SKScene {
         if f.def.isFlying { return .fly }
         if f.def.isBoss { return .stomp }
         switch f.kind {
-        case .skitter: return .scuttle
-        case .shell, .sapper, .elite, .warden: return .plod
+        case .skitter, .hound: return .scuttle
+        case .shell, .sapper, .elite, .warden, .glasshide, .herald: return .plod
+        case .ram: return .stomp
         default: return .crawl
         }
     }
@@ -873,6 +881,8 @@ final class BattleScene: SKScene {
         let mothY = by + sin(T * 3 + seed) * 3 - max(0, sin(T * 13 + seed)) * 2
         var art = "\(f.kind.rawValue)"
         if f.kind == .colossus && (f.slowT > 0 || f.freezeT > 0) { art = "colossusf" }
+        // A Glasshide with every pane broken: the moment to land the big hits.
+        if f.kind == .glasshide && f.panes == 0 { art = "glasshide0" }
         let tag: String
         if flying { tag = "s" } else if let l = legs {
             let k = Int((l.truncatingRemainder(dividingBy: .pi * 2) + .pi * 2).truncatingRemainder(dividingBy: .pi * 2) / (.pi * 2) * 8 + 0.5) % 8
@@ -1496,15 +1506,16 @@ final class BattleScene: SKScene {
         func update(_ t: Tower, battle b: Battle, T: Double) {
             let lv = min(t.lv, b.data.maxTowerLevel), fbLv = min(lv, 4), splitTag = t.split.map { "-\($0.rawValue)" } ?? ""
             let S = lv >= 5 ? 0.86 : 0.6 + 0.06 * Double(fbLv - 1)
-            let k = "\(lv)|\(splitTag)|\(t.round?.rawValue ?? "")|\(t.down)"
+            let k = "\(lv)|\(splitTag)|\(t.round?.rawValue ?? "")|\(t.down)|\(t.stunT > 0)"
             if k != key {
                 key = k
                 Art.shared.set(body, "t-\(t.kind.rawValue)-\(lv)\(splitTag)-\(t.plot % 2)", fallback: "t-\(t.kind.rawValue)-\(fbLv)-\(t.plot % 2)")
                 plinthRim.isHidden = t.round == nil
                 plinthGem.isHidden = t.round == nil
                 plinthGem.fillColor = t.round == .ember ? UIColor(hex: 0xff8a3a) : t.round == .frost ? UIColor(hex: 0x8fd0ff) : UIColor(hex: 0xb9a8ff)
-                body.alpha = t.down ? 0.42 : 1
-                barrel?.alpha = t.down ? 0.42 : 1
+                // Asleep on a lowered gear, or stunned by a Ram's stamp.
+                body.alpha = t.down ? 0.42 : t.stunT > 0 ? 0.7 : 1
+                barrel?.alpha = t.down ? 0.42 : t.stunT > 0 ? 0.7 : 1
                 sleepBadge.isHidden = !t.down
                 masteryRing.isHidden = t.lv < 5
                 emit.isHidden = t.down

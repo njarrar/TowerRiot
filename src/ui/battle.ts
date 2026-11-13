@@ -5,9 +5,9 @@ import {
   ACTION_ARM_MS, HERO_GRAB_RADIUS, InputResolver, type HitTarget,
 } from '../game/input-resolver';
 import { Scene, W as MAP_W, type View } from '../render/scene';
-import { SHIFTING_EARTH_REFUND, stageById, type OathId, type StageVariant } from '../game/data/stages';
+import { FIRST_STAGE, SHIFTING_EARTH_REFUND, stageById, type OathId, type StageVariant } from '../game/data/stages';
 import { MAX_TOWER_LEVEL, TOWERS, type Rounds, type TowerKind } from '../game/data/towers';
-import { ENEMIES } from '../game/data/enemies';
+import { ENEMIES, type EnemyKind } from '../game/data/enemies';
 import { ATTUNE, HERO, SKILLS, SNARE, type SkillKey } from '../game/data/hero';
 import { ITEMS, ITEM_ORDER, ITEM_SLOTS, RUNES, type ItemId } from '../game/data/shop';
 import type { Mods } from '../game/mods';
@@ -70,6 +70,8 @@ export class BattleScreen {
   private menu: HTMLElement;
   private banner: HTMLElement;
   private pauseStrip: HTMLElement;
+  /** New foes already introduced in this fight. */
+  private metFoes = new Set<EnemyKind>();
   private bannerT = 0;
   private bannerQ: { title: string; sub: string; secs: number }[] = [];
   private lvlT = 0;
@@ -233,6 +235,8 @@ export class BattleScreen {
         case 'pulse': a.play('bell'); break;
         case 'arc': a.play('zap'); break;
         case 'root': a.play('root'); break;
+        case 'stamp': a.play('boom'); break;
+        case 'pane': a.play('bell'); break;
         case 'kill': a.play('coin'); break;
         case 'heroHit': a.play('hero'); break;
         case 'leak': a.play('leak'); this.leakBy.set(e.kind, (this.leakBy.get(e.kind) ?? 0) + e.lives); break;
@@ -248,7 +252,17 @@ export class BattleScreen {
         case 'terraform': a.play('boss'); this.showBanner('Ground shifts', e.label, 3.0, true); break;
         case 'gateShock': a.play('sunrise'); this.showBanner('Bastion bell!', 'The Keep shockwave stuns intruders at the gate.', 2.2); break;
         case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
-        case 'wave': a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2); break;
+        case 'wave': {
+          a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2);
+          // The first time a new foe walks in, name it and say what beats it.
+          const w = b.stage.waves[e.n - 1];
+          for (const g of w?.groups ?? []) {
+            if (!this.isNewFoe(g.kind) || ENEMIES[g.kind].traits?.boss) continue;
+            this.metFoes.add(g.kind);
+            this.showBanner(`New foe: ${ENEMIES[g.kind].name}`, ENEMIES[g.kind].answer, 3.6);
+          }
+          break;
+        }
         case 'adapt': this.showBanner('The Hollow adapts', `It hardens against ${ELEMENT_NAME[e.el] ?? e.el}: ${Math.round(e.resist * 100)}% less damage. Mix your towers.`, 3.4); break;
         case 'shift': this.showBanner(e.on ? e.label : 'The way is open again', e.on ? 'Foes on that road wait at the edge. Others go round.' : '', 2.6); break;
         case 'barrier': this.showBanner('The wreck gives way', 'The beach road is open. Foes will use it now.', 3); break;
@@ -299,13 +313,19 @@ export class BattleScreen {
       el.append(h('div', { class: 'nw-note nw-breach', text: `New breach opens (${nw.openingRoads.join(', ')})` }));
     }
     el.append(h('div', { class: 'nw-foes' }, ...nw.foes.map(f => {
-      const d = ENEMIES[f.kind];
-      return h('span', { class: `nw-foe ${d.flying ? 'fly' : ''}`, title: `${d.name}: ${d.blurb}` },
-        h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), d.flying ? icon(WING_ICON, 'svg-ico nw-wing') : null, h('span', { class: 'nw-name', text: d.name }));
+      const d = ENEMIES[f.kind], fresh = this.isNewFoe(f.kind);
+      return h('span', { class: `nw-foe ${d.flying ? 'fly' : ''} ${fresh ? 'new' : ''}`, title: `${d.name}: ${d.blurb} ${d.answer}` },
+        h('img', { src: foeIcon(f.kind, 28), alt: '' }), h('b', { text: String(f.count) }), d.flying ? icon(WING_ICON, 'svg-ico nw-wing') : null, h('span', { class: 'nw-name', text: d.name }),
+        fresh ? h('i', { class: 'nw-new', text: 'New' }) : null);
     })));
     if (adapts) el.append(h('div', { class: 'nw-note' },
       h('span', { class: 'nw-full', text: lean ? `The Hollow adapts this wave, against your ${ELEMENT_NAME[lean]}.` : 'The Hollow adapts this wave.' }),
       h('span', { class: 'nw-short', text: lean ? `Adapts: ${ELEMENT_NAME[lean]}` : 'Adapts' })));
+  }
+
+  /** A foe this stage brings in for the first time in the campaign, not yet met in this fight. */
+  private isNewFoe(kind: EnemyKind): boolean {
+    return FIRST_STAGE[kind] === this.battle.stage.id && !this.metFoes.has(kind);
   }
 
   private showBanner(title: string, sub: string, secs: number, now = false) {

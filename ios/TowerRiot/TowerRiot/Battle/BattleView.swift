@@ -554,6 +554,11 @@ private struct CallView: View {
                                 ArtPicture(name: "icon-foe-\(f.kind.rawValue)", size: 22)
                                 Text("\(f.count)").font(Face.body(13, .heavy)).foregroundStyle(Ink.ink)
                                 if ctl.data.enemy(f.kind).isFlying { ArtIcon(name: "wing", size: 12).foregroundStyle(Ink.inkDim) }
+                                if ctl.isNewFoe(f.kind) {
+                                    Text("New").font(Face.body(10, .heavy)).foregroundStyle(Ink.accentInk)
+                                        .padding(.horizontal, 4).padding(.vertical, 1)
+                                        .background(RoundedRectangle(cornerRadius: 3).fill(Ink.accent))
+                                }
                             }
                         }
                     }
@@ -939,7 +944,7 @@ private struct ResultCard: View {
                         ArtPicture(name: "icon-foe-\(c.kind.rawValue)", size: 48)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(d.name)\(c.lives > 1 && !d.isBoss ? "s" : "") took \(c.lives) of your \(b.startLives) lives").font(Face.body(14, .heavy)).foregroundStyle(Ink.ink)
-                            Text(d.blurb).font(Face.body(12)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
+                            Text("\(d.blurb) Answer: \(d.answer)").font(Face.body(12)).foregroundStyle(Ink.inkDim).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .padding(10).background(RoundedRectangle(cornerRadius: 5).fill(Ink.paper2))

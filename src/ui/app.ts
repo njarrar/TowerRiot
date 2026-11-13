@@ -190,7 +190,7 @@ export class App {
         h('dl', {},
           h('dt', { text: 'New foe' }), h('dd', { class: 'foe-dd' },
             newFoe ? h('img', { class: 'mini', src: foeIcon(newFoe.kind, 36), alt: newFoe.name }) : null,
-            h('span', { text: newFoe ? `${newFoe.name}: ${newFoe.blurb}` : raw.newFoe })),
+            h('span', { text: newFoe ? `${newFoe.name}: ${newFoe.blurb} Answer: ${newFoe.answer}` : raw.newFoe })),
           h('dt', { text: 'Unlocks' }), h('dd', { text: raw.unlocks }),
           h('dt', { text: 'Towers' }), h('dd', {}, ...raw.towers.map(k => h('img', { class: 'mini', src: towerIcon(k, 40), alt: TOWERS[k].name, title: TOWERS[k].name }))),
           h('dt', { text: 'Waves' }), h('dd', { text: `${raw.waves.length}, starting gold ${raw.startGold}` }),
@@ -303,7 +303,8 @@ export class App {
           const tags = [f.flying ? 'Flying' : 'Ground', f.traits?.boss ? 'Boss' : null, f.traits?.armor ? `Armor ${f.traits.armor}` : null, f.traits?.stealth ? 'Stealth' : null, f.traits?.heal ? 'Healer' : null].filter(Boolean).join(' · ');
           list.append(h('div', { class: 'guide-card' },
             h('img', { src: foeIcon(f.kind as EnemyKind, 60), alt: f.name }),
-            h('div', {}, h('b', { text: f.name }), h('small', { text: `${tags} · ${f.hp} HP · ${f.gold}g · ${f.leak} life` }), h('p', { text: f.blurb }))));
+            h('div', {}, h('b', { text: f.name }), h('small', { text: `${tags} · ${f.hp} HP · ${f.gold}g · ${f.leak} life` }), h('p', { text: f.blurb }),
+              h('p', { class: 'answer' }, h('b', { text: 'Answer: ' }), f.answer))));
         }
       } else if (this.guideTab === 'towers') {
         for (const k of TOWER_ORDER) {

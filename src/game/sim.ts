@@ -119,6 +119,14 @@ export interface Foe {
   dead: boolean;
   /** Bitmask preventing cyclic or repeated jumps across the same portal. */
   warpedMask: number;
+  /** Seconds left in a Cinder Hound's lunge. */
+  lungeT: number;
+  /** Glasshide panes left, seconds until the next one grows back, and a short gap so one burst breaks one pane. */
+  panes: number;
+  paneT: number;
+  paneCd: number;
+  /** Inside a Herald's aura this tick. */
+  warded: boolean;
 }
 
 export interface Tower {
@@ -141,6 +149,8 @@ export interface Tower {
   fired: number;
   /** Shot counter for Repeater Lv 5 every-4th twin bolt mastery. */
   shotCount: number;
+  /** Seconds left stunned by a Hollow Ram's stamp. */
+  stunT: number;
   /** Telemetry exposed in Tower Inspector & Result breakdown. */
   dmgDealt: number;
   kills: number;
@@ -224,6 +234,9 @@ export type BattleEvent =
   | { t: 'terraform'; label: string }
   | { t: 'warp'; fromX: number; fromY: number; toX: number; toY: number; kind: PortalDef['kind'] }
   | { t: 'gateShock'; x: number; y: number }
+  | { t: 'stamp'; x: number; y: number; r: number }
+  | { t: 'pane'; x: number; y: number; left: number }
+  | { t: 'lunge'; x: number; y: number }
   | { t: 'won'; stars: number } | { t: 'lost' };
 
 export type Status = 'prep' | 'running' | 'won' | 'lost';
@@ -449,6 +462,13 @@ export class Battle {
     return n > 1 && n <= this.totalWaves && (n - 1) % every === 0;
   }
 
+  /** A Herald's aura cuts damage from the element the player leans on most right now. */
+  private readonly heraldCut = ENEMIES.herald.traits!.aura!.cut;
+  heraldEl(): Element | null {
+    const { top, share } = this.adaptationShare();
+    return share > 0 ? top : null;
+  }
+
   /** Current leading element pressure toward the 42% adaptation threshold. */
   adaptationShare(): { top: Element | null; share: number; threshold: number } {
     let total = 0;
@@ -508,7 +528,7 @@ export class Battle {
     this.gold -= cost;
     const t: Tower = {
       id: this.ids++, kind, plot, x: p.x, y: p.y, lv: 1, split: null, spent: cost, cd: 0.4,
-      mode: 'first', round: null, aim: 0, high: p.high, down: false, fired: 9, shotCount: 0, dmgDealt: 0, kills: 0,
+      mode: 'first', round: null, aim: 0, high: p.high, down: false, fired: 9, shotCount: 0, stunT: 0, dmgDealt: 0, kills: 0,
     };
     t.down = !!p.gear && !this.gearUp(p.gear);
     this.towers.push(t);
@@ -1015,7 +1035,8 @@ export class Battle {
       hp, max: hp, speed: def.speed * (0.94 + this.rng() * 0.12), slow: 0, slowT: 0, rootT: 0, staggerT: 0, freezeT: 0, freezeImmune: 0,
       burnT: 0, burnDps: 0, vulnT: 0, blocked: false, hidden: false, shielded: false, under: false,
       underT: def.traits?.burrow ? def.traits.burrow[1] : def.traits?.dive?.every ?? 0,
-      abilityT: def.traits?.summon?.every ?? 2, phase: 0, burstT: 0, hitT: 0, dead: false, warpedMask: 0,
+      abilityT: def.traits?.summon?.every ?? def.traits?.lunge?.every ?? def.traits?.stamp?.every ?? 2, phase: 0, burstT: 0, hitT: 0, dead: false, warpedMask: 0,
+      lungeT: 0, panes: def.traits?.panes?.n ?? 0, paneT: 0, paneCd: 0, warded: false,
     };
     this.foes.push(f);
     if (isBoss) this.events.push({ t: 'boss', kind });
@@ -1155,6 +1176,7 @@ export class Battle {
   private updateFoes(dt: number) {
     const h = this.hero;
     const wardens = this.foes.filter(f => f.def.traits?.shield && !f.dead);
+    const heralds = this.foes.filter(f => f.def.traits?.aura && !f.dead && !f.under);
     const beacons = this.towers.filter(t => t.kind === 'beacon' && !t.down);
     let blocking = 0;
     const sight = this.heroSight();
@@ -1170,6 +1192,11 @@ export class Battle {
       f.vulnT = Math.max(0, f.vulnT - dt);
       f.burstT = Math.max(0, f.burstT - dt);
       f.hitT = Math.max(0, f.hitT - dt);
+      f.paneCd = Math.max(0, f.paneCd - dt);
+      if (tr?.panes && f.panes < tr.panes.n) {
+        f.paneT -= dt;
+        if (f.paneT <= 0) { f.panes++; f.paneT = tr.panes.regrow; }
+      }
       if (f.burnT > 0) {
         f.burnT -= dt;
         this.damage(f, f.burnDps * dt, 'fire', false, true, false, undefined, 'status');
@@ -1194,6 +1221,26 @@ export class Battle {
         if (f.abilityT <= 0) {
           f.abilityT = tr.summon.every;
           for (let i = 0; i < tr.summon.n; i++) this.spawn(tr.summon.kind, undefined, { road: f.road, d: Math.max(0, f.d - 20 - i * 18) });
+        }
+      }
+      const held = f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0;
+      if (tr?.lunge) {
+        f.lungeT = Math.max(0, f.lungeT - dt);
+        if (f.slow > 0 || held || f.blocked) f.lungeT = 0;
+        f.abilityT -= dt;
+        if (f.abilityT <= 0) {
+          f.abilityT = tr.lunge.every;
+          if (f.slow <= 0 && !held && !f.blocked) { f.lungeT = tr.lunge.dur; this.events.push({ t: 'lunge', x: f.x, y: f.y }); }
+        }
+      }
+      if (tr?.stamp) {
+        f.abilityT -= dt;
+        if (f.abilityT <= 0) {
+          f.abilityT = tr.stamp.every;
+          if (!held) {
+            for (const t of this.towers) if (ell(t.x - f.x, t.y - f.y) < tr.stamp.r) t.stunT = Math.max(t.stunT, tr.stamp.stun);
+            this.events.push({ t: 'stamp', x: f.x, y: f.y, r: tr.stamp.r });
+          }
         }
       }
       if (tr?.heal) {
@@ -1224,11 +1271,12 @@ export class Battle {
       }
 
       f.shielded = !tr?.shield && wardens.some(w => ell(w.x - f.x, w.y - f.y) < (w.def.traits!.shield ?? 0));
+      f.warded = !tr?.aura && heralds.some(w => ell(w.x - f.x, w.y - f.y) < w.def.traits!.aura!.r);
       f.hidden = !!tr?.stealth && !(
         (!h.dead && Math.hypot(h.x - f.x, h.y - f.y) < sight) ||
         h.sunriseT > 0 ||
         this.inLighthouse(f.x, f.y) ||
-        this.towers.some(t => ell(t.x - f.x, t.y - f.y) < TOWER_SIGHT) ||
+        (!tr?.veil && this.towers.some(t => ell(t.x - f.x, t.y - f.y) < TOWER_SIGHT)) ||
         beacons.some(b => ell(b.x - f.x, b.y - f.y) < TOWERS.beacon.range[Math.min(b.lv, 3) - 1])
       );
 
@@ -1245,6 +1293,7 @@ export class Battle {
       let mul = f.slow > 0 ? 1 - f.slow : 1;
       if (f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked) mul = 0;
       if (f.burstT > 0) mul *= 1.6;
+      if (f.lungeT > 0 && tr?.lunge) mul *= tr.lunge.mult;
       const activeBrake = this.switches.find(sw => sw.def.mode === 'belt' && sw.activeT > 0 && sw.def.targetRoad === f.road.def.id);
       if (activeBrake) mul *= activeBrake.def.beltMult ?? 0.55;
       else for (const b of f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult;
@@ -1332,6 +1381,19 @@ export class Battle {
     armorPierceExtra = 0,
   ): number {
     if (!this.reachable(f, true) || amount <= 0) return 0;
+    if (f.panes > 0) {
+      // Each hit breaks one pane and does no harm. Burns and vents only scratch the glass;
+      // a spore cloud breaks a pane now and then.
+      const tick = bucket === 'status';
+      if (tick && el !== 'nature') return 0;
+      if (f.paneCd > 0) return 0;
+      f.panes--;
+      f.paneCd = tick ? 0.6 : 0.12;
+      f.paneT = f.def.traits?.panes?.regrow ?? 2.5;
+      this.events.push({ t: 'pane', x: f.x, y: f.y - f.def.bar * 0.6, left: f.panes });
+      return 0;
+    }
+    if (f.warded && el !== 'hero' && el !== 'env' && el === this.heraldEl()) amount *= 1 - this.heraldCut;
     const { applied, clamped } = deliverDamage(
       { stageId: this.stage.id, mods: this.mods, resist: this.resist, dmgWindow: this.dmgWindow, breakdown: this.breakdown },
       f, amount, el, { byHero, quiet, armorPierceExtra, bucket },
@@ -1514,6 +1576,7 @@ export class Battle {
   private updateTowers(dt: number) {
     for (const t of this.towers) {
       t.fired += dt;
+      if (t.stunT > 0) { t.stunT = Math.max(0, t.stunT - dt); continue; }
       if (t.kind === 'beacon' || t.down) continue;
       const s = this.stats(t);
       t.cd -= dt;

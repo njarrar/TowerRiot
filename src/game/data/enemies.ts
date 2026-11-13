@@ -3,6 +3,7 @@ import type { Element } from './towers';
 export type EnemyKind =
   | 'grub' | 'skitter' | 'shell' | 'moth' | 'warden' | 'mender' | 'shade'
   | 'splitter' | 'sapper' | 'burrower' | 'ashmoth' | 'elite'
+  | 'husk' | 'hound' | 'glasshide' | 'veilmoth' | 'ram' | 'herald'
   | 'mireking' | 'tidewyrm' | 'colossus' | 'queen';
 
 /** Special rules a foe follows. The battle code reads these flags, never the kind name. */
@@ -27,6 +28,16 @@ export interface Traits {
   summon?: { kind: EnemyKind; n: number; every: number };
   /** Dives for `dur` seconds every `every` seconds, untargetable and healing 1% a second. */
   dive?: { every: number; dur: number };
+  /** Every `every` seconds it runs at `mult` speed for `dur` seconds, unless slowed, held or frozen. */
+  lunge?: { every: number; dur: number; mult: number };
+  /** Glass panes: each hit breaks one pane and does no harm. A lost pane grows back after `regrow` seconds. */
+  panes?: { n: number; regrow: number };
+  /** Every `every` seconds it stamps: towers within `r` px stop for `stun` seconds. Held or frozen, it cannot stamp. */
+  stamp?: { every: number; r: number; stun: number };
+  /** Only Wren's lantern, a Beacon, the lighthouse or Sunrise reveal it. Other towers' sight does not. */
+  veil?: boolean;
+  /** Foes within `r` px take `cut` less damage from the element the player has used most this wave. Wren ignores it. */
+  aura?: { r: number; cut: number };
   /** Below each health share: summons and a speed burst. */
   phases?: number[];
   boss?: boolean;
@@ -51,25 +62,33 @@ export interface EnemyDef {
   size: number;
   traits?: Traits;
   blurb: string;
+  /** The towers that beat it, in a line, for the field guide and the first time it shows up. */
+  answer: string;
 }
 
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
-  grub: { kind: 'grub', name: 'Grub', hp: 34, speed: 52, gold: 4, leak: 1, dps: 6, bar: 30, size: 1, blurb: 'Slow and soft. Comes in crowds.' },
-  skitter: { kind: 'skitter', name: 'Skitter', hp: 18, speed: 104, gold: 3, leak: 1, dps: 4, bar: 22, size: 0.7, takes: { fire: 0.7 }, blurb: 'Very fast and frail. Fire struggles to catch it.' },
-  shell: { kind: 'shell', name: 'Shellback', hp: 130, speed: 34, gold: 10, leak: 2, dps: 12, bar: 50, size: 1.3, takes: { pierce: 0.5, fire: 1.25 }, blurb: 'Heavy shell. Bolts do half damage, fire cracks it.' },
-  moth: { kind: 'moth', name: 'Moth', hp: 30, speed: 78, gold: 5, leak: 1, dps: 0, bar: 62, size: 0.9, flying: true, blurb: 'Flies. Cannons and roots cannot reach it, Wren cannot block it.' },
-  warden: { kind: 'warden', name: 'Warden', hp: 220, speed: 30, gold: 20, leak: 3, dps: 18, bar: 66, size: 1.7, takes: { storm: 1.3 }, traits: { shield: 110 }, blurb: 'Shields foes near it. Lightning hurts it most.' },
-  mender: { kind: 'mender', name: 'Mender', hp: 60, speed: 44, gold: 8, leak: 1, dps: 5, bar: 34, size: 1, traits: { heal: 0.06 }, blurb: 'Heals foes around it. Kill it first.' },
-  shade: { kind: 'shade', name: 'Shade', hp: 40, speed: 66, gold: 7, leak: 1, dps: 8, bar: 30, size: 0.95, traits: { stealth: true }, blurb: 'Unseen until a Beacon or Wren lights it.' },
-  splitter: { kind: 'splitter', name: 'Splitter', hp: 70, speed: 48, gold: 6, leak: 1, dps: 8, bar: 36, size: 1.15, traits: { splitInto: { kind: 'skitter', n: 3 } }, blurb: 'Bursts into three Skitters when it dies.' },
-  sapper: { kind: 'sapper', name: 'Sapper', hp: 80, speed: 46, gold: 8, leak: 1, dps: 10, bar: 34, size: 1.05, takes: { nature: 1.3 }, traits: { sapper: true }, blurb: 'Chews through wrecks and walls to open new roads.' },
-  burrower: { kind: 'burrower', name: 'Burrower', hp: 90, speed: 58, gold: 9, leak: 1, dps: 9, bar: 30, size: 1.1, takes: { nature: 1.4 }, traits: { burrow: [2.2, 3] }, blurb: 'Digs under the road where nothing can reach it.' },
-  ashmoth: { kind: 'ashmoth', name: 'Ash moth', hp: 48, speed: 84, gold: 7, leak: 1, dps: 0, bar: 62, size: 1, flying: true, takes: { fire: 0, frost: 1.3 }, blurb: 'Flies and cannot burn. Frost brings it down.' },
-  elite: { kind: 'elite', name: 'Iron Shellback', hp: 200, speed: 32, gold: 16, leak: 2, dps: 16, bar: 54, size: 1.4, takes: { pierce: 0.8, fire: 1.2 }, traits: { armor: 4 }, blurb: 'Armored. Every hit loses a few points. Big hits win.' },
-  mireking: { kind: 'mireking', name: 'The Mire King', hp: 2400, speed: 20, gold: 150, leak: 12, dps: 40, bar: 110, size: 3, traits: { boss: true, phases: [0.5], summon: { kind: 'grub', n: 2, every: 5 } }, blurb: 'Drags the swamp with him and spits out Grubs.' },
-  tidewyrm: { kind: 'tidewyrm', name: 'The Tidewyrm', hp: 2000, speed: 26, gold: 200, leak: 12, dps: 50, bar: 90, size: 2.6, takes: { storm: 1.25 }, traits: { boss: true, phases: [0.5], dive: { every: 9, dur: 3 } }, blurb: 'Dives under the tide to heal. Hit it while it is up.' },
-  colossus: { kind: 'colossus', name: 'The Brass Colossus', hp: 6000, speed: 16, gold: 260, leak: 12, dps: 70, bar: 140, size: 3.4, traits: { boss: true, phases: [0.5], plated: 0.35 }, blurb: 'Brass plates turn most damage. Chill it and the plates crack.' },
-  queen: { kind: 'queen', name: 'The Hollow Queen', hp: 5500, speed: 22, gold: 400, leak: 12, dps: 90, bar: 130, size: 3.2, flying: false, traits: { boss: true, phases: [0.66, 0.33], summon: { kind: 'shade', n: 2, every: 7 } }, blurb: 'Rewrites the map as she falls. Three phases.' },
+  grub: { kind: 'grub', name: 'Grub', hp: 34, speed: 52, gold: 4, leak: 1, dps: 6, bar: 30, size: 1, blurb: 'Slow and soft. Comes in crowds.', answer: 'Any tower. A Forge cannon clears the crowds.' },
+  skitter: { kind: 'skitter', name: 'Skitter', hp: 18, speed: 104, gold: 3, leak: 1, dps: 4, bar: 22, size: 0.7, takes: { fire: 0.7 }, blurb: 'Very fast and frail. Fire struggles to catch it.', answer: 'Watch tower or Storm pylon. A Frost bell slows the rush.' },
+  shell: { kind: 'shell', name: 'Shellback', hp: 130, speed: 34, gold: 10, leak: 2, dps: 12, bar: 50, size: 1.3, takes: { pierce: 0.5, fire: 1.25 }, blurb: 'Heavy shell. Bolts do half damage, fire cracks it.', answer: 'Forge cannon. Bolts do half.' },
+  moth: { kind: 'moth', name: 'Moth', hp: 30, speed: 78, gold: 5, leak: 1, dps: 0, bar: 62, size: 0.9, flying: true, blurb: 'Flies. Cannons and roots cannot reach it, Wren cannot block it.', answer: 'Watch tower, Storm pylon or Frost bell. Cannons and roots miss it.' },
+  warden: { kind: 'warden', name: 'Warden', hp: 220, speed: 30, gold: 20, leak: 3, dps: 18, bar: 66, size: 1.7, takes: { storm: 1.3 }, traits: { shield: 110 }, blurb: 'Shields foes near it. Lightning hurts it most.', answer: 'Storm pylon on it first, then the foes it shields.' },
+  mender: { kind: 'mender', name: 'Mender', hp: 60, speed: 44, gold: 8, leak: 1, dps: 5, bar: 34, size: 1, traits: { heal: 0.06 }, blurb: 'Heals foes around it. Kill it first.', answer: 'Kill it first: a Watch tower or Wren.' },
+  shade: { kind: 'shade', name: 'Shade', hp: 40, speed: 66, gold: 7, leak: 1, dps: 8, bar: 30, size: 0.95, traits: { stealth: true }, blurb: 'Unseen until a Beacon or Wren lights it.', answer: 'A Beacon or Wren to show it, then any tower.' },
+  splitter: { kind: 'splitter', name: 'Splitter', hp: 70, speed: 48, gold: 6, leak: 1, dps: 8, bar: 36, size: 1.15, traits: { splitInto: { kind: 'skitter', n: 3 } }, blurb: 'Bursts into three Skitters when it dies.', answer: 'Forge cannon or Storm pylon for the Skitters it leaves.' },
+  sapper: { kind: 'sapper', name: 'Sapper', hp: 80, speed: 46, gold: 8, leak: 1, dps: 10, bar: 34, size: 1.05, takes: { nature: 1.3 }, traits: { sapper: true }, blurb: 'Chews through wrecks and walls to open new roads.', answer: 'Root garden, and kill it before it reaches the wreck.' },
+  burrower: { kind: 'burrower', name: 'Burrower', hp: 90, speed: 58, gold: 9, leak: 1, dps: 9, bar: 30, size: 1.1, takes: { nature: 1.4 }, traits: { burrow: [2.2, 3] }, blurb: 'Digs under the road where nothing can reach it.', answer: 'Root garden or Frost bell to catch it above ground.' },
+  ashmoth: { kind: 'ashmoth', name: 'Ash moth', hp: 48, speed: 84, gold: 7, leak: 1, dps: 0, bar: 62, size: 1, flying: true, takes: { fire: 0, frost: 1.3 }, blurb: 'Flies and cannot burn. Frost brings it down.', answer: 'Frost bell, Watch tower or Storm pylon. Fire does nothing.' },
+  elite: { kind: 'elite', name: 'Iron Shellback', hp: 200, speed: 32, gold: 16, leak: 2, dps: 16, bar: 54, size: 1.4, takes: { pierce: 0.8, fire: 1.2 }, traits: { armor: 4 }, blurb: 'Armored. Every hit loses a few points. Big hits win.', answer: 'Big hits: Rail, Siege mortar or Longbow.' },
+  husk: { kind: 'husk', name: 'Husk', hp: 70, speed: 46, gold: 5, leak: 1, dps: 8, bar: 32, size: 1.05, traits: { armor: 2 }, blurb: 'A Grub cased in ash. Chip shots barely scratch it; blasts and lightning still work.', answer: 'Forge cannon or Storm pylon.' },
+  hound: { kind: 'hound', name: 'Cinder Hound', hp: 75, speed: 64, gold: 7, leak: 1, dps: 10, bar: 30, size: 1.05, takes: { fire: 0.5, frost: 1.25 }, traits: { lunge: { every: 4, dur: 1.2, mult: 2.2 } }, blurb: 'Lunges at double speed every few seconds. A slowed or held Hound cannot lunge.', answer: 'Frost bell or Root garden to stop the lunge, plus Watch tower or Storm pylon.' },
+  glasshide: { kind: 'glasshide', name: 'Glasshide', hp: 150, speed: 36, gold: 14, leak: 2, dps: 14, bar: 54, size: 1.35, traits: { panes: { n: 3, regrow: 2.5 } }, blurb: 'Three glass panes each stop one hit. Strip them with fast hits, then land the big ones.', answer: 'Fast hits to break panes (Repeater, Tesla crown, Spore pod, Frost bell), then big hits.' },
+  veilmoth: { kind: 'veilmoth', name: 'Veil Moth', hp: 44, speed: 70, gold: 8, leak: 1, dps: 0, bar: 62, size: 0.95, flying: true, traits: { stealth: true, veil: true }, blurb: 'Flies unseen. Only a Beacon or Wren\'s lantern shows it to your towers.', answer: 'A Beacon on its flight line, plus Watch tower, Frost bell or Storm pylon.' },
+  ram: { kind: 'ram', name: 'Hollow Ram', hp: 520, speed: 22, gold: 40, leak: 4, dps: 30, bar: 80, size: 2.1, traits: { armor: 5, stamp: { every: 6, r: 110, stun: 1.5 } }, blurb: 'Stamps and stuns towers near it. Pin it with roots or frost so it cannot stamp.', answer: 'Root garden or Glacier to pin it, plus Rail, Longbow or Siege mortar.' },
+  herald: { kind: 'herald', name: 'Herald', hp: 260, speed: 32, gold: 25, leak: 2, dps: 16, bar: 64, size: 1.4, traits: { aura: { r: 120, cut: 0.35 } }, blurb: 'Foes near it shrug off your most used element. Mix elements, or let Wren take it.', answer: 'Mix elements, or send Wren.' },
+  mireking: { kind: 'mireking', name: 'The Mire King', hp: 2400, speed: 20, gold: 150, leak: 12, dps: 40, bar: 110, size: 3, traits: { boss: true, phases: [0.5], summon: { kind: 'grub', n: 2, every: 5 } }, blurb: 'Drags the swamp with him and spits out Grubs.', answer: 'Steady damage, and clear the Grubs he spits out.' },
+  tidewyrm: { kind: 'tidewyrm', name: 'The Tidewyrm', hp: 2000, speed: 26, gold: 200, leak: 12, dps: 50, bar: 90, size: 2.6, takes: { storm: 1.25 }, traits: { boss: true, phases: [0.5], dive: { every: 9, dur: 3 } }, blurb: 'Dives under the tide to heal. Hit it while it is up.', answer: 'Storm pylon while it is above water.' },
+  colossus: { kind: 'colossus', name: 'The Brass Colossus', hp: 6000, speed: 16, gold: 260, leak: 12, dps: 70, bar: 140, size: 3.4, traits: { boss: true, phases: [0.5], plated: 0.35 }, blurb: 'Brass plates turn most damage. Chill it and the plates crack.', answer: 'Frost bell to crack the plates, then everything.' },
+  queen: { kind: 'queen', name: 'The Hollow Queen', hp: 5500, speed: 22, gold: 400, leak: 12, dps: 90, bar: 130, size: 3.2, flying: false, traits: { boss: true, phases: [0.66, 0.33], summon: { kind: 'shade', n: 2, every: 7 } }, blurb: 'Rewrites the map as she falls. Three phases.', answer: 'A full mix. She calls Shades, so keep a Beacon.' },
 };
 
 /** Health scale per stage so later stages hit harder. The Ashen Rift (16 to 20) climbs twice as fast, so the last region is the hardest. */
