@@ -170,7 +170,7 @@ A save from before the trees were rebalanced gets every node refunded once, and 
 ![Steam Vents on a phone](docs/images/phone-steam-vents.jpg)
 
 - **Web and mobile web.** A service worker caches the whole game on first load, so it keeps working with no signal. Add it to your home screen and it opens full screen, like an app.
-- **iOS and Android.** iOS is a native Swift app with every picture and sound inside it. Android wraps the web game with Capacitor, every file bundled inside. No server, no account, no ads, no network calls.
+- **iOS and Android.** iOS is a native Swift app and Android a native Kotlin app, each with every picture and sound inside it. No server, no account, no ads, no network calls.
 - **Phones, tablets and desktops.** Play sideways or upright. The controls sit beside the map on wide screens and below it on short ones. Held upright, a phone shows the map at full height under a strip of stats, with Wren and the skills below; drag the map left and right to see the rest, and red notches at the edges point to foes out of view. Everything keeps clear of notches and rounded corners.
 - **Saves stay on your device.**
 
@@ -237,13 +237,26 @@ You need a Mac with Xcode 16 or newer and a free Apple ID. The art in the repo i
 
 With a free Apple ID the app stops opening after 7 days. Press Run again to renew it.
 
-### Android app
+### Android app (native)
 
-```bash
-npm run cap:android   # build, sync and open Android Studio
-```
+The Android game is a native Kotlin app in `android/`, with no web view. It plays the same 20 stages by the same rules as the web and iOS games, with the same baked art, fully offline. It needs no internet permission at all.
 
-The app turns with the phone: sideways or upright. Run `npm run icons` to repaint the app icon (Wren and the Keep) for the web, iOS and Android.
+- `android/engine` is the battle engine, the game data and saves, in plain Kotlin. It reads the same `game-data.json` as the iOS app and must land on the same 54 bot runs. It tests on any machine with Java 17: `cd android && ./gradlew :engine:test`.
+- `android/app` is the app: the battle draws on a canvas, Jetpack Compose draws the menus and HUD, and a small synth makes the sounds. It takes its art straight from `ios/TowerRiot/TowerRiot/Art`, so `npm run native:art` updates both apps.
+- Every push that touches `android/` (or the shared data and art) runs the engine tests and builds the app (`.github/workflows/android.yml`). The finished app is kept on that run as `TowerRiot-android`.
+
+The app turns with the phone: sideways or upright, and the back button steps back through the screens. Run `npm run icons` to repaint the app icon (Wren and the Keep) for the web, iOS and Android.
+
+#### Play it on your Android phone
+
+The quick way needs no computer tools at all:
+
+1. On GitHub, open the Actions tab, pick the **Android** workflow and open its latest green run.
+2. Under Artifacts, download **TowerRiot-android**. It is a zip with `app-release.apk` inside. Unzip it (on the phone, the Files app does this).
+3. Tap `app-release.apk`. Android asks to allow installs from this source (your browser or Files app). Allow it, go back and tap Install.
+4. Open TowerRiot from your apps. To update, install a newer APK over it: your stars and tree picks stay.
+
+Or build it yourself: install Android Studio, open the `android/` folder, plug the phone in with USB debugging on (Settings, About phone, tap Build number seven times, then Developer options, USB debugging), pick the phone at the top and press Run.
 
 ---
 
@@ -269,7 +282,7 @@ tests/         stage, rule and save checks, and the balance bot
 scripts/       offline cache, app icons, iOS art bake
 tools/bake/    the page that paints the iOS art
 ios/           the native iOS app (Swift) and its engine package
-android/       Android app shell
+android/       the native Android app (Kotlin) and its engine
 ```
 
 ---

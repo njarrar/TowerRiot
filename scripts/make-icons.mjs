@@ -15,12 +15,11 @@ const out = (path, buf) => { const u = new URL(`../${path}`, import.meta.url); m
 
 for (const size of [192, 512, 1024]) out(`public/icons/icon-${size}.png`, await paint(size));
 out('ios/TowerRiot/TowerRiot/Assets.xcassets/AppIcon.appiconset/icon-1024.png', await paint(1024));
-// Android: square and round launcher icons, and the adaptive foreground with the figures inside the safe zone.
+// Android: square and round launcher icons.
 const dens = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
 for (const [d, s] of Object.entries(dens)) {
   const res = `android/app/src/main/res/mipmap-${d}`;
   out(`${res}/ic_launcher.png`, await paint(s));
   out(`${res}/ic_launcher_round.png`, await paint(s, 1, true));
-  out(`${res}/ic_launcher_foreground.png`, await paint(Math.round(s * 108 / 48), 0.72));
 }
 await browser.close();
