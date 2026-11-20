@@ -101,9 +101,22 @@ The Ashen Rift (stages 11 to 20) brings six more, each asking for a different mi
 | Hollow Ram | Stamps and stuns towers near it. | Roots or frost to pin it, then big hits |
 | Herald | Foes near it shrug off your most used element. | Mix elements, or send Wren |
 
+Four more turn up across the campaign:
+
+| Foe | Watch out | What beats it |
+|---|---|---|
+| Rune Stalker | Leaves the road to steal the live rune, then speeds up the foes around it. | Wren, or a Watch tower before it gets there. A kill by Wren pays 35 gold more and renews the rune |
+| Gilded Scarab | Fast, and costs no lives if it gets out. | Kill it for a 70 gold bounty |
+| Wick Leech | Flies to a Beacon and halves its reach while it feeds. | Watch tower or Storm pylon |
+| Tether Twin | Walks in linked pairs that share each hit half and half while close. | Area damage: Forge cannon, Storm pylon or Lantern Snare |
+
+Some old foes fight in new ways. Grubs in a pack of four or more run 15% faster. A Mender now heals one foe at a time with a beam, and holding it with Wren, roots or frost breaks the beam for 3 seconds. A Sapper that dies before it reaches a wall blows up and hurts the foes around it. A Warden's shield faces forward: towers ahead of it do 40% less, so hit it from the side or behind, with lightning, or with Wren. When Wren lands the last hit on a Herald, the Hollow loses 20% of its best resistance.
+
+In Variant B and under any Oath, three waves each bring one **Crowned Elite**: a foe with 45% more health, a gold crown and one of three traits. Swift runs 20% faster, Volatile stuns nearby towers when it dies, and Wardborn carries a pane that stops one hit.
+
 The first time a new foe walks in, a banner names it and says what beats it, and the next-wave card marks it **New**.
 
-And four bosses, one at the end of each region: **The Mire King**, **The Tidewyrm**, **The Brass Colossus** and **The Hollow Queen**. Each one changes the map as its health falls. At half health the Mire King smashes an inner causeway to the Keep, the Tidewyrm drowns the north pass, and the Colossus breaks straight through the anvil. The Queen does it twice, at two thirds and at one third.
+And four bosses, one at the end of each region: **The Mire King**, **The Tidewyrm**, **The Brass Colossus** and **The Hollow Queen**. Each has its own attack. The Mire King throws bog at a tower to slow its fire, and below half health he heals unless he is burning. The Tidewyrm comes up from each dive drenched, taking 40% more from lightning for 4 seconds, and below half health it stuns towers where it surfaces. The Colossus warns for 1.5 seconds, then vents steam that knocks Wren back; below half health it drops its plates and speeds up. The Hollow Queen hides the foes around her, calls two Heralds, and flies for 6 seconds in her last phase. Each one changes the map as its health falls. At half health the Mire King smashes an inner causeway to the Keep, the Tidewyrm drowns the north pass, and the Colossus breaks straight through the anvil. The Queen does it twice, at two thirds and at one third.
 
 ![Lighthouse Rock](docs/images/battle-lighthouse.jpg)
 
@@ -296,6 +309,16 @@ The November 2026 overhaul:
 - **Phones held upright clear the Dynamic Island:** the battle bar starts below the island and fits a 375 point phone (lives, gold, wave, speed, pause), Auto sits with the skills, sound moves to the pause strip, and the band sits on the home bar. On the title screen Settings is a gear, so no button label gets cut. The campaign's links share a row of their own. On iPhone, held sideways, the HUD now clears the island too.
 - **Six new foes in the Ashen Rift:** Husks, Cinder Hounds, Glasshides, Veil Moths, Hollow Rams and Heralds replace plain Grubs and Skitters in stages 11 to 20, so each late stage asks for a new tower mix. The field guide and the stage card say what beats each foe.
 - **iOS fixes:** no stuck slow motion after a cancelled aim, taps near Wren reach the towers and plots around her, the left-handed HUD works in every layout, and a win counts even if you leave during the result screen.
+- **Four new foes:** the Rune Stalker, the Gilded Scarab, the Wick Leech and the Tether Twin, each with its own art, icon and field guide entry.
+- **Bosses fight back:** each of the four has its own attack and a second phase, and a health bar at the top of the screen marks the phases.
+- **Crowned Elites** in Variant B and under Oaths.
+- **Old foes, new tricks:** Grub packs surge, Menders heal by a beam you can break, Sappers blow up, Wardens shield only their front, and a Herald killed by Wren weakens the Hollow.
+- **Clearer foes:** six old foes have new shapes, hits flash, a Ram shows a ring before it stamps, and adapted foes show the element they resist.
+- **Rule fixes:** a Beacon's reach for hidden foes grows with its upgrades, Second Dawn skips dead slots, Glasshide panes break under fast towers, and the Tide Pearl works on all water stages.
+- **Web:** the game pauses when the tab or app goes to the background, a lost touch no longer leaves time slow, sound comes back after a call on iPhone, and a new version waits for you to tap Reload. If the game hits an error it shows a card to reload or go back to the title. Your save is kept.
+- **Settings:** auto skill points has three choices (region 1 only, always, off), and erase asks twice.
+- **iOS:** a fixed 30 steps a second clock like the web, pause when the app leaves the screen, Variant B ground art, and lighter sound code.
+- **Android:** the game draws edge to edge and keeps clear of the camera cutout, with a paper-coloured launch screen and a smaller release build.
 
 ## Design notes
 

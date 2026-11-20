@@ -1,5 +1,6 @@
 import SwiftUI
 import SpriteKit
+import QuartzCore
 import TowerRiotKit
 
 /// Runs one fight: steps the battle each frame, turns events into sound and banners, and holds what the HUD shows.
@@ -44,11 +45,15 @@ final class BattleController: ObservableObject {
     }
 
     private var frames = 0
+    /// Fixed 1/30 s physics accumulator matching web `BattleClock` across 60Hz/120Hz ProMotion displays.
+    private var clockAcc = 0.0
+    private static let fixedStep = 1.0 / 30.0
     private var bannerT = 0.0
     private var bannerQ: [(String, String, Double)] = []
     private var bannerId = 0
     private var lvlT = 0.0
     private var leakBy: [EnemyKind: Int] = [:]
+    private var openedRoads = Set<String>()
     private var exitWasPaused = false
     private var ended = false
     private var resultScheduled = false
@@ -127,8 +132,14 @@ final class BattleController: ObservableObject {
             // One skill works right away. Building comes first; how to move Wren follows the first tower.
             if battle.canLearn(.q) { _ = battle.learn(.q) }
             let hx = battle.hero.x, hy = battle.hero.y
-            var best = 0
-            for (i, p) in battle.plots.enumerated() where hypot(p.x - hx, p.y - hy) < hypot(battle.plots[best].x - hx, battle.plots[best].y - hy) { best = i }
+            var best: Int? = nil
+            for (i, p) in battle.plots.enumerated() where p.unlocked && p.rubble == nil {
+                if let b = best {
+                    if hypot(p.x - hx, p.y - hy) < hypot(battle.plots[b].x - hx, battle.plots[b].y - hy) { best = i }
+                } else {
+                    best = i
+                }
+            }
             hintPlot = best
             scene.look.hintPlot = best
             showBanner("Build your first tower", "Tap the marked plot. Towers do most of the work.", 5)
@@ -155,17 +166,25 @@ final class BattleController: ObservableObject {
     /* ------------------------------------------------------------------ loop */
 
     private func frame(_ dt: Double) -> [BattleEvent] {
-        let simDt = aimingW ? dt * 0.25 : dt
-        battle.step(simDt)
+        // Nothing to throw once Wren loses W readiness (down, on cooldown, or fight ended).
+        if aimingW && !battle.skillReady(.w) { endAim() }
+        if !battle.paused {
+            let slowFactor = aimingW ? 0.25 : 1.0
+            clockAcc = min(clockAcc + dt * slowFactor, Self.fixedStep * 6)
+            var steps = 0
+            while clockAcc >= Self.fixedStep && steps < 6 {
+                battle.step(Self.fixedStep)
+                clockAcc -= Self.fixedStep
+                steps += 1
+            }
+        }
         let events = battle.drain()
         react(events)
         // Auto-call waits for a clear field, so waves never pile up on each other.
         if autoNext && !battle.paused && !battle.over && battle.status == .running && battle.nextIn != nil && battle.wave < battle.totalWaves && battle.foes.isEmpty {
             _ = battle.callWave()
         }
-        // Nothing to throw once Wren is down or the fight is over: time must not stay slowed.
-        if aimingW && (battle.hero.dead || battle.over) { endAim() }
-        if sellArmedId != nil && Date().timeIntervalSince1970 >= sellArmedUntil { sellArmedId = nil }
+        if sellArmedId != nil && CACurrentMediaTime() >= sellArmedUntil { sellArmedId = nil }
         scene.look.showLeash = showLeash || aimingW
         if bannerT > 0 {
             bannerT -= dt
@@ -198,11 +217,20 @@ final class BattleController: ObservableObject {
             case let .switchFlip(_, label, state): sound.play(.switchFlip); showBanner(label, state != 0 ? "Mechanism engaged!" : "Mechanism reset.", 1.8)
             case .warp: sound.play(.warp)
             case let .riftWarn(_, wv): showBanner("New breach forming", "Watch the marked path before Wave \(wv).", 2.6)
-            case .riftOpen: sound.play(.wave); showBanner("Rift torn open", "A new lane has activated on the field!", 2.4)
+            case let .riftOpen(road):
+                if !openedRoads.contains(road) {
+                    openedRoads.insert(road)
+                    sound.play(.wave); showBanner("Rift torn open", "A new lane has activated on the field!", 2.4)
+                }
             case let .terraform(label): sound.play(.boss); showBanner("Ground shifts", label, 3.0, now: true)
             case .stamp: sound.play(.boom)
             case .pane: sound.play(.bell)
             case .gateShock: sound.play(.sunrise); showBanner("Bastion bell!", "The Keep shockwave stuns intruders at the gate.", 2.2)
+            case .ironGate: sound.play(.build); showBanner("Iron Gate holds!", "The portcullis repels the breach and knocks intruders back.", 2.2)
+            case let .heraldCleanse(el, _, _): sound.play(.sunrise); showBanner("Herald broken!", "Wren's kill strips 20% \(Words.element[el] ?? el.rawValue) resistance from the Hollow.", 2.4)
+            case .runeStolen: sound.play(.leak); showBanner("Rune stolen!", "A Rune Stalker snatched the Rune and rallied nearby foes!", 2.4)
+            case .escape: sound.play(.warp); showBanner("Scarab escaped", "No lives lost, but its treasure slipped away.", 2.0)
+            case .bog: sound.play(.root)
             case .level: sound.play(.level); lvlT = 0.9; levelFlash = true; if autoSkills { b.autoLearn() }
             case let .wave(n, hint):
                 sound.play(.wave); showBanner("Wave \(n) of \(b.totalWaves)", hint, 2)
@@ -229,7 +257,7 @@ final class BattleController: ObservableObject {
             case .heroDown: showBanner("Wren falls", "She returns at the gate in \(Int(b.hero.respawnT.rounded(.up))) s.", 2.4)
             case .revive: showBanner("Second dawn", "Wren stands back up.", 2)
             case let .early(gold): showBanner("Called early", "+\(gold) gold", 1.6)
-            case let .won(stars): sound.play(.win); scheduleEnd(won: true, stars: stars)
+            case let .won(stars): if b.status == .won { sound.play(.win); scheduleEnd(won: true, stars: stars) }
             case .lost: sound.play(.lose); scheduleEnd(won: false, stars: 0)
             default: break
             }
@@ -330,13 +358,13 @@ final class BattleController: ObservableObject {
     }
 
     func openPlot(_ i: Int) {
-        let now = Date().timeIntervalSince1970
+        let now = CACurrentMediaTime()
         menu = .plot(i); armed = nil; sellArmedId = nil; panelOpenedAt = now
         scene.look.selPlot = i; scene.look.selTower = nil; scene.look.preview = nil
     }
 
     func openTower(_ id: Int) {
-        let now = Date().timeIntervalSince1970
+        let now = CACurrentMediaTime()
         menu = .tower(id); armed = nil; sellArmedId = nil; panelOpenedAt = now
         scene.look.selTower = id; scene.look.selPlot = nil; scene.look.preview = nil
     }
@@ -349,7 +377,7 @@ final class BattleController: ObservableObject {
     /// First tap shows the range and what the tower does; the second tap builds (after brief bounce/arm delay).
     func pickBuild(_ kind: TowerKind) {
         guard case let .plot(pi) = menu else { return }
-        let now = Date().timeIntervalSince1970
+        let now = CACurrentMediaTime()
         if now - panelOpenedAt < 0.2 { return }
         if armed != kind || now - armedAt < 0.3 {
             armed = kind; armedAt = now; scene.look.preview = kind; return
@@ -360,7 +388,7 @@ final class BattleController: ObservableObject {
 
     /// 2-tap sell guard so fast taps never accidentally scrap an upgraded tower.
     func sellOrArm(_ id: Int) {
-        let now = Date().timeIntervalSince1970
+        let now = CACurrentMediaTime()
         if now - panelOpenedAt < 0.2 { return }
         if sellArmedId == id && now < sellArmedUntil {
             if battle.sell(id) { closeMenu() }
@@ -402,6 +430,15 @@ final class BattleController: ObservableObject {
     func cycleSpeed() { battle.speed = battle.speed == 1 ? 2 : battle.speed == 2 ? 3 : 1; tick &+= 1 }
 
     func togglePause() { battle.paused.toggle(); tick &+= 1 }
+
+    /// Auto-pause when the app leaves the foreground (calls, Control Center, app switcher).
+    func pauseIfRunning() {
+        if aimingW { endAim() }
+        if !battle.over && !battle.paused && !ended && !resultScheduled {
+            battle.paused = true
+            tick &+= 1
+        }
+    }
 
     func toggleSound() { app.toggleSound(); tick &+= 1 }
 

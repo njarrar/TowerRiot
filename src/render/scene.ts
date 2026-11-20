@@ -9,6 +9,7 @@ import { Y_SQUASH, TOWER_SIGHT } from '../game/sim';
 import { pointAt, smooth, type Vec } from '../game/path';
 import { makeRng } from '../game/rng';
 import { TOWERS, type TowerKind } from '../game/data/towers';
+import type { Element } from '../game/data/towers';
 import type { EnemyKind } from '../game/data/enemies';
 import { RUNES, RUNE_WARN_SEC } from '../game/data/shop';
 import { ATTUNE, HERO, SNARE } from '../game/data/hero';
@@ -103,8 +104,20 @@ export class Scene {
   private area = { x: 0, y: 0, w: 0, h: 0 };
 
   constructor(private readonly canvas: HTMLCanvasElement) {
-    this.g = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('2D canvas context unavailable');
+    this.g = ctx;
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
+  }
+
+  /** Release cached offscreen canvases when leaving a battle to avoid mobile GPU memory spikes. */
+  dispose() {
+    if (this.bg) { this.bg.width = 0; this.bg.height = 0; }
+    if (this.gateSp) { this.gateSp.c.width = 0; this.gateSp.c.height = 0; }
+    for (const sp of this.sprites.values()) { sp.c.width = 0; sp.c.height = 0; }
+    this.sprites.clear();
+    this.parts = []; this.fx = []; this.floats = []; this.coins = [];
+    this.seeds.clear(); this.gaits.clear(); this.openedRoads.clear();
   }
 
   /** Paint the stage ground once. Slow (a second or so on a phone), so call it behind a loading screen. */
@@ -186,11 +199,14 @@ export class Scene {
   static towerScale(t: { lv: number }) { return 0.6 + 0.06 * (Math.min(t.lv, 5) - 1); }
 
   private towerSprite(t: Tower): Sprite {
-    const key = `${t.kind}:${Math.min(t.lv, 5)}:${t.split ?? ''}:${t.plot}`;
+    const lv = Math.min(t.lv, 5);
+    const key = `${t.kind}:${lv}:${t.split ?? ''}`;
     let sp = this.sprites.get(key);
     if (!sp) {
-      const S = Scene.towerScale(t), seed = 200 + t.plot * 7;
-      sp = this.sprite((x, ox, oy) => paintTower(x, t.kind, ox, oy, S, 'base', seed, t.lv, t.split), 280, 300, 140, 262);
+      const S = Scene.towerScale(t);
+      const seed = 200 + t.kind.charCodeAt(0) * 13 + lv * 7;
+      // Pass drawBarrel=false so Forge Cannon's rotating barrel is only drawn live in drawTowerBase.
+      sp = this.sprite((x, ox, oy) => paintTower(x, t.kind, ox, oy, S, 'base', seed, lv, t.split, false), 280, 300, 140, 262);
       this.sprites.set(key, sp);
     }
     return sp;
@@ -350,6 +366,24 @@ export class Scene {
           this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 180, life: 0.85, c: '255,215,120' });
           this.shake = Math.max(this.shake, 6);
           break;
+        case 'ironGate':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 140, life: 0.75, c: '235,195,125' });
+          this.shake = Math.max(this.shake, 5);
+          break;
+        case 'heraldCleanse':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 150, life: 0.85, c: '120,245,200' });
+          this.float(e.x, e.y - 54, 'Cleanse -20%', '#7cf0c4', true);
+          break;
+        case 'runeStolen':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 140, life: 0.9, c: '255,195,70' });
+          this.float(e.x, e.y - 50, 'Rune stolen!', '#ffb040', true);
+          break;
+        case 'escape':
+          this.float(e.x, e.y - 44, 'Escaped!', '#e8c468', false);
+          break;
+        case 'bog':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 52, life: 0.7, c: '115,175,75' });
+          break;
         default: break;
       }
     }
@@ -410,7 +444,7 @@ export class Scene {
     this.step(dt);
     this.stepGaits(b, dt);
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    g.fillStyle = '#e4dccb'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    g.fillStyle = '#e4dccb'; g.fillRect(0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr);
     g.translate(this.ox, this.oy); g.scale(this.scale, this.scale);
     g.save();
     g.beginPath(); g.rect(0, 0, W, H); g.clip();
@@ -478,11 +512,17 @@ export class Scene {
     this.drawRifts(T);
     if (b.rune) this.drawRune(b.rune, T, view.reduceMotion);
 
+    // Dominant Hollow adaptation element (>= 15% resistance) for live visual mutations.
+    let adaptEl: Element | null = null, adaptMax = 0.15;
+    for (const el of ['pierce', 'fire', 'frost', 'storm', 'nature'] as Element[]) {
+      if ((b.resist[el] ?? 0) >= adaptMax) { adaptMax = b.resist[el]; adaptEl = el; }
+    }
+
     // Base pass, sorted by depth.
     const ents: { y: number; d: () => void }[] = [];
     for (const t of b.towers) ents.push({ y: t.y, d: () => this.drawTowerBase(t) });
     for (const [x, y] of this.posts) ents.push({ y, d: () => drawPost(g, x, y) });
-    for (const f of b.foes) ents.push({ y: f.y + (f.def.flying ? 40 : 0), d: () => this.drawFoe(f, 'base', T) });
+    for (const f of b.foes) ents.push({ y: f.y + (f.def.flying ? 40 : 0), d: () => this.drawFoe(f, 'base', T, adaptEl) });
     if (!b.hero.dead) ents.push({ y: b.hero.y, d: () => this.drawHero(b, 'base', T) });
     for (const [gx, gy] of b.gate) ents.push({ y: gy, d: () => this.put(this.gateSp, gx, gy) });
     ents.sort((a, z) => a.y - z.y).forEach(e => e.d());
@@ -502,7 +542,7 @@ export class Scene {
     if (st.lighthouse) lights.push([st.lighthouse[0], st.lighthouse[1] - 120, 380, 1, '#ffe2a0']);
     for (const f of this.fx) if (f.k === 'boom') lights.push([f.x, f.y, 140 * f.life / 0.45 + 40, 0.9, '#ff8a3a']);
     const dark = b.hero.sunriseT > 0 ? 0 : b.night ? 0.62 : st.lava ? 0.14 : 0.03;
-    L.darkness(g, W, H, lights, dark);
+    if (dark > 0.05) L.darkness(g, W, H, lights, dark);
 
     // Sun wash and slow light shafts (not at night).
     if (!b.night) {
@@ -526,7 +566,48 @@ export class Scene {
     // Emit pass.
     for (const t of b.towers) this.drawTowerEmit(b, t, T);
     for (const [x, y] of this.posts) { const f = 0.8 + 0.2 * Math.sin(T * 15 + x); g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, x, y - 34, 10 * f, '#ff9a3a', 0.25); g.restore(); g.fillStyle = '#ffd08a'; g.fillRect(x - 2, y - 37, 4, 6 * f); }
-    for (const f of b.foes) this.drawFoe(f, 'emit', T);
+    for (const f of b.foes) this.drawFoe(f, 'emit', T, adaptEl);
+    // Mender channeled emerald healing tether beams
+    for (const f of b.foes) {
+      if (f.dead || f.healTarget === null) continue;
+      const target = b.foes.find(o => o.id === f.healTarget && !o.dead && !o.under);
+      if (!target) continue;
+      g.save();
+      g.globalCompositeOperation = 'lighter';
+      const sx = f.x + (f.dir || 1) * 12, sy = f.y - 16, tx = target.x, ty = target.y - target.def.bar * 0.45;
+      const mx = (sx + tx) / 2, my = Math.min(sy, ty) - 18 + Math.sin(T * 8 + f.id) * 4;
+      g.strokeStyle = 'rgba(92,240,145,.32)'; g.lineWidth = 6;
+      g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo(mx, my, tx, ty); g.stroke();
+      g.strokeStyle = 'rgba(185,255,205,.88)'; g.lineWidth = 2; g.setLineDash([7, 5]); g.lineDashOffset = -T * 42;
+      g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo(mx, my, tx, ty); g.stroke();
+      g.setLineDash([]);
+      L.glow(g, tx, ty, 16, '#6ef08e', 0.35 + 0.1 * Math.sin(T * 7));
+      g.restore();
+    }
+    // Tether Twin violet soul-link chains (50/50 damage split within 160 px)
+    for (const f of b.foes) {
+      if (f.dead || f.under || f.linkPartnerId === null || f.id > f.linkPartnerId) continue;
+      const p = b.foes.find(o => o.id === f.linkPartnerId && !o.dead && !o.under);
+      if (!p || Math.hypot(p.x - f.x, p.y - f.y) > 160) continue;
+      g.save(); g.globalCompositeOperation = 'lighter';
+      g.strokeStyle = 'rgba(196,148,255,.35)'; g.lineWidth = 5;
+      g.beginPath(); g.moveTo(f.x, f.y - 24); g.lineTo(p.x, p.y - 24); g.stroke();
+      g.strokeStyle = 'rgba(240,224,255,.9)'; g.lineWidth = 1.6; g.setLineDash([6, 4]); g.lineDashOffset = -T * 36;
+      g.beginPath(); g.moveTo(f.x, f.y - 24); g.lineTo(p.x, p.y - 24); g.stroke();
+      g.setLineDash([]); g.restore();
+    }
+    // Wick Leech dark-violet flame siphon beams draining Beacons
+    for (const f of b.foes) {
+      if (f.dead || f.under || f.siphonTowerId === null) continue;
+      const tw = b.tower(f.siphonTowerId);
+      if (!tw || tw.down) continue;
+      g.save(); g.globalCompositeOperation = 'lighter';
+      g.strokeStyle = 'rgba(195,115,255,.45)'; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(tw.x, tw.y - 78); g.lineTo(f.x, f.y - 10); g.stroke();
+      g.strokeStyle = 'rgba(255,168,80,.85)'; g.lineWidth = 1.6; g.setLineDash([5, 6]); g.lineDashOffset = -T * 40;
+      g.beginPath(); g.moveTo(tw.x, tw.y - 78); g.lineTo(f.x, f.y - 10); g.stroke();
+      g.setLineDash([]); g.restore();
+    }
     if (!b.hero.dead) this.drawHero(b, 'emit', T, !!view.still);
     for (const [gx, gy] of b.gate) L.gate(g, gx, gy, 'emit');
     if (st.lighthouse) {
@@ -542,7 +623,7 @@ export class Scene {
       g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, lx, ly - 110, 62, '#ffe6b0', 0.55); g.restore();
     }
 
-    if (!view.still) this.drawShots(b);
+    if (!view.still) this.drawShots(b, dt);
     this.drawFx(T);
     if (st.weather === 'rain' && !view.reduceMotion) {
       g.save();
@@ -573,8 +654,46 @@ export class Scene {
       g.fillStyle = f.c; g.fillText(f.text, f.x, f.y);
     }
     g.globalAlpha = 1;
+    if (!view.still) this.drawBossBar(b, T);
     g.restore();
     if (this.slides && !view.still) this.drawEdgeMarks(b);
+  }
+
+  /** Morning Keep Boss Top Bar with phase threshold notches whenever a boss is on the field. */
+  private drawBossBar(b: Battle, T: number) {
+    const boss = b.foes.find(f => !f.dead && f.def.traits?.boss);
+    if (!boss) return;
+    const g = this.g;
+    const bw = 340, bh = 38, bx = (W - bw) / 2, by = 14;
+    g.save();
+    g.fillStyle = 'rgba(246,242,234,.92)';
+    g.strokeStyle = '#7a6854'; g.lineWidth = 1.6;
+    g.beginPath(); g.roundRect(bx, by, bw, bh, 8); g.fill(); g.stroke();
+    g.fillStyle = '#231f1a';
+    g.font = '800 13px Cinzel, Georgia, serif';
+    g.textAlign = 'left'; g.textBaseline = 'top';
+    const tag = boss.under ? ' · Submerged' : boss.shielded ? ' · Ward' : boss.phase > 0 ? ` · Phase ${boss.phase + 1}` : '';
+    g.fillText(`${boss.def.name}${tag}`, bx + 12, by + 6);
+    g.font = '700 11px Barlow, sans-serif'; g.textAlign = 'right'; g.fillStyle = '#5c5145';
+    g.fillText(`${Math.ceil(boss.hp)} / ${Math.ceil(boss.max)}`, bx + bw - 12, by + 7);
+    const barX = bx + 12, barY = by + 23, barW = bw - 24, barH = 8;
+    g.fillStyle = 'rgba(35,31,26,.16)';
+    g.beginPath(); g.roundRect(barX, barY, barW, barH, 4); g.fill();
+    const frac = Math.max(0, Math.min(1, boss.hp / boss.max));
+    const fillCol = boss.under ? '#4baac8' : boss.hitT > 0 ? '#f08a60' : '#b83c26';
+    g.fillStyle = fillCol;
+    g.beginPath(); g.roundRect(barX, barY, barW * frac, barH, 4); g.fill();
+    // Phase threshold tick marks
+    for (const p of boss.def.traits?.phases ?? []) {
+      const tx = barX + barW * p;
+      g.strokeStyle = '#f6f2ea'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(tx, barY - 1); g.lineTo(tx, barY + barH + 1); g.stroke();
+    }
+    if (boss.burstT > 0) {
+      g.strokeStyle = `rgba(218,86,52,${0.4 + 0.4 * Math.sin(T * 10)})`; g.lineWidth = 2;
+      g.beginPath(); g.roundRect(bx - 1, by - 1, bw + 2, bh + 2, 9); g.stroke();
+    }
+    g.restore();
   }
 
   /** When the map runs off the screen's sides: a dark notch at the edge for each foe out of view, and a hint that there is more road. */
@@ -879,6 +998,14 @@ export class Scene {
       for (let k = 0; k < 3; k++) { const a = a0 + k * TAU / 3; g.beginPath(); g.arc(t.x + Math.cos(a) * 14, hy + Math.sin(a) * 4, 2.4, 0, TAU); g.fill(); }
       g.restore();
     }
+    if (t.bogT > 0) {
+      // Mire King Bog Glob sludge clinging to tower plinth (-33% fire rate).
+      g.save();
+      g.fillStyle = 'rgba(84,126,56,.62)';
+      g.beginPath(); g.ellipse(t.x, t.y - 4, 34, 12, 0, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(150,215,95,.8)'; g.lineWidth = 1.5; g.stroke();
+      g.restore();
+    }
   }
 
   private drawTowerEmit(b: Battle, t: Tower, T: number) {
@@ -901,7 +1028,7 @@ export class Scene {
     if (t.split) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, t.x, t.y - 120 * S, 26, LIGHT[t.kind][0], 0.25 + 0.1 * Math.sin(T * 3)); g.restore(); }
   }
 
-  private drawFoe(f: Foe, pass: 'base' | 'emit', T: number) {
+  private drawFoe(f: Foe, pass: 'base' | 'emit', T: number, adaptEl: Element | null = null) {
     const g = this.g, seed = this.seedOf(f);
     const m = this.gaits.get(f.id), kind = gaitOf(f), gt = GAIT[kind];
     const ph = m?.ph ?? seed, v = Math.min(1, m?.v ?? 1);
@@ -917,33 +1044,111 @@ export class Scene {
     const step = Math.abs(Math.sin(ph)) * gt.lift * v;
     const breath = Math.sin(T * 2.2 + seed) * 0.5;
     const by = y - step + breath * (1 - v);
-    const bx = x + strike * 5 * Math.sign(face);
+    // Crisp recoil jolt on hit so attacks feel tactile.
+    const recoil = f.hitT > 0 ? -Math.sign(face) * (f.hitT / 0.12) * 3.5 : 0;
+    const bx = x + strike * 5 * Math.sign(face) + recoil;
     // Nose up going up the screen, down going down; heavy walkers also rock side to side.
     const tilt = (hy / hl) * 0.16 * Math.sign(face) + Math.sin(ph) * gt.rock * v - strike * 0.12 * Math.sign(face);
     // Crawlers surge: stretch as they reach, bunch up as they pull.
     const surge = Math.sin(ph * 2) * gt.surge * v;
     const legs = f.blocked || v < 0.05 ? undefined : ph;
     if (f.under) {
-      if (pass === 'base') {
+      if (f.kind === 'tidewyrm') {
+        const dir = Math.sign(face || 1);
+        if (pass === 'base') {
+          g.save();
+          // Churning pelagic foam ripples & underwater dorsal fin silhouette
+          const w1 = (T * 0.9) % 1, w2 = (T * 0.9 + 0.5) % 1;
+          g.fillStyle = 'rgba(42,126,162,.45)';
+          g.beginPath(); g.ellipse(x, y, 42, 16, 0, 0, TAU); g.fill();
+          for (const phW of [w1, w2]) {
+            g.strokeStyle = `rgba(195,242,255,${(1 - phW) * 0.72})`; g.lineWidth = 2;
+            g.beginPath(); g.ellipse(x, y, 20 + phW * 38, (20 + phW * 38) * 0.36, 0, 0, TAU); g.stroke();
+          }
+          // Slicing dorsal fin skimming the surface
+          g.fillStyle = '#184458'; g.strokeStyle = '#7cd8f0'; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(x - dir * 18, y + 2); g.quadraticCurveTo(x - dir * 4, y - 18, x - dir * 14, y - 20); g.quadraticCurveTo(x + dir * 10, y - 10, x + dir * 14, y + 2); g.closePath(); g.fill(); g.stroke();
+          // Rising healing bubbles while submerged
+          for (let k = 0; k < 4; k++) {
+            const bp = (T * 1.4 + k * 0.25) % 1;
+            g.fillStyle = `rgba(120,245,195,${(1 - bp) * 0.8})`;
+            g.beginPath(); g.arc(x - 18 + k * 12 + Math.sin(T * 5 + k) * 3, y - bp * 26, 2.2 + (1 - bp) * 1.5, 0, TAU); g.fill();
+          }
+          // Resurface breach telegraph in final 1.2s
+          if (f.underT > 0 && f.underT < 1.2) {
+            const warn = 1 - f.underT / 1.2;
+            g.strokeStyle = `rgba(255,220,130,${0.4 + 0.5 * warn})`; g.lineWidth = 2.5; g.setLineDash([6, 4]);
+            g.beginPath(); g.ellipse(x, y, 48 * (1.15 - warn * 0.2), 18 * (1.15 - warn * 0.2), 0, 0, TAU); g.stroke(); g.setLineDash([]);
+          }
+          g.restore();
+        } else {
+          g.save();
+          g.globalCompositeOperation = 'lighter';
+          L.glow(g, x, y - 4, 34, '#5ad8ff', 0.32);
+          g.globalCompositeOperation = 'source-over';
+          g.globalAlpha = 0.6;
+          bar0(g, x, y - f.def.bar, f.hp / f.max, '#5ad8ff', 90);
+          g.restore();
+        }
+      } else if (pass === 'base') {
         g.fillStyle = 'rgba(40,32,24,.9)'; g.beginPath(); g.ellipse(x, y, 14 * f.def.size, 6 * f.def.size, 0, 0, TAU); g.fill();
         g.fillStyle = 'rgba(90,76,58,.8)'; for (let k = 0; k < 4; k++) g.fillRect(x - 10 + k * 6 + Math.sin(T * 9 + k) * 2, y - 3, 3, 3);
       }
       return;
     }
     const hidden = f.hidden;
-    if (hidden) g.globalAlpha = 0.3;
+    if (hidden) g.globalAlpha = f.kind === 'veilmoth' ? 0.42 : 0.3;
     const S = f.def.size;
+    // Ram 1.2s pre-stamp warning ring or Brass Colossus 1.5s Steam Vent telegraph on the ground.
+    if (pass === 'base' && f.def.traits?.stamp && f.abilityT > 0 && f.abilityT < 1.2 && f.rootT <= 0 && f.freezeT <= 0 && f.staggerT <= 0) {
+      const warn = 1 - f.abilityT / 1.2;
+      const rr = f.def.traits.stamp.r;
+      g.save();
+      g.strokeStyle = `rgba(235,95,48,${0.35 + 0.55 * warn})`;
+      g.fillStyle = `rgba(235,95,48,${0.08 * warn})`;
+      g.lineWidth = 2.2;
+      g.beginPath(); g.ellipse(x, y, rr, rr / Y_SQUASH, 0, 0, TAU); g.fill(); g.stroke();
+      g.strokeStyle = `rgba(255,210,120,${0.7 * warn})`;
+      g.beginPath(); g.ellipse(x, y, rr * (1 - warn * 0.85), (rr / Y_SQUASH) * (1 - warn * 0.85), 0, 0, TAU); g.stroke();
+      g.restore();
+    }
+    if (pass === 'base' && f.ventWarnT > 0) {
+      const warn = 1 - f.ventWarnT / 1.5;
+      g.save();
+      g.strokeStyle = `rgba(255,148,58,${0.4 + 0.5 * warn})`;
+      g.fillStyle = `rgba(255,148,58,${0.12 * warn})`;
+      g.lineWidth = 2.4; g.setLineDash([6, 4]);
+      g.beginPath(); g.ellipse(x, y, 120, 120 / Y_SQUASH, 0, 0, TAU); g.fill(); g.stroke();
+      g.setLineDash([]); g.restore();
+    }
     // Small foes are drawn a fifth bigger than their art scale so they read at 3x and on phones.
     const K = f.def.traits?.boss ? 1 : 1.2;
+    const lungeStretchX = f.lungeT > 0 ? 1.18 : 1;
+    const lungeStretchY = f.lungeT > 0 ? 0.88 : 1;
+    const flightLift = f.flightT > 0 ? 28 + Math.sin(T * 5) * 4 : 0;
     g.save();
-    g.translate(bx, by); g.rotate(tilt); g.scale(K * (1 + surge), K * (1 - surge * 0.8)); g.translate(-bx, -by);
+    g.translate(bx, by - flightLift); g.rotate(tilt); g.scale(K * (1 + surge) * lungeStretchX, K * (1 - surge * 0.8) * lungeStretchY); g.translate(-bx, -(by - flightLift));
     // Wings beat: seen from the front, a flap reads as the wings folding in and opening out.
-    const flap = (k: number) => { g.save(); g.translate(bx, by); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -by); };
-    const mothY = by + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
-    paintFoe(g, f.kind, bx, by, pass, seed, face, legs, { chilled: f.slowT > 0 || f.freezeT > 0, T, flap, mothY, panes: f.panes });
+    const flap = (k: number) => { g.save(); g.translate(bx, by - flightLift); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -(by - flightLift)); };
+    const mothY = (by - flightLift) + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
+    paintFoe(g, f.kind, bx, by - flightLift, pass, seed, face, legs, { chilled: f.slowT > 0 || f.freezeT > 0, T, flap, mothY, panes: f.panes, adaptEl, lunging: f.lungeT > 0, regrowing: !!(f.def.traits?.panes && f.panes < f.def.traits.panes.n && f.paneT < 0.8) });
+    // Veil Moth pulsing violet rim while veiled so it reads as intentional stealth rather than a render glitch.
+    if (pass === 'emit' && hidden && f.kind === 'veilmoth') {
+      ringGlow(g, bx, mothY - 4, 22, '175,140,255', 0.32 + 0.14 * Math.sin(T * 5));
+    }
     // The green glow in their seams: the one strong colour the Hollow owns.
-    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
+    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - flightLift - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
     g.restore();
+    // Crowned Elite golden crest & affix pip on Variant B / Oath runs.
+    if (pass === 'emit' && !hidden && f.affix) {
+      const cy = y - f.def.bar * K - 14;
+      const col = f.affix === 'swift' ? '#62d4ff' : f.affix === 'volatile' ? '#ff7c3a' : '#7cf0c4';
+      g.save();
+      g.fillStyle = '#f5c84c'; g.strokeStyle = '#3a2408'; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(x - 8, cy + 4); g.lineTo(x - 9, cy - 4); g.lineTo(x - 3, cy); g.lineTo(x, cy - 6); g.lineTo(x + 3, cy); g.lineTo(x + 9, cy - 4); g.lineTo(x + 8, cy + 4); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = col; g.beginPath(); g.arc(x, cy + 1, 2.2, 0, TAU); g.fill();
+      g.restore();
+    }
     g.globalAlpha = 1;
     if (pass === 'base') {
       if (f.rootT > 0) { g.fillStyle = '#182414'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rx = x + Math.cos(a) * 14 * S, ry = y + Math.sin(a) * 4; g.beginPath(); g.moveTo(rx - 3, ry); g.lineTo(rx + Math.cos(a) * 3, ry - 12 - f.rootT * 4); g.lineTo(rx + 3, ry); g.fill(); } }
@@ -1008,7 +1213,7 @@ export class Scene {
     if (this.moveMark) { const m = this.moveMark, a = m.t / 0.6; g.strokeStyle = `rgba(255,214,140,${a})`; g.lineWidth = 2; g.beginPath(); g.ellipse(m.x, m.y, 22 * (1.4 - a), 9 * (1.4 - a), 0, 0, TAU); g.stroke(); }
   }
 
-  private drawShots(b: Battle) {
+  private drawShots(b: Battle, dt: number) {
     const g = this.g;
     g.save(); g.globalCompositeOperation = 'lighter';
     for (const s of b.shots) {
@@ -1028,7 +1233,7 @@ export class Scene {
       const x = s.x0 + (s.tx - s.x0) * u, y = s.y0 + (s.ty - s.y0) * u - arc;
       g.fillStyle = '#0c0c0d'; g.beginPath(); g.arc(x, y, 4.5, 0, TAU); g.fill();
       g.fillStyle = 'rgba(200,205,215,.4)'; g.fillRect(x - 2, y - 3, 2, 1);
-      if (this.r() < 0.5) this.parts.push({ x, y, vx: 0, vy: -6, life: 0.7, max: 0.7, c: 'rgba(60,60,62,', s: 3, kind: 'smoke' });
+      if (dt > 0 && this.r() < 0.5) this.parts.push({ x, y, vx: 0, vy: -6, life: 0.7, max: 0.7, c: 'rgba(60,60,62,', s: 3, kind: 'smoke' });
     }
   }
 
@@ -1092,6 +1297,15 @@ export class Scene {
 
 /* ------------------------------------------------------------------ helpers */
 
+const TOWER_ANCHOR: Record<TowerKind, { trimX: number; trimY: number; crownY: number }> = {
+  watch:  { trimX: 25, trimY: -78, crownY: -158 },
+  cannon: { trimX: 30, trimY: -36, crownY: -80 },
+  bell:   { trimX: 28, trimY: -70, crownY: -148 },
+  pylon:  { trimX: 18, trimY: -66, crownY: -162 },
+  roots:  { trimX: 22, trimY: -44, crownY: -98 },
+  beacon: { trimX: 17, trimY: -74, crownY: -162 },
+};
+
 export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: number, y: number, s: number, pass: 'base' | 'emit', seed: number, lv = 1, split: 'a' | 'b' | null = null, drawBarrel = true) {
   if (pass === 'base' && lv >= 2) {
     // Reinforced iron/masonry plinth ring so upgraded towers carry clear visual weight from Lv 2+.
@@ -1111,24 +1325,25 @@ export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: numb
     case 'roots': X.rootGarden(c, x, y, s, pass, seed); if (pass === 'emit') X.rootPods(c, x, y, s, 1, 0.4); break;
   }
   if (pass === 'base' && split) {
-    // Distinct Lv 4 specialization trim: Split A wears heavy bastion/crimson banners; Split B wears sleek arcane/copper finials.
+    // Distinct Lv 4 specialization trim anchored to each tower's actual architecture height.
+    const anc = TOWER_ANCHOR[kind];
     c.save(); c.translate(x, y); c.scale(s, s);
     if (split === 'a') {
       for (const sd of [-1, 1]) {
-        c.fillStyle = '#9e3420'; c.beginPath(); c.moveTo(sd * 22, -46); c.lineTo(sd * 29, -44); c.lineTo(sd * 28, -26); c.lineTo(sd * 25, -30); c.lineTo(sd * 22, -26); c.closePath(); c.fill();
-        c.strokeStyle = '#e0ac4c'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(sd * 21, -46); c.lineTo(sd * 30, -44); c.stroke();
+        c.fillStyle = '#9e3420'; c.beginPath(); c.moveTo(sd * anc.trimX, anc.trimY); c.lineTo(sd * (anc.trimX + 7), anc.trimY + 2); c.lineTo(sd * (anc.trimX + 6), anc.trimY + 20); c.lineTo(sd * (anc.trimX + 3), anc.trimY + 16); c.lineTo(sd * anc.trimX, anc.trimY + 20); c.closePath(); c.fill();
+        c.strokeStyle = '#e0ac4c'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(sd * (anc.trimX - 1), anc.trimY); c.lineTo(sd * (anc.trimX + 8), anc.trimY + 2); c.stroke();
       }
     } else {
       for (const sd of [-1, 1]) {
-        c.fillStyle = '#485666'; c.beginPath(); c.moveTo(sd * 19, -40); c.lineTo(sd * 28, -58); c.lineTo(sd * 23, -36); c.closePath(); c.fill();
-        c.strokeStyle = '#9ed8f5'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(sd * 20, -40); c.lineTo(sd * 27.5, -57); c.stroke();
+        c.fillStyle = '#485666'; c.beginPath(); c.moveTo(sd * (anc.trimX - 2), anc.trimY + 4); c.lineTo(sd * (anc.trimX + 7), anc.trimY - 14); c.lineTo(sd * (anc.trimX + 2), anc.trimY + 8); c.closePath(); c.fill();
+        c.strokeStyle = '#9ed8f5'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(sd * (anc.trimX - 1), anc.trimY + 4); c.lineTo(sd * (anc.trimX + 6.5), anc.trimY - 13); c.stroke();
       }
     }
     if (lv >= 5) {
-      // Radiant Mastery crown halo at Lv 5
+      // Radiant Mastery crown halo at Lv 5 anchored above each tower's actual crest
       c.strokeStyle = '#ffd978'; c.lineWidth = 1.6;
-      c.beginPath(); c.ellipse(0, -138, 18, 5.5, 0, 0, TAU); c.stroke();
-      c.fillStyle = '#fff5cf'; c.beginPath(); c.arc(0, -144, 3.2, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(0, anc.crownY, 18, 5.5, 0, 0, TAU); c.stroke();
+      c.fillStyle = '#fff5cf'; c.beginPath(); c.arc(0, anc.crownY - 6, 3.2, 0, TAU); c.fill();
     }
     c.restore();
   }
@@ -1143,6 +1358,10 @@ export interface FoePaintOpts {
   mothY?: number;
   wings?: boolean;
   alt?: number;
+  /** Live dominant Hollow adaptation element for physical visual mutation overlay. */
+  adaptEl?: Element | null;
+  lunging?: boolean;
+  regrowing?: boolean;
 }
 
 /** Paints any of the 22 Hollow enemy kinds with distinct silhouettes, crests, and readable role accents. */
@@ -1187,47 +1406,15 @@ export function paintFoe(
       }
       break;
     case 'mender':
-      L.grub(g, bx, by, 0.46, pass, seed + 5, face, legs);
-      // Bioluminescent emerald healing spore-fronds along its spine.
-      if (pass === 'base') {
-        g.save(); g.translate(bx, by); g.scale(face, 1);
-        for (const [ox, h] of [[-10, 15], [-1, 19], [8, 14]]) {
-          g.strokeStyle = '#284a2c'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(ox, -10); g.quadraticCurveTo(ox - 3, -10 - h * 0.6, ox - 1, -10 - h); g.stroke();
-          g.fillStyle = '#72ea8e'; g.beginPath(); g.arc(ox - 1, -10 - h, 3.1, 0, TAU); g.fill();
-        }
-        g.restore();
-      } else {
-        ringGlow(g, bx, by - 12, 26, '120,230,140', 0.24 + 0.1 * Math.sin(T * 4));
-        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 24, 16, '#6ef08e', 0.42); g.restore();
-      }
+      X.acolyte(g, bx, by, 0.56, pass, seed + 5, face, legs);
+      if (pass === 'emit') ringGlow(g, bx, by - 14, 24, '120,230,140', 0.2 + 0.08 * Math.sin(T * 4));
       break;
     case 'shade':
-      // Tattered twilight wraith shroud + eerie violet seam luminescence.
-      if (pass === 'base') {
-        g.save(); g.translate(bx, by); g.scale(face, 1);
-        const sg = g.createLinearGradient(-32, -16, 16, 0);
-        sg.addColorStop(0, 'rgba(72,52,122,0)'); sg.addColorStop(0.5, 'rgba(64,48,112,.58)'); sg.addColorStop(1, 'rgba(28,22,48,.78)');
-        g.fillStyle = sg;
-        g.beginPath(); g.moveTo(14, -14); g.quadraticCurveTo(-8, -22, -32, -12); g.lineTo(-24, -5); g.lineTo(-34, -1); g.quadraticCurveTo(-8, 2, 14, -4); g.closePath(); g.fill();
-        g.restore();
-      }
-      L.grub(g, bx, by, 0.4, pass, seed + 7, face, legs);
-      if (pass === 'emit') {
-        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx - dir * 4, by - 10, 18, '#a688ff', 0.42); g.restore();
-      }
+      X.wraith(g, bx, by, 0.56, pass, seed + 7, face, legs);
       break;
     case 'splitter':
-      L.grub(g, bx, by, 0.5, pass, seed + 1, face, legs);
-      // Twin-lobed brood nodules divided by a bright jade cleavage fissure.
-      if (pass === 'base') {
-        g.save(); g.translate(bx, by); g.scale(face, 1);
-        g.fillStyle = '#203832';
-        g.beginPath(); g.ellipse(-6, -15, 7, 5, -0.2, 0, TAU); g.ellipse(6, -15, 7, 5, 0.2, 0, TAU); g.fill();
-        g.strokeStyle = '#7cf5cf'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -21); g.lineTo(0, -5); g.stroke();
-        g.restore();
-      } else {
-        ringGlow(g, bx, by - 14, 22, '150,245,210', 0.22);
-      }
+      X.stiltpod(g, bx, by, 0.62, pass, seed + 1, face, legs);
+      if (pass === 'emit') ringGlow(g, bx, by - 18, 20, '150,245,210', 0.2);
       break;
     case 'burrower':
       L.grub(g, bx, by, 0.42, pass, seed + 2, face, legs);
@@ -1279,18 +1466,8 @@ export function paintFoe(
       }
       break;
     case 'warden':
-      L.shellback(g, bx, by, 0.66, pass, 66, face, 0, legs);
-      // Tri-spired obsidian ward-tuning crest cradling a suspended Rift prism.
-      if (pass === 'base') {
-        g.save(); g.translate(bx, by); g.scale(face, 1);
-        g.strokeStyle = '#1d2628'; g.lineWidth = 2.8; g.lineCap = 'round';
-        g.beginPath(); g.moveTo(-10, -28); g.lineTo(-14, -48); g.moveTo(0, -30); g.lineTo(0, -54); g.moveTo(10, -28); g.lineTo(14, -48); g.stroke();
-        g.fillStyle = '#6cf0ce'; g.beginPath(); g.moveTo(0, -61); g.lineTo(5, -54); g.lineTo(0, -47); g.lineTo(-5, -54); g.closePath(); g.fill();
-        g.restore();
-      } else {
-        ringGlow(g, bx, by - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3));
-        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - 54, 22, '#5ce6c0', 0.55); g.restore();
-      }
+      X.obelisk(g, bx, by, 0.72, pass, 66, face, legs);
+      if (pass === 'emit') ringGlow(g, bx, by - 24, 110 / Y_SQUASH * 0.6, '90,200,170', 0.22 + 0.08 * Math.sin(T * 3));
       break;
     case 'moth':
       if (opts.flap) opts.flap(0.35);
@@ -1350,7 +1527,11 @@ export function paintFoe(
       } else {
         g.save(); g.globalCompositeOperation = 'lighter';
         L.glow(g, bx, by - 16, 16, '#4fe0b0', 0.3);
-        L.glow(g, bx - dir * 20, by - 12, 8, '#ff8a3a', 0.35 + 0.15 * Math.sin(T * 11));
+        L.glow(g, bx - dir * 20, by - 12, opts.lunging ? 16 : 8, '#ff8a3a', opts.lunging ? 0.72 : 0.35 + 0.15 * Math.sin(T * 11));
+        if (opts.lunging) {
+          g.strokeStyle = 'rgba(255,155,60,.8)'; g.lineWidth = 2;
+          g.beginPath(); g.moveTo(bx - dir * 16, by - 14); g.lineTo(bx - dir * 34, by - 12); g.moveTo(bx - dir * 14, by - 9); g.lineTo(bx - dir * 28, by - 8); g.stroke();
+        }
         g.restore();
       }
       break;
@@ -1371,6 +1552,10 @@ export function paintFoe(
             g.strokeStyle = '#2b3236'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(px - 4, -18); g.lineTo(px - 2, -18 - ph); g.stroke();
           } else {
             g.fillStyle = 'rgba(170,200,210,.6)'; g.beginPath(); g.moveTo(px - 4, -18); g.lineTo(px - 2, -24); g.lineTo(px + 2, -21); g.lineTo(px + 5, -17); g.closePath(); g.fill();
+            if (opts.regrowing && i === n) {
+              g.strokeStyle = 'rgba(195,245,255,.85)'; g.lineWidth = 1.4;
+              g.beginPath(); g.moveTo(px, -18); g.lineTo(px + 1, -18 - ph * 0.75); g.stroke();
+            }
           }
         }
         g.restore();
@@ -1438,6 +1623,20 @@ export function paintFoe(
         g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 16, by - 67, 20, '#7cf0c4', 0.6 + 0.1 * Math.sin(T * 7)); g.restore();
       }
       break;
+    case 'runethief':
+      X.stalker(g, bx, by, 0.7, pass, seed + 19, face, legs);
+      break;
+    case 'scarab':
+      X.scarab(g, bx, by, 0.68, pass, seed + 21, face, legs);
+      break;
+    case 'wickleech':
+      if (opts.flap) opts.flap(0.28);
+      X.leech(g, bx, mothY, 0.56, pass, seed + 23, alt);
+      if (opts.flap) g.restore();
+      break;
+    case 'tether':
+      X.twin(g, bx, by, 0.66, pass, seed + 25, face, legs);
+      break;
     case 'mireking':
       L.grub(g, bx, by, 1.25, pass, 41, face, legs);
       // Gnarled bog-antler crown draped with swamp moss & glowing fen orbs.
@@ -1460,46 +1659,11 @@ export function paintFoe(
       }
       break;
     case 'tidewyrm':
-      // Swept-back pelagic dorsal fins + abyssal cyan bioluminescence.
-      if (pass === 'base') {
-        g.save(); g.translate(bx, by); g.scale(face, 1);
-        for (const [fx, fy, fh] of [[-38, -16, 18], [-16, -24, 24], [8, -23, 22], [28, -18, 15]]) {
-          const fg = g.createLinearGradient(fx, fy - fh, fx, fy);
-          fg.addColorStop(0, '#62c4de'); fg.addColorStop(1, '#1d4658');
-          g.fillStyle = fg;
-          g.beginPath(); g.moveTo(fx - 8, fy); g.quadraticCurveTo(fx - 2, fy - fh, fx - 12, fy - fh); g.quadraticCurveTo(fx + 6, fy - fh * 0.5, fx + 9, fy); g.closePath(); g.fill();
-        }
-        g.restore();
-      }
-      L.grub(g, bx, by, 1.05, pass, 47, face, legs);
-      if (pass === 'emit') {
-        ringGlow(g, bx, by, 60, '120,205,245', 0.26);
-        g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 46, by - 12, 22, '#5ad8ff', 0.45); g.restore();
-      }
+      X.serpent(g, bx, by, 1.05, pass, 47, face, legs);
+      if (pass === 'emit') ringGlow(g, bx, by, 60, '120,205,245', 0.26);
       break;
     case 'colossus':
-      // Foundry Siege Engine: burnished bronze-brass plating, giant dorsal cogwheel & furnace stack (never frosty unless chilled).
-      L.shellback(g, bx, by, 1.2, pass, 61, face, opts.chilled ? 1 : 0, legs);
-      if (pass === 'base') {
-        g.save(); g.translate(bx, by); g.scale(face, 1);
-        // Warm metallic bronze sheen across the shell dome
-        const bg = g.createLinearGradient(-50, -58, 50, -10);
-        bg.addColorStop(0, 'rgba(225,168,78,.36)'); bg.addColorStop(0.6, 'rgba(168,108,42,.28)'); bg.addColorStop(1, 'rgba(60,36,16,0)');
-        g.fillStyle = bg; g.beginPath(); g.ellipse(0, -18, 60, 40, 0, Math.PI, TAU); g.fill();
-        // Dorsal clockwork cogwheel + iron furnace stack
-        g.save(); g.translate(-8, -56); g.rotate(legs !== undefined ? legs * 0.5 : 0.3);
-        g.strokeStyle = '#c8923a'; g.lineWidth = 4.5; g.beginPath(); g.arc(0, 0, 16, 0, TAU); g.stroke();
-        for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; g.beginPath(); g.moveTo(Math.cos(a) * 15, Math.sin(a) * 15); g.lineTo(Math.cos(a) * 22, Math.sin(a) * 22); g.stroke(); }
-        g.fillStyle = '#3a2c1e'; g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill();
-        g.restore();
-        g.fillStyle = '#2a2624'; g.fillRect(16, -68, 11, 22); g.fillStyle = '#b88234'; g.fillRect(14, -70, 15, 4);
-        g.restore();
-      } else {
-        g.save(); g.globalCompositeOperation = 'lighter';
-        L.glow(g, bx + dir * 21, by - 72, 26, '#ff8a30', 0.55);
-        L.glow(g, bx - dir * 8, by - 56, 18, '#ffb85c', 0.3);
-        g.restore();
-      }
+      X.dreadnought(g, bx, by, 1.12, pass, 61, face, opts.chilled ? 1 : 0, legs);
       break;
     case 'queen':
       if (opts.wings !== false) {
@@ -1521,6 +1685,35 @@ export function paintFoe(
         g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 26, by - 42, 26, '#ffe082', 0.45); g.restore();
       }
       break;
+  }
+  // 5-Element live Hollow adaptation visual mutation overlay (shows what the Hollow hardened against).
+  if (opts.adaptEl && pass === 'base') {
+    g.save(); g.translate(bx, by); g.scale(face, 1);
+    switch (opts.adaptEl) {
+      case 'fire':
+        g.strokeStyle = 'rgba(255,112,38,.85)'; g.lineWidth = 1.6;
+        g.beginPath(); g.moveTo(-10, -14); g.lineTo(-3, -18); g.lineTo(5, -13); g.lineTo(11, -17); g.stroke();
+        break;
+      case 'frost':
+        g.fillStyle = 'rgba(205,240,255,.85)';
+        for (const ox of [-8, 0, 8]) { g.beginPath(); g.moveTo(ox - 2.5, -14); g.lineTo(ox, -23); g.lineTo(ox + 2.5, -14); g.closePath(); g.fill(); }
+        break;
+      case 'storm':
+        g.strokeStyle = '#d49a44'; g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(-4, -16); g.lineTo(-8, -26); g.moveTo(4, -16); g.lineTo(8, -26); g.stroke();
+        g.fillStyle = '#c8b8ff'; g.beginPath(); g.arc(-8, -26, 2, 0, TAU); g.arc(8, -26, 2, 0, TAU); g.fill();
+        break;
+      case 'nature':
+        g.strokeStyle = '#5c7c42'; g.lineWidth = 2.2;
+        g.beginPath(); g.moveTo(-12, -12); g.quadraticCurveTo(0, -20, 12, -12); g.stroke();
+        g.fillStyle = '#c89a38'; g.beginPath(); g.arc(0, -16, 2.2, 0, TAU); g.fill();
+        break;
+      case 'pierce':
+        g.fillStyle = '#8a94a0'; g.strokeStyle = '#252a30'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(6, -18); g.lineTo(16, -15); g.lineTo(14, -7); g.lineTo(5, -9); g.closePath(); g.fill(); g.stroke();
+        break;
+    }
+    g.restore();
   }
 }
 
@@ -1603,11 +1796,11 @@ const GAIT: Record<GaitKind, { stride: number; lift: number; rock: number; surge
   fly: { stride: 60, lift: 0, rock: 0.04, surge: 0 },
 };
 function gaitOf(f: Foe): GaitKind {
-  if (f.def.flying) return 'fly';
+  if (f.def.flying || f.flightT > 0) return 'fly';
   if (f.def.traits?.boss) return 'stomp';
   switch (f.kind) {
-    case 'skitter': case 'hound': return 'scuttle';
-    case 'shell': case 'sapper': case 'elite': case 'warden': case 'glasshide': case 'herald': return 'plod';
+    case 'skitter': case 'hound': case 'runethief': case 'scarab': return 'scuttle';
+    case 'shell': case 'sapper': case 'elite': case 'warden': case 'glasshide': case 'herald': case 'tether': return 'plod';
     case 'ram': return 'stomp';
     default: return 'crawl';
   }

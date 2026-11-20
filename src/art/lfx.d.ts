@@ -11,6 +11,16 @@ export interface LfxExtra {
   rootGarden(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number): void;
   rootPods(c: Ctx, x: number, y: number, s: number, t: number, hot: number): void;
   paintField(c: Ctx, w: number, h: number, m: unknown): void;
+  acolyte(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
+  wraith(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
+  stiltpod(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
+  obelisk(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
+  serpent(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
+  dreadnought(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, frost: number, ph?: number): void;
+  stalker(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
+  scarab(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
+  leech(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, alt: number): void;
+  twin(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number, face: number, ph?: number): void;
 }
 export interface Lfx {
   watchTower(c: Ctx, x: number, y: number, s: number, pass: Pass, seed: number): void;

@@ -126,6 +126,10 @@ export interface StageAlt {
   portalOpenAtWave?: number;
   /** Tides, lava and steam cycle this much faster or slower (0.8 = every 40 s instead of 50 s). */
   shiftEveryMul?: number;
+  /** Optional explicit switch overrides when reversed roads relocate forks/gates. */
+  switches?: SwitchDef[];
+  /** Optional explicit portal overrides when reversed roads invert chute/rift directions. */
+  portals?: PortalDef[];
   /** Foe health for this layout, on top of the stage's own `hpMul`. */
   hpMul?: number;
 }
@@ -296,6 +300,8 @@ export function resolveStageVariant(st: StageDef, variant: StageVariant = 'stand
     if (a.weather !== undefined) out.weather = a.weather;
     if (a.adaptEvery !== undefined) out.adaptEvery = a.adaptEvery;
     if (a.portalOpenAtWave !== undefined) out.portals = out.portals?.map(pt => ({ ...pt, openAtWave: a.portalOpenAtWave }));
+    if (a.switches !== undefined) out.switches = a.switches.map(sw => ({ ...sw, at: [...sw.at] as Vec }));
+    if (a.portals !== undefined) out.portals = a.portals.map(pt => ({ ...pt }));
     if (a.shiftEveryMul !== undefined && out.shifts?.length) out.shifts = scaleShifts(out.shifts, a.shiftEveryMul);
     if (a.hpMul !== undefined) out.hpMul = (st.hpMul ?? 1) * a.hpMul;
   }
@@ -424,7 +430,7 @@ const s3: StageDef = {
     ['Grubs down the hill', '12 grub /1'],
     ['Skitters', '16 skitter /0.5'],
     ['The first Shellback', '2 shell /3, 10 grub +2'],
-    ['A long column', '24 grub /0.6'],
+    ['A long column', '24 grub /0.6, 1 scarab +5'],
     ['Scree chute opens!', '4 shell /2.4, 18 skitter +5 /0.4'],
     ['Fast and heavy', '20 skitter /0.35, 4 shell +6'],
     ['A wall of shells', '8 shell /1.8'],
@@ -479,7 +485,7 @@ const s5: StageDef = {
   ],
   waters: [{ id: 'moat', w: 58, drainAtWave: 5, ctrl: [[560, 240], [405, 275], [375, 395], [485, 500], [735, 495], [820, 380], [800, 255]] }],
   plots: [
-    { at: [540, 385] }, { at: [665, 415], sinkAt: 8 }, { at: [375, 195] },
+    { at: [540, 385] }, { at: [665, 415], sinkAt: 7 }, { at: [375, 195] },
     { at: [585, 168] }, { at: [795, 180] }, { at: [1015, 360], sinkAt: 6 },
     { at: [1015, 595] }, { at: [640, 645] }, { at: [435, 640] },
     { at: [245, 370], sinkAt: 4 }, { at: [85, 290] }, { at: [1200, 390] },
@@ -539,7 +545,7 @@ const s6: StageDef = {
     ['Skitters cross the shoals', '10 skitter @n /0.7, 10 skitter @s /0.7 +1'],
     ['Moths over the straits', '8 moth @n /1, 12 grub @s /0.9'],
     ['Shellbacks, armored', '3 shell @s /3, 14 grub @n /0.8'],
-    ['Rising swells', '16 grub @n /0.7, 14 skitter @s +3 /0.6'],
+    ['Rising swells', '16 grub @n /0.7, 14 skitter @s +3 /0.6, 1 runethief @n +5'],
     ['Detour cliff breaches!', '22 skitter @n /0.4, 22 skitter @s +2 /0.4'],
     ['Heavy tide march', '6 shell @n /2.2, 16 skitter @s /0.45'],
     ['Moth cloud', '20 moth @n /0.55, 12 moth @s +3 /0.7'],
@@ -625,7 +631,7 @@ const s8: StageDef = {
     ['Moths off the rocks', '12 moth @n /0.7, 12 skitter @s /0.5'],
     ['Splitter swarm', '8 splitter @n /1.2, 8 splitter @s /1.2 +3'],
     ['Sea-cave awakens!', '12 splitter @n /1.1, 16 grub @s +1 /0.6'],
-    ['Shells in the dark', '5 shell @n /2.2, 10 shade @s /0.9'],
+    ['Shells in the dark', '5 shell @n /2.2, 10 shade @s /0.9, 2 wickleech @n +4 /1.5'],
     ['Moth cloud', '20 moth @n /0.5, 20 moth @s /0.5 +2'],
     ['The breakers', '8 splitter @n /1.1, 8 splitter @s /1.1, 6 shell @n +6 /2, 12 shade @s +10 /0.8'],
     ['Last light', '10 splitter @n /1.0, 10 splitter @s /1.0, 16 skitter @s +6 /0.35, 10 moth @n +10 /0.6'],
@@ -784,7 +790,7 @@ const s12: StageDef = {
     ['Two fronts', '20 skitter @w /0.35, 10 skitter @n /0.5'],
     ['Shells and menders', '6 shell @w /2, 2 mender @n /5'],
     ['West spur engages!', '8 burrower @w /1.4, 5 burrower @n /1.8'],
-    ['Splitters', '10 splitter @w /1.1, 4 splitter @n /2'],
+    ['Splitters', '10 splitter @w /1.1, 4 splitter @n /2, 1 scarab @w +5'],
     ['Moths', '16 moth @w /0.5, 10 moth @n /0.6'],
     ['Wardens', '2 warden @w /6, 1 warden @n, 11 husk @w +2 /0.6'],
     ['Iron and earth', '10 shell @w /1.4, 7 burrower @n /1.2, 4 mender @w +6 /3'],
@@ -859,6 +865,11 @@ const s14: StageDef = {
     twist: 'The foundry reverses: foes pour from NW out toward N, E and S docks.',
     hpMul: 1.06,
     reverseRoads: ['top', 'mid', 'mid_loop', 'bot'], heroStart: [760, 260],
+    switches: [
+      { id: 'rail_m', label: 'Mid Rail Switch', at: [540, 260], mode: 'fork', closesA: ['mid_loop'], closesB: ['mid'], cd: 16 },
+      { id: 'brake',  label: 'Crucible Brake',  at: [740, 175], mode: 'gate', closesB: ['top'], dur: 10, cd: 18 },
+    ],
+    portals: [{ id: 'drop', kind: 'chute', fromRoad: 'bot', fromAt: 0.35, toRoad: 'mid', toAt: 0.42, openAtWave: 5, everyNth: 3, groundOnly: true }],
   },
   waves: waves([
     ['Three bays start', '6 husk @t, 6 husk @m +1, 6 husk @b +2'],
@@ -866,7 +877,7 @@ const s14: StageDef = {
     ['Burrowers', '6 burrower @t /1.4, 6 burrower @b /1.4 +1'],
     ['Ash moths', '12 ashmoth @m /0.6, 6 elite @m +4 /2.5'],
     ['Drop chute opens!', '3 mender @t /4, 3 mender @b /4, 14 husk @m /0.6'],
-    ['Splitters', '8 splitter @t /1.1, 8 splitter @b /1.1'],
+    ['Splitters', '8 splitter @t /1.1, 8 splitter @b /1.1, 2 runethief @m +4 /3'],
     ['Heavy line', '8 elite @m /2, 2 warden @t /6'],
     ['Full shift', '6 elite @t /2, 6 elite @b /2, 20 ashmoth @m +4 /0.5, 4 mender @m +8 /3'],
     ['Overtime', '3 warden @m /5, 10 elite @t /1.6, 12 burrower @b /1, 16 splitter @m +10 /0.8'],
@@ -951,7 +962,7 @@ const s16: StageDef = {
     ['Cinder Hounds', '6 hound /1.2'],
     ['Burrowers', '8 burrower /0.9'],
     ['Ash moths', '18 ashmoth /0.5'],
-    ['Hounds and iron', '10 hound /0.7, 6 elite +3 /2'],
+    ['Hounds and iron', '10 hound /0.7, 6 elite +3 /2, 2 tether +6 /0.6'],
     ['Ash portal tears open!', '3 warden /5, 4 mender +2 /3, 10 hound +3 /0.55'],
     ['Shades through the smoke', '20 shade /0.5, 6 hound +6 /0.8'],
     ['Deep burrow', '12 burrower /0.7, 6 elite +6 /2'],
@@ -963,7 +974,7 @@ const s17: StageDef = {
   id: 17, name: 'Avalanche Ridge', region: 3, lava: true,
   twist: 'NE→W→SE horseshoe around a collapsing high ridge. Wave 4 cracks a steep scree slide while avalanches bury plots.',
   newFoe: 'Glasshide', unlocks: 'Shop item: Dawn mantle',
-  startGold: 720, lives: 20, towers: ALL, hpMul: 1.0,
+  startGold: 720, lives: 20, towers: ALL, hpMul: 1.06,
   high: [[345, 210], [1280, 210], [1280, 505], [345, 505], [260, 360], [345, 210]],
   roads: [
     { id: 'main',  spawn: 'w', w: 50, ctrl: [[1320, 125], [960, 125], [560, 120], [270, 140], [160, 265], [155, 450], [280, 565], [580, 580], [920, 580], [1165, 585]] },
@@ -986,6 +997,7 @@ const s17: StageDef = {
     twist: 'Foes surge upward from the southern basin onto the crumbling eastern peak, on the ridge road and the scree alike.',
     hpMul: 0.65,
     reverseRoads: ['main', 'scree'], heroStart: [640, 220],
+    portals: [{ id: 'lavatube', kind: 'tunnel', fromRoad: 'main', fromAt: 0.25, toRoad: 'scree', toAt: 0.45, openAtWave: 7, everyNth: 3, groundOnly: true }],
   },
   waves: waves([
     ['Onto the ridge', '16 husk /0.6'],
@@ -1030,6 +1042,8 @@ const s18: StageDef = {
     twist: 'The outer corners become the rifts and every spiral feeds inward to one centre Keep.',
     hpMul: 0.72,
     reverseRoads: ['north', 'south', 'cross'],
+    switches: [{ id: 'mirror_sw', label: 'Bridge Boom', at: [640, 285], mode: 'gate', closesB: ['cross'], dur: 10, cd: 18 }],
+    portals: [{ id: 'refl', kind: 'rift', fromRoad: 'south', fromAt: 0.35, toRoad: 'cross', toAt: 0.45, openAtWave: 7, everyNth: 4, groundOnly: true }],
   },
   waves: waves([
     ['Center rift opens', '16 husk /0.55'],
@@ -1038,7 +1052,7 @@ const s18: StageDef = {
     ['Veil Moths', '6 veilmoth /1.2, 10 husk +2 /0.6'],
     ['North lake cools into a bridge!', '14 burrower /0.7, 6 glasshide +2 /2.4'],
     ['Wardens', '4 warden /3, 6 mender +2 /2, 12 hound +4 /0.6'],
-    ['Reflection portal wakes!', '18 shade /0.5, 10 veilmoth +3 /0.7, 6 elite +6 /1.5'],
+    ['Reflection portal wakes!', '18 shade /0.5, 10 veilmoth +3 /0.7, 6 elite +6 /1.5, 2 wickleech +4 /1.5'],
     ['Mirror storm', '12 elite /1, 20 hound +2 /0.35'],
     ['Double image', '4 warden /4, 8 glasshide +2 /2, 12 veilmoth +8 /0.6, 16 ashmoth +12 /0.45, 6 mender +16 /2.5'],
   ]),
@@ -1077,7 +1091,7 @@ const s19: StageDef = {
     ['Veils and splitters', '12 veilmoth @nw /0.6, 10 splitter @n /1'],
     ['South-West breaches: all 4 active!', '1 warden @nw, 1 warden @sw, 1 warden @n, 1 warden @s, 16 husk @nw +4 /0.45'],
     ['Rams and Menders', '2 ram @nw /8, 4 mender @nw +2 /3, 12 elite @s /1.4'],
-    ['Burrow & warp portal', '8 burrower @nw /1, 8 burrower @sw /1, 6 glasshide @n /2.4'],
+    ['Burrow & warp portal', '8 burrower @nw /1, 8 burrower @sw /1, 6 glasshide @n /2.4, 2 tether @s +4 /0.6'],
     ['Moth storm', '10 veilmoth @n /0.7, 20 ashmoth @s /0.45'],
     ['Iron tide', '10 elite @nw /1.1, 2 ram @sw /8, 3 warden @n +4 /4'],
     ['The Gate opens', '3 warden @nw /4, 2 ram @sw /8, 14 hound @sw +4 /0.5, 24 shade @s /0.35, 12 veilmoth @n /0.6, 6 glasshide @nw +10 /2.4'],

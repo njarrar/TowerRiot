@@ -91,6 +91,7 @@ export class BattleScreen {
   private sellArmedUntil = 0;
   private armedAt = 0;
   private armedBuild: TowerKind | null = null;
+  private lastPointerType = 'mouse';
   private hintPlot: number | null = null;
   private autoNext: boolean;
   private hintEl: HTMLElement;
@@ -113,7 +114,10 @@ export class BattleScreen {
     };
     this.canvas = h('canvas', { class: 'stage-canvas', 'aria-label': `Battle map: ${this.battle.stage.name}` });
     this.scene = new Scene(this.canvas);
-    this.menu = h('div', { class: 'popup hidden', role: 'dialog' });
+    this.menu = h('div', {
+      class: 'popup hidden', role: 'dialog',
+      onpointerdown: (e: Event) => { this.lastPointerType = (e as PointerEvent).pointerType || 'mouse'; },
+    });
     this.banner = h('div', { class: 'banner off', 'aria-live': 'polite' }, h('div', { class: 'banner-title' }), h('div', { class: 'banner-sub' }));
     this.pauseStrip = h('div', { class: 'pause-strip hidden', role: 'region', 'aria-label': 'Paused controls' },
       h('span', { class: 'ps-title', text: 'Paused. Inspect the board freely' }),
@@ -163,6 +167,7 @@ export class BattleScreen {
     this.releaseTrap?.(); this.releaseTrap = null;
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
+    this.scene.dispose();
   }
 
   private fit() {
@@ -206,14 +211,15 @@ export class BattleScreen {
   /* ------------------------------------------------------------------ loop */
 
   private frame(now: number) {
-    const rawDt = Math.min(0.05, (now - this.last) / 1000);
+    // A frame stamp can be older than `last` after a long task (painting the map), so never step time backwards.
+    const rawDt = Math.max(0, Math.min(0.05, (now - this.last) / 1000));
     this.last = now;
-    this.T += rawDt;
     const b = this.battle;
     // Wren fell (or lost the skill) while aiming: stop aiming, so time does not stay slow.
     if (this.aimingW && !b.skillReady('w')) this.cancelAim();
     // Fixed 1/30 s clock step (with 0.25x tactical slow-motion while aiming W).
     const slowFactor = this.aimingW ? 0.25 : 1;
+    if (!b.paused) this.T += rawDt * slowFactor;
     this.clock.advance(rawDt, slowFactor, b.paused, stepDt => b.step(stepDt));
     const events = b.drain();
     this.react(events);
@@ -251,6 +257,11 @@ export class BattleScreen {
           a.play('wave'); this.showBanner('Rift torn open', 'A new lane has activated on the field!', 2.4); break;
         case 'terraform': a.play('boss'); this.showBanner('Ground shifts', e.label, 3.0, true); break;
         case 'gateShock': a.play('sunrise'); this.showBanner('Bastion bell!', 'The Keep shockwave stuns intruders at the gate.', 2.2); break;
+        case 'ironGate': a.play('build'); this.showBanner('Iron Gate holds!', 'The portcullis repels the breach and knocks intruders back.', 2.2); break;
+        case 'heraldCleanse': a.play('sunrise'); this.showBanner('Herald broken!', `Wren's kill strips 20% ${ELEMENT_NAME[e.el] ?? e.el} resistance from the Hollow.`, 2.4); break;
+        case 'runeStolen': a.play('leak'); this.showBanner('Rune stolen!', 'A Rune Stalker snatched the Rune and rallied nearby foes!', 2.4); break;
+        case 'escape': a.play('warp'); this.showBanner('Scarab escaped', 'No lives lost, but its treasure slipped away.', 2.0); break;
+        case 'bog': a.play('root'); break;
         case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
         case 'wave': {
           a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2);
@@ -566,6 +577,7 @@ export class BattleScreen {
 
   private bindInput() {
     this.canvas.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       this.host.audio.unlock();
       // Keep the pointer, so a release over the HUD still ends the gesture here.
       try { this.canvas.setPointerCapture(e.pointerId); } catch { /* the pointer is already gone */ }
@@ -613,8 +625,12 @@ export class BattleScreen {
       }
     });
     this.canvas.addEventListener('pointercancel', e => {
-      this.input.onCancel(e.pointerId);
-      this.view.showLeash = false;
+      try { this.canvas.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+      if (this.aimingW) this.cancelAim();
+      else {
+        this.input.onCancel(e.pointerId);
+        this.view.showLeash = false;
+      }
     });
     this.canvas.addEventListener('contextmenu', e => {
       e.preventDefault();
@@ -700,6 +716,12 @@ export class BattleScreen {
     }
   }
 
+  /** Pause automatically when the tab or native app moves to the background. */
+  pauseIfRunning() {
+    if (this.aimingW) this.cancelAim();
+    if (!this.battle.over && !this.battle.paused && !this.ended) this.togglePause();
+  }
+
   /** Top Pause Strip keeps the field unblurred and inspectable while paused. */
   private togglePause() {
     const b = this.battle;
@@ -776,17 +798,23 @@ export class BattleScreen {
     }
     m.dataset.sig = sig;
     clear(m);
+    const popupHead = (label: string) => {
+      m.setAttribute('aria-label', label);
+      return h('div', { class: 'popup-head' },
+        h('div', { class: 'popup-title', text: label }),
+        h('button', { class: 'popup-close', type: 'button', 'aria-label': 'Close menu', onclick: () => this.closeMenu() }, '✕'));
+    };
     if (this.view.selPlot !== null) {
       const pi = this.view.selPlot, p = b.plots[pi], defP = b.stage.plots[pi];
       if (!p.unlocked) {
-        m.append(h('div', { class: 'popup-title', text: 'Submerged plot' }),
+        m.append(popupHead('Submerged plot'),
           h('div', { class: 'popup-note', text: `Opens cleanly on Wave ${defP.openAtWave ?? 5} once terrain shifts.` }));
         if (place) this.placeMenu(p.x, p.y);
         return;
       }
       if (p.rubble) {
         const rb = p.rubble;
-        m.append(h('div', { class: 'popup-title', text: `${rb.kind[0].toUpperCase()}${rb.kind.slice(1)} obstacle` }),
+        m.append(popupHead(`${rb.kind[0].toUpperCase()}${rb.kind.slice(1)} obstacle`),
           h('div', { class: 'popup-note', text: rb.holdSec ? `Clear now for ${rb.cost}g. Or, once the first wave is called, stand Wren beside it for ${rb.holdSec}s to salvage it for free.` : `Pay ${rb.cost}g to clear this plot.` }),
           h('div', { class: 'act-row' },
             h('button', {
@@ -803,7 +831,7 @@ export class BattleScreen {
       const plotTitle = p.gear
         ? `Build on a ${p.gear === 'a' ? 'gold' : 'iron'} gear plot${perks ? ` (${perks})` : ''}`
         : perks ? `Build a tower (${perks} range)` : 'Build a tower';
-      m.append(h('div', { class: 'popup-title', text: plotTitle }));
+      m.append(popupHead(plotTitle));
       const grid = h('div', { class: 'build-row' });
       b.stage.towers.forEach((k: TowerKind, idx: number) => {
         const def = TOWERS[k], cost = b.costOf(k), ok = b.canBuild(pi, k);
@@ -813,7 +841,15 @@ export class BattleScreen {
           onclick: (e: Event) => {
             if (!this.input.canConfirmPanelAction(performance.now())) return;
             const pe = e as PointerEvent;
-            if (pe.pointerType !== 'mouse' && (this.armedBuild !== k || performance.now() - this.armedAt < ACTION_ARM_MS)) {
+            const isTouch = (pe.pointerType || this.lastPointerType) === 'touch';
+            if (!b.canBuild(pi, k)) {
+              this.armedBuild = null;
+              this.previewTower(k);
+              const note = this.menu.querySelector('.note-preview');
+              setText(note, `${def.name}: need ${Math.max(0, b.costOf(k) - b.gold)} more gold.`);
+              return;
+            }
+            if (isTouch && (this.armedBuild !== k || performance.now() - this.armedAt < ACTION_ARM_MS)) {
               this.armedBuild = k; this.armedAt = performance.now();
               this.previewTower(k);
               return;
@@ -833,7 +869,7 @@ export class BattleScreen {
     const def = TOWERS[t.kind];
     const spDef = t.split ? def.splits.find(x => x.id === t.split)! : undefined;
     const title = spDef ? (t.lv >= MAX_TOWER_LEVEL ? `${spDef.masteryName} (Lv 5)` : `${spDef.name} (Lv 4)`) : `${def.name}, level ${t.lv}`;
-    m.append(h('div', { class: 'popup-title', text: title }));
+    m.append(popupHead(title));
 
     // Telemetry stats + active buff chips, then the tower's numbers. refreshTowerLive() fills and keeps them current.
     m.append(h('div', { class: 'tower-stats-row' }, h('span', { class: 't-stat' })));
@@ -864,12 +900,12 @@ export class BattleScreen {
 
     if (t.kind !== 'beacon' && t.kind !== 'bell') {
       const modes = h('div', { class: 'seg', role: 'group', 'aria-label': 'Target' });
-      for (const md of ['first', 'strong', 'armored', 'close'] as TargetMode[]) modes.append(h('button', { class: t.mode === md ? 'on' : '', onclick: () => b.setMode(t.id, md) }, MODE_NAME[md]));
+      for (const md of ['first', 'strong', 'armored', 'close'] as TargetMode[]) modes.append(h('button', { class: t.mode === md ? 'on' : '', 'aria-pressed': String(t.mode === md), onclick: () => b.setMode(t.id, md) }, MODE_NAME[md]));
       m.append(h('div', { class: 'popup-sub', text: 'Target' }), modes);
       if (b.mods.rounds.length) {
         const rounds = h('div', { class: 'seg', role: 'group', 'aria-label': 'Rounds' });
-        rounds.append(h('button', { class: t.round === null ? 'on' : '', onclick: () => b.setRound(t.id, null) }, 'Plain'));
-        for (const r of b.mods.rounds) rounds.append(h('button', { class: t.round === r ? 'on' : '', onclick: () => b.setRound(t.id, r) }, ROUND_NAME[r]));
+        rounds.append(h('button', { class: t.round === null ? 'on' : '', 'aria-pressed': String(t.round === null), onclick: () => b.setRound(t.id, null) }, 'Plain'));
+        for (const r of b.mods.rounds) rounds.append(h('button', { class: t.round === r ? 'on' : '', 'aria-pressed': String(t.round === r), onclick: () => b.setRound(t.id, r) }, ROUND_NAME[r]));
         m.append(h('div', { class: 'popup-sub', text: 'Rounds' }), rounds);
       }
     }
@@ -1026,13 +1062,16 @@ export class BattleScreen {
       toThree ? h('p', { class: 'next-star', text: toThree }) : null,
       why && worst ? h('div', { class: 'cause' },
         h('img', { src: foeIcon(worst[0] as keyof typeof ENEMIES, 56), alt: '' }),
-        h('div', {}, h('b', { text: `${why.name}${worst[1] > 1 && !why.traits?.boss ? 's' : ''} took ${worst[1]} of your ${b.startLives} lives` }), h('span', { text: why.blurb }))) : null,
+        h('div', {},
+          h('b', { text: `${why.name}${worst[1] > 1 && !why.traits?.boss ? 's' : ''} took ${worst[1]} of your ${b.startLives} lives` }),
+          h('span', { text: why.blurb }),
+          why.answer ? h('span', { class: 'cause-ans', text: `Counter: ${why.answer}` }) : null)) : null,
       h('div', { class: 'breakdown' },
         h('div', { class: 'bd-bar' },
           h('i', { class: 'bd-t', style: `width:${Math.round(bd.towers / tot * 100)}%`, title: 'Towers' }),
           h('i', { class: 'bd-h', style: `width:${Math.round((bd.hero + bd.skills) / tot * 100)}%`, title: 'Wren + Skills' }),
           h('i', { class: 'bd-s', style: `width:${Math.round(bd.status / tot * 100)}%`, title: 'Burn & Vents' })),
-        h('div', { class: 'bd-lbl', text: `Towers ${Math.round(bd.towers / tot * 100)}% · Wren ${Math.round((bd.hero + bd.skills) / tot * 100)}%${mvp && mvpName ? ` · MVP: ${mvpName} (${Math.round(mvp.dmgDealt)})` : ''}` })),
+        h('div', { class: 'bd-lbl', text: `Towers ${Math.round(bd.towers / tot * 100)}% · Wren ${Math.round((bd.hero + bd.skills) / tot * 100)}%${bd.status > 0 ? ` · Status ${Math.round(bd.status / tot * 100)}%` : ''}${mvp && mvpName ? ` · MVP: ${mvpName} (${Math.round(mvp.dmgDealt)})` : ''}` })),
       won && gained > 0 ? h('p', { class: 'embers', text: `+${gained} Embers for the skill trees` }) : null,
       h('div', { class: 'act-row' },
         h('button', { class: `btn ${won ? '' : 'primary'}`, onclick: () => this.host.onRetry(st.id, { variant: this.host.variant, oaths: this.host.oaths }) }, won ? 'Play again' : 'Try again'),

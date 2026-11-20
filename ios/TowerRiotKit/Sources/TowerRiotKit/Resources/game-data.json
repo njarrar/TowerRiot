@@ -654,8 +654,77 @@
      "cut": 0.35
     }
    },
-   "blurb": "Foes near it shrug off your most used element. Mix elements, or let Wren take it.",
-   "answer": "Mix elements, or send Wren."
+   "blurb": "Foes near it shrug off your most used element. Wren landing the kill strips 20% adaptation.",
+   "answer": "Mix elements, or send Wren for the cleanse."
+  },
+  {
+   "kind": "runethief",
+   "name": "Rune Stalker",
+   "hp": 95,
+   "speed": 78,
+   "gold": 22,
+   "leak": 1,
+   "dps": 10,
+   "bar": 34,
+   "size": 1,
+   "traits": {
+    "runeHunter": true
+   },
+   "blurb": "Veers off-road to steal active Runes and haste nearby Hollow foes. Wren gets +35g & refreshes the rune on a kill.",
+   "answer": "Intercept with Wren or snipe with Watch towers before it reaches the Rune."
+  },
+  {
+   "kind": "scarab",
+   "name": "Gilded Scarab",
+   "hp": 165,
+   "speed": 86,
+   "gold": 70,
+   "leak": 0,
+   "dps": 0,
+   "bar": 30,
+   "size": 1,
+   "traits": {
+    "fugitive": true
+   },
+   "blurb": "A glittering relic-bearer that costs 0 lives if it escapes, but drops a massive bounty when killed.",
+   "answer": "Focus fire or send Wren to cash in the +50% last-hit jackpot."
+  },
+  {
+   "kind": "wickleech",
+   "name": "Wick Leech",
+   "hp": 75,
+   "speed": 58,
+   "gold": 12,
+   "leak": 1,
+   "dps": 0,
+   "bar": 62,
+   "size": 0.95,
+   "flying": true,
+   "takes": {
+    "pierce": 1.2,
+    "storm": 1.2
+   },
+   "traits": {
+    "siphonBeacon": true
+   },
+   "blurb": "Hovers over Beacons to siphon their flame, halving aura and stealth reveal radius until slain.",
+   "answer": "Watch tower or Storm pylon to swat it off your Beacon."
+  },
+  {
+   "kind": "tether",
+   "name": "Tether Twin",
+   "hp": 150,
+   "speed": 46,
+   "gold": 13,
+   "leak": 1,
+   "dps": 12,
+   "bar": 36,
+   "size": 1.1,
+   "traits": {
+    "link": true
+   },
+   "blurb": "Marches in linked pairs that split all damage 50/50 while within 160 px. AoE hits both halves at once.",
+   "answer": "Forge cannon, Storm pylon, or Lantern Snare to blast both twins together."
   },
   {
    "kind": "mireking",
@@ -676,10 +745,11 @@
      "kind": "grub",
      "n": 2,
      "every": 5
-    }
+    },
+    "bossSkill": "mire"
    },
-   "blurb": "Drags the swamp with him and spits out Grubs.",
-   "answer": "Steady damage, and clear the Grubs he spits out."
+   "blurb": "Hurls Bog Globs that slow towers and regenerates in Phase 2 unless burning.",
+   "answer": "Keep him burning with Forge cannon or Lantern Snare, and clear his Grubs."
   },
   {
    "kind": "tidewyrm",
@@ -702,10 +772,11 @@
     "dive": {
      "every": 9,
      "dur": 3
-    }
+    },
+    "bossSkill": "tide"
    },
-   "blurb": "Dives under the tide to heal. Hit it while it is up.",
-   "answer": "Storm pylon while it is above water."
+   "blurb": "Dives under the tide to heal; surfaces Drenched (+40% Storm damage) and erupts Tide-Spouts in Phase 2.",
+   "answer": "Punish its 4 s Drenched window with Storm pylons each time it surfaces."
   },
   {
    "kind": "colossus",
@@ -722,15 +793,16 @@
     "phases": [
      0.5
     ],
-    "plated": 0.35
+    "plated": 0.35,
+    "bossSkill": "colossus"
    },
-   "blurb": "Brass plates turn most damage. Chill it and the plates crack.",
-   "answer": "Frost bell to crack the plates, then everything."
+   "blurb": "Vents scalding steam to knock Wren back. Below 50% HP it sheds its brass plates and surges at +35% speed.",
+   "answer": "Frost bell to crack plates early, dodge the steam vent, then burst Phase 2."
   },
   {
    "kind": "queen",
    "name": "The Hollow Queen",
-   "hp": 5500,
+   "hp": 7400,
    "speed": 22,
    "gold": 400,
    "leak": 12,
@@ -748,10 +820,11 @@
      "kind": "shade",
      "n": 2,
      "every": 7
-    }
+    },
+    "bossSkill": "queen"
    },
-   "blurb": "Rewrites the map as she falls. Three phases.",
-   "answer": "A full mix. She calls Shades, so keep a Beacon."
+   "blurb": "Casts Veil Eclipse, calls Twin Heralds in Phase 2, and ascends into Spectral Flight in Phase 3.",
+   "answer": "Keep Beacons lit, anti-air ready for Phase 3 flight, and let Wren cleanse her Heralds."
   }
  ],
  "hero": {
@@ -1165,7 +1238,7 @@
     {
      "id": "ar-overload",
      "name": "Overload",
-     "desc": "Lightning on rooted or frozen foes jumps +2 times (Rail +35%).",
+     "desc": "Lightning on rooted or frozen foes jumps +2 times (Rail +35% extra).",
      "cost": 4,
      "req": "ar-storm",
      "effect": {
@@ -2432,6 +2505,12 @@
        "n": 24,
        "gap": 0.6,
        "delay": 0
+      },
+      {
+       "kind": "scarab",
+       "n": 1,
+       "gap": 4,
+       "delay": 5
       }
      ]
     },
@@ -3100,7 +3179,7 @@
       665,
       415
      ],
-     "sinkAt": 8
+     "sinkAt": 7
     },
     {
      "at": [
@@ -3788,6 +3867,13 @@
        "gap": 0.6,
        "delay": 3,
        "spawn": "s"
+      },
+      {
+       "kind": "runethief",
+       "n": 1,
+       "gap": 3,
+       "delay": 5,
+       "spawn": "n"
       }
      ]
     },
@@ -4798,6 +4884,13 @@
        "gap": 0.9,
        "delay": 0,
        "spawn": "s"
+      },
+      {
+       "kind": "wickleech",
+       "n": 2,
+       "gap": 1.5,
+       "delay": 4,
+       "spawn": "n"
       }
      ]
     },
@@ -6617,6 +6710,13 @@
        "gap": 2,
        "delay": 0,
        "spawn": "n"
+      },
+      {
+       "kind": "scarab",
+       "n": 1,
+       "gap": 4,
+       "delay": 5,
+       "spawn": "w"
       }
      ]
     },
@@ -7525,6 +7625,51 @@
     "heroStart": [
      760,
      260
+    ],
+    "switches": [
+     {
+      "id": "rail_m",
+      "label": "Mid Rail Switch",
+      "at": [
+       540,
+       260
+      ],
+      "mode": "fork",
+      "closesA": [
+       "mid_loop"
+      ],
+      "closesB": [
+       "mid"
+      ],
+      "cd": 16
+     },
+     {
+      "id": "brake",
+      "label": "Crucible Brake",
+      "at": [
+       740,
+       175
+      ],
+      "mode": "gate",
+      "closesB": [
+       "top"
+      ],
+      "dur": 10,
+      "cd": 18
+     }
+    ],
+    "portals": [
+     {
+      "id": "drop",
+      "kind": "chute",
+      "fromRoad": "bot",
+      "fromAt": 0.35,
+      "toRoad": "mid",
+      "toAt": 0.42,
+      "openAtWave": 5,
+      "everyNth": 3,
+      "groundOnly": true
+     }
     ]
    },
    "waves": [
@@ -7660,6 +7805,13 @@
        "gap": 1.1,
        "delay": 0,
        "spawn": "b"
+      },
+      {
+       "kind": "runethief",
+       "n": 2,
+       "gap": 3,
+       "delay": 4,
+       "spawn": "m"
       }
      ]
     },
@@ -8541,6 +8693,12 @@
        "n": 6,
        "gap": 2,
        "delay": 3
+      },
+      {
+       "kind": "tether",
+       "n": 2,
+       "gap": 0.6,
+       "delay": 6
       }
      ]
     },
@@ -8650,7 +8808,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1,
+   "hpMul": 1.06,
    "high": [
     [
      345,
@@ -8923,6 +9081,19 @@
     "heroStart": [
      640,
      220
+    ],
+    "portals": [
+     {
+      "id": "lavatube",
+      "kind": "tunnel",
+      "fromRoad": "main",
+      "fromAt": 0.25,
+      "toRoad": "scree",
+      "toAt": 0.45,
+      "openAtWave": 7,
+      "everyNth": 3,
+      "groundOnly": true
+     }
     ]
    },
    "waves": [
@@ -9397,6 +9568,35 @@
      "north",
      "south",
      "cross"
+    ],
+    "switches": [
+     {
+      "id": "mirror_sw",
+      "label": "Bridge Boom",
+      "at": [
+       640,
+       285
+      ],
+      "mode": "gate",
+      "closesB": [
+       "cross"
+      ],
+      "dur": 10,
+      "cd": 18
+     }
+    ],
+    "portals": [
+     {
+      "id": "refl",
+      "kind": "rift",
+      "fromRoad": "south",
+      "fromAt": 0.35,
+      "toRoad": "cross",
+      "toAt": 0.45,
+      "openAtWave": 7,
+      "everyNth": 4,
+      "groundOnly": true
+     }
     ]
    },
    "waves": [
@@ -9510,6 +9710,12 @@
        "n": 6,
        "gap": 1.5,
        "delay": 6
+      },
+      {
+       "kind": "wickleech",
+       "n": 2,
+       "gap": 1.5,
+       "delay": 4
       }
      ]
     },
@@ -10036,6 +10242,13 @@
        "gap": 2.4,
        "delay": 0,
        "spawn": "n"
+      },
+      {
+       "kind": "tether",
+       "n": 2,
+       "gap": 0.6,
+       "delay": 4,
+       "spawn": "s"
       }
      ]
     },

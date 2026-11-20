@@ -63,23 +63,72 @@ export const browserStore = (): Store => ({
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
 });
 
+const VALID_STAGE_IDS = new Set(STAGES.map(st => st.id));
+const VALID_OATHS = new Set<string>(['twinRifts', 'shiftingEarth', 'longNight']);
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === 'object' && !Array.isArray(v) && Object.prototype.toString.call(v) === '[object Object]';
+}
+
+function sanitizeStarMap(raw: unknown): Record<number, number> {
+  const out: Record<number, number> = {};
+  if (!isPlainObject(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) {
+    const id = Number(k);
+    if (!Number.isInteger(id) || !VALID_STAGE_IDS.has(id)) continue;
+    if (typeof v !== 'number' || !Number.isFinite(v)) continue;
+    const clamped = Math.max(0, Math.min(3, Math.trunc(v)));
+    out[id] = Math.max(out[id] ?? 0, clamped);
+  }
+  return out;
+}
+
+function sanitizeOathsCleared(raw: unknown): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  if (!isPlainObject(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) {
+    if (v !== true) continue;
+    const [sid, oid] = k.split(':');
+    const id = Number(sid);
+    if (!Number.isInteger(id) || !VALID_STAGE_IDS.has(id) || !VALID_OATHS.has(oid)) continue;
+    out[`${id}:${oid}`] = true;
+  }
+  return out;
+}
+
+function sanitizeSettings(raw: unknown, base: Settings): Settings {
+  if (!isPlainObject(raw)) return { ...base };
+  return {
+    sound: typeof raw.sound === 'boolean' ? raw.sound : base.sound,
+    reduceMotion: typeof raw.reduceMotion === 'boolean' ? raw.reduceMotion : base.reduceMotion,
+    autoSkills: typeof raw.autoSkills === 'boolean' || raw.autoSkills === null ? raw.autoSkills : base.autoSkills,
+    dmgNumbers: typeof raw.dmgNumbers === 'boolean' ? raw.dmgNumbers : base.dmgNumbers,
+    tapGroundMove: typeof raw.tapGroundMove === 'boolean' ? raw.tapGroundMove : base.tapGroundMove,
+    tapAimW: typeof raw.tapAimW === 'boolean' ? raw.tapAimW : base.tapAimW,
+    autoNext: typeof raw.autoNext === 'boolean' ? raw.autoNext : base.autoNext,
+    leftHandHud: typeof raw.leftHandHud === 'boolean' ? raw.leftHandHud : base.leftHandHud,
+  };
+}
+
 export function loadSave(store: Store): Save {
   const raw = store.get(SAVE_KEY);
   if (!raw) return freshSave();
   try {
-    const s = JSON.parse(raw) as Partial<Save> & { version?: number };
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPlainObject(parsed)) return freshSave();
+    const s = parsed as Partial<Save> & { version?: unknown };
     const base = freshSave();
     const old = s.version !== SAVE_VERSION;
     const hadNodes = Array.isArray(s.nodes) && s.nodes.length > 0;
     const out: Save = {
       version: 2,
-      stars: typeof s.stars === 'object' && s.stars ? s.stars : {},
-      altStars: typeof s.altStars === 'object' && s.altStars ? s.altStars : {},
-      oathStars: typeof s.oathStars === 'object' && s.oathStars ? s.oathStars : {},
-      oathsCleared: typeof s.oathsCleared === 'object' && s.oathsCleared ? s.oathsCleared : {},
+      stars: sanitizeStarMap(s.stars),
+      altStars: sanitizeStarMap(s.altStars),
+      oathStars: sanitizeStarMap(s.oathStars),
+      oathsCleared: sanitizeOathsCleared(s.oathsCleared),
       // An older save bought its nodes at the old prices: refund them all rather than leave the player in debt.
-      nodes: old || !Array.isArray(s.nodes) ? [] : s.nodes.filter(id => NODES.has(id)),
-      settings: { ...base.settings, ...(s.settings ?? {}) },
+      nodes: old || !Array.isArray(s.nodes) ? [] : s.nodes.filter((id): id is string => typeof id === 'string' && NODES.has(id)),
+      settings: sanitizeSettings(s.settings, base.settings),
       seenIntro: !!s.seenIntro,
       treesRefunded: old ? hadNodes : !!s.treesRefunded,
     };
@@ -92,14 +141,17 @@ export function loadSave(store: Store): Save {
 
 export const writeSave = (store: Store, s: Save) => store.set(SAVE_KEY, JSON.stringify(s));
 
-/** Drop nodes a save cannot hold: a missing prerequisite, both of an either-or pair, or more than its Embers pay for. */
+/** Drop nodes a save cannot hold: locked stage gate, missing prerequisite, either-or conflict, or Ember deficit. */
 function pruneNodes(s: Save) {
+  const cl = cleared(s);
   for (let changed = true; changed;) {
     changed = false;
     const keep: string[] = [];
     for (const id of s.nodes) {
       const n = NODES.get(id);
-      const ok = !!n && !keep.includes(id) && (!n.req || s.nodes.includes(n.req)) && !(n.excl && keep.includes(n.excl));
+      const tree = n ? TREES.find(t => t.nodes.includes(n)) : undefined;
+      const unlocked = !!n && !!tree && tree.after <= cl && (n.after ?? 0) <= cl;
+      const ok = unlocked && !keep.includes(id) && (!n.req || s.nodes.includes(n.req)) && !(n.excl && keep.includes(n.excl));
       if (ok) keep.push(id); else changed = true;
     }
     s.nodes = keep;
