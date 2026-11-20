@@ -440,20 +440,47 @@ export class App {
   settings() {
     this.screen = 'settings';
     const st = this.save.settings;
-    type Flag = 'sound' | 'reduceMotion' | 'autoSkills' | 'dmgNumbers' | 'tapGroundMove' | 'tapAimW' | 'autoNext' | 'leftHandHud';
+    type Flag = 'sound' | 'reduceMotion' | 'dmgNumbers' | 'tapGroundMove' | 'tapAimW' | 'autoNext' | 'leftHandHud';
     const toggle = (label: string, key: Flag, note: string) => h('label', { class: 'toggle' },
-      h('input', { type: 'checkbox', checked: st[key] ?? true, onchange: (e: Event) => { st[key] = (e.target as HTMLInputElement).checked; this.applySettings(); } }),
+      h('input', { type: 'checkbox', checked: !!st[key], onchange: (e: Event) => { st[key] = (e.target as HTMLInputElement).checked; this.applySettings(); } }),
       h('span', {}, h('b', { text: label }), h('small', { text: note })));
+    const autoSkillRow = h('div', { class: 'toggle seg-row' },
+      h('span', {}, h('b', { text: 'Auto skill points' }), h('small', { text: 'Spend Wren\'s points on level-up. Default helps in Mosslight Vale (Stages 1–5), then hands control to you.' })),
+      (() => {
+        const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Auto skill points' });
+        const opts: [string, boolean | null][] = [['Region 1 only', null], ['Always on', true], ['Off', false]];
+        const renderSeg = () => {
+          clear(seg);
+          for (const [lbl, val] of opts) {
+            seg.append(h('button', {
+              class: st.autoSkills === val ? 'on' : '',
+              'aria-pressed': String(st.autoSkills === val),
+              onclick: () => { st.autoSkills = val; this.applySettings(); renderSeg(); },
+            }, lbl));
+          }
+        };
+        renderSeg();
+        return seg;
+      })());
     const erase = h('div', { class: 'erase' });
     const askErase = () => {
       clear(erase);
       erase.append(h('button', { class: 'btn danger', onclick: () => {
         clear(erase);
+        const cancelBtn = h('button', { class: 'btn', onclick: askErase }, 'Cancel');
         erase.append(
           h('p', { class: 'erase-q', text: 'Erase all stars and tree picks? This cannot be undone.' }),
           h('div', { class: 'act-row' },
-            h('button', { class: 'btn danger solid', onclick: () => { this.save = freshSave(); this.persist(); this.title(); } }, 'Erase'),
-            h('button', { class: 'btn', onclick: askErase }, 'Cancel')));
+            cancelBtn,
+            h('button', { class: 'btn danger solid', onclick: () => {
+              this.save = freshSave();
+              this.variantByStage.clear();
+              this.selectedOaths.clear();
+              this.treeTab = 0;
+              this.applySettings();
+              this.title();
+            } }, 'Erase everything')));
+        cancelBtn.focus();
       } }, 'Erase progress'));
     };
     askErase();
@@ -462,7 +489,7 @@ export class App {
       h('div', { class: 'panel' },
         toggle('Sound', 'sound', 'Tower fire, hits and Wren. Mute any time with M in battle.'),
         toggle('Calm motion', 'reduceMotion', 'Disables screen shake, screen flash, fog drift, and rain.'),
-        toggle('Auto skill points', 'autoSkills', 'Automatically spend Wren skill points on level up (default in Region 1).'),
+        autoSkillRow,
         toggle('Damage numbers', 'dmgNumbers', 'Show hit numbers over foes.'),
         toggle('Tap ground moves Wren (touch)', 'tapGroundMove', 'On touchscreens, allow single ground taps to pin Wren (drag Wren always works).'),
         toggle('Tap-to-aim W (accessibility)', 'tapAimW', 'Aim Lantern Snare with two taps: tap W, then tap the spot. It lands exactly where you tap.'),

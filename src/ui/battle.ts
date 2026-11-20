@@ -91,6 +91,7 @@ export class BattleScreen {
   private sellArmedUntil = 0;
   private armedAt = 0;
   private armedBuild: TowerKind | null = null;
+  private lastPointerType = 'mouse';
   private hintPlot: number | null = null;
   private autoNext: boolean;
   private hintEl: HTMLElement;
@@ -113,7 +114,10 @@ export class BattleScreen {
     };
     this.canvas = h('canvas', { class: 'stage-canvas', 'aria-label': `Battle map: ${this.battle.stage.name}` });
     this.scene = new Scene(this.canvas);
-    this.menu = h('div', { class: 'popup hidden', role: 'dialog' });
+    this.menu = h('div', {
+      class: 'popup hidden', role: 'dialog',
+      onpointerdown: (e: Event) => { this.lastPointerType = (e as PointerEvent).pointerType || 'mouse'; },
+    });
     this.banner = h('div', { class: 'banner off', 'aria-live': 'polite' }, h('div', { class: 'banner-title' }), h('div', { class: 'banner-sub' }));
     this.pauseStrip = h('div', { class: 'pause-strip hidden', role: 'region', 'aria-label': 'Paused controls' },
       h('span', { class: 'ps-title', text: 'Paused. Inspect the board freely' }),
@@ -776,17 +780,23 @@ export class BattleScreen {
     }
     m.dataset.sig = sig;
     clear(m);
+    const popupHead = (label: string) => {
+      m.setAttribute('aria-label', label);
+      return h('div', { class: 'popup-head' },
+        h('div', { class: 'popup-title', text: label }),
+        h('button', { class: 'popup-close', type: 'button', 'aria-label': 'Close menu', onclick: () => this.closeMenu() }, '✕'));
+    };
     if (this.view.selPlot !== null) {
       const pi = this.view.selPlot, p = b.plots[pi], defP = b.stage.plots[pi];
       if (!p.unlocked) {
-        m.append(h('div', { class: 'popup-title', text: 'Submerged plot' }),
+        m.append(popupHead('Submerged plot'),
           h('div', { class: 'popup-note', text: `Opens cleanly on Wave ${defP.openAtWave ?? 5} once terrain shifts.` }));
         if (place) this.placeMenu(p.x, p.y);
         return;
       }
       if (p.rubble) {
         const rb = p.rubble;
-        m.append(h('div', { class: 'popup-title', text: `${rb.kind[0].toUpperCase()}${rb.kind.slice(1)} obstacle` }),
+        m.append(popupHead(`${rb.kind[0].toUpperCase()}${rb.kind.slice(1)} obstacle`),
           h('div', { class: 'popup-note', text: rb.holdSec ? `Clear now for ${rb.cost}g. Or, once the first wave is called, stand Wren beside it for ${rb.holdSec}s to salvage it for free.` : `Pay ${rb.cost}g to clear this plot.` }),
           h('div', { class: 'act-row' },
             h('button', {
@@ -803,7 +813,7 @@ export class BattleScreen {
       const plotTitle = p.gear
         ? `Build on a ${p.gear === 'a' ? 'gold' : 'iron'} gear plot${perks ? ` (${perks})` : ''}`
         : perks ? `Build a tower (${perks} range)` : 'Build a tower';
-      m.append(h('div', { class: 'popup-title', text: plotTitle }));
+      m.append(popupHead(plotTitle));
       const grid = h('div', { class: 'build-row' });
       b.stage.towers.forEach((k: TowerKind, idx: number) => {
         const def = TOWERS[k], cost = b.costOf(k), ok = b.canBuild(pi, k);
@@ -813,7 +823,15 @@ export class BattleScreen {
           onclick: (e: Event) => {
             if (!this.input.canConfirmPanelAction(performance.now())) return;
             const pe = e as PointerEvent;
-            if (pe.pointerType !== 'mouse' && (this.armedBuild !== k || performance.now() - this.armedAt < ACTION_ARM_MS)) {
+            const isTouch = (pe.pointerType || this.lastPointerType) === 'touch';
+            if (!b.canBuild(pi, k)) {
+              this.armedBuild = null;
+              this.previewTower(k);
+              const note = this.menu.querySelector('.note-preview');
+              setText(note, `${def.name}: need ${Math.max(0, b.costOf(k) - b.gold)} more gold.`);
+              return;
+            }
+            if (isTouch && (this.armedBuild !== k || performance.now() - this.armedAt < ACTION_ARM_MS)) {
               this.armedBuild = k; this.armedAt = performance.now();
               this.previewTower(k);
               return;
@@ -833,7 +851,7 @@ export class BattleScreen {
     const def = TOWERS[t.kind];
     const spDef = t.split ? def.splits.find(x => x.id === t.split)! : undefined;
     const title = spDef ? (t.lv >= MAX_TOWER_LEVEL ? `${spDef.masteryName} (Lv 5)` : `${spDef.name} (Lv 4)`) : `${def.name}, level ${t.lv}`;
-    m.append(h('div', { class: 'popup-title', text: title }));
+    m.append(popupHead(title));
 
     // Telemetry stats + active buff chips, then the tower's numbers. refreshTowerLive() fills and keeps them current.
     m.append(h('div', { class: 'tower-stats-row' }, h('span', { class: 't-stat' })));
@@ -864,12 +882,12 @@ export class BattleScreen {
 
     if (t.kind !== 'beacon' && t.kind !== 'bell') {
       const modes = h('div', { class: 'seg', role: 'group', 'aria-label': 'Target' });
-      for (const md of ['first', 'strong', 'armored', 'close'] as TargetMode[]) modes.append(h('button', { class: t.mode === md ? 'on' : '', onclick: () => b.setMode(t.id, md) }, MODE_NAME[md]));
+      for (const md of ['first', 'strong', 'armored', 'close'] as TargetMode[]) modes.append(h('button', { class: t.mode === md ? 'on' : '', 'aria-pressed': String(t.mode === md), onclick: () => b.setMode(t.id, md) }, MODE_NAME[md]));
       m.append(h('div', { class: 'popup-sub', text: 'Target' }), modes);
       if (b.mods.rounds.length) {
         const rounds = h('div', { class: 'seg', role: 'group', 'aria-label': 'Rounds' });
-        rounds.append(h('button', { class: t.round === null ? 'on' : '', onclick: () => b.setRound(t.id, null) }, 'Plain'));
-        for (const r of b.mods.rounds) rounds.append(h('button', { class: t.round === r ? 'on' : '', onclick: () => b.setRound(t.id, r) }, ROUND_NAME[r]));
+        rounds.append(h('button', { class: t.round === null ? 'on' : '', 'aria-pressed': String(t.round === null), onclick: () => b.setRound(t.id, null) }, 'Plain'));
+        for (const r of b.mods.rounds) rounds.append(h('button', { class: t.round === r ? 'on' : '', 'aria-pressed': String(t.round === r), onclick: () => b.setRound(t.id, r) }, ROUND_NAME[r]));
         m.append(h('div', { class: 'popup-sub', text: 'Rounds' }), rounds);
       }
     }
@@ -1026,13 +1044,16 @@ export class BattleScreen {
       toThree ? h('p', { class: 'next-star', text: toThree }) : null,
       why && worst ? h('div', { class: 'cause' },
         h('img', { src: foeIcon(worst[0] as keyof typeof ENEMIES, 56), alt: '' }),
-        h('div', {}, h('b', { text: `${why.name}${worst[1] > 1 && !why.traits?.boss ? 's' : ''} took ${worst[1]} of your ${b.startLives} lives` }), h('span', { text: why.blurb }))) : null,
+        h('div', {},
+          h('b', { text: `${why.name}${worst[1] > 1 && !why.traits?.boss ? 's' : ''} took ${worst[1]} of your ${b.startLives} lives` }),
+          h('span', { text: why.blurb }),
+          why.answer ? h('span', { class: 'cause-ans', text: `Counter: ${why.answer}` }) : null)) : null,
       h('div', { class: 'breakdown' },
         h('div', { class: 'bd-bar' },
           h('i', { class: 'bd-t', style: `width:${Math.round(bd.towers / tot * 100)}%`, title: 'Towers' }),
           h('i', { class: 'bd-h', style: `width:${Math.round((bd.hero + bd.skills) / tot * 100)}%`, title: 'Wren + Skills' }),
           h('i', { class: 'bd-s', style: `width:${Math.round(bd.status / tot * 100)}%`, title: 'Burn & Vents' })),
-        h('div', { class: 'bd-lbl', text: `Towers ${Math.round(bd.towers / tot * 100)}% · Wren ${Math.round((bd.hero + bd.skills) / tot * 100)}%${mvp && mvpName ? ` · MVP: ${mvpName} (${Math.round(mvp.dmgDealt)})` : ''}` })),
+        h('div', { class: 'bd-lbl', text: `Towers ${Math.round(bd.towers / tot * 100)}% · Wren ${Math.round((bd.hero + bd.skills) / tot * 100)}%${bd.status > 0 ? ` · Status ${Math.round(bd.status / tot * 100)}%` : ''}${mvp && mvpName ? ` · MVP: ${mvpName} (${Math.round(mvp.dmgDealt)})` : ''}` })),
       won && gained > 0 ? h('p', { class: 'embers', text: `+${gained} Embers for the skill trees` }) : null,
       h('div', { class: 'act-row' },
         h('button', { class: `btn ${won ? '' : 'primary'}`, onclick: () => this.host.onRetry(st.id, { variant: this.host.variant, oaths: this.host.oaths }) }, won ? 'Play again' : 'Try again'),
