@@ -6,6 +6,7 @@ const config: CapacitorConfig = {
   appName: 'TowerRiot',
   webDir: 'dist',
   backgroundColor: '#f6f2ea',
+  server: { allowNavigation: [] },
   ios: { contentInset: 'never' },
   android: { allowMixedContent: false },
 };
