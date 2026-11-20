@@ -167,6 +167,7 @@ export class BattleScreen {
     this.releaseTrap?.(); this.releaseTrap = null;
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.onKey);
+    this.scene.dispose();
   }
 
   private fit() {
@@ -212,12 +213,12 @@ export class BattleScreen {
   private frame(now: number) {
     const rawDt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
-    this.T += rawDt;
     const b = this.battle;
     // Wren fell (or lost the skill) while aiming: stop aiming, so time does not stay slow.
     if (this.aimingW && !b.skillReady('w')) this.cancelAim();
     // Fixed 1/30 s clock step (with 0.25x tactical slow-motion while aiming W).
     const slowFactor = this.aimingW ? 0.25 : 1;
+    if (!b.paused) this.T += rawDt * slowFactor;
     this.clock.advance(rawDt, slowFactor, b.paused, stepDt => b.step(stepDt));
     const events = b.drain();
     this.react(events);
@@ -255,6 +256,7 @@ export class BattleScreen {
           a.play('wave'); this.showBanner('Rift torn open', 'A new lane has activated on the field!', 2.4); break;
         case 'terraform': a.play('boss'); this.showBanner('Ground shifts', e.label, 3.0, true); break;
         case 'gateShock': a.play('sunrise'); this.showBanner('Bastion bell!', 'The Keep shockwave stuns intruders at the gate.', 2.2); break;
+        case 'ironGate': a.play('build'); this.showBanner('Iron Gate holds!', 'The portcullis repels the breach and knocks intruders back.', 2.2); break;
         case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
         case 'wave': {
           a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2);

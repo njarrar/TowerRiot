@@ -267,13 +267,22 @@ function grub(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk
 
 // Moth: torn wings, vein glow, body hairs. Flies, so its shadow sits far below.
 function moth(ctx,x,y,s,pass,seed,alt){seed=seed||51;alt=alt==null?60:alt;ctx.save();ctx.translate(x,y);ctx.scale(s,s);
- const wing=(side,fore)=>{const k=side;ctx.beginPath();if(fore){ctx.moveTo(0,-6);ctx.bezierCurveTo(k*20,-30,k*58,-44,k*78,-36);ctx.bezierCurveTo(k*74,-20,k*62,-8,k*40,0);ctx.bezierCurveTo(k*22,4,k*8,2,0,0);}
-   else{ctx.moveTo(0,2);ctx.bezierCurveTo(k*20,4,k*48,8,k*56,26);ctx.bezierCurveTo(k*44,40,k*20,34,k*6,18);ctx.closePath();}ctx.closePath();};
+ const wing=(side,fore,rNotch)=>{const k=side;ctx.beginPath();if(fore){
+   ctx.moveTo(0,-6);ctx.bezierCurveTo(k*20,-30,k*58,-44,k*78,-36);
+   // Tattered trailing edge baked directly into the contour (never destination-out on the live canvas).
+   ctx.lineTo(k*75,-28);ctx.lineTo(k*(66+(rNotch?rNotch()*4:2)),-25);ctx.lineTo(k*72,-20);
+   ctx.lineTo(k*65,-13);ctx.lineTo(k*(54+(rNotch?rNotch()*5:2)),-12);ctx.lineTo(k*59,-7);
+   ctx.bezierCurveTo(k*48,-2,k*26,4,0,0);
+  } else {
+   ctx.moveTo(0,2);ctx.bezierCurveTo(k*20,4,k*48,8,k*56,26);
+   ctx.lineTo(k*49,31);ctx.lineTo(k*(42+(rNotch?rNotch()*4:2)),25);ctx.lineTo(k*43,35);
+   ctx.bezierCurveTo(k*32,39,k*18,32,k*6,18);
+  }ctx.closePath();};
  if(pass==='base'){
   shadow(ctx,0,alt,46,8,.55);
   const r=rng(seed);
   for(const side of[-1,1]){for(const fore of[false,true]){
-   ctx.save();wing(side,fore);
+   ctx.save();wing(side,fore,r);
    const g=ctx.createLinearGradient(0,-30,side*70,20);g.addColorStop(0,'#4a4036');g.addColorStop(.55,'#2b241d');g.addColorStop(1,'#14110e');ctx.fillStyle=g;ctx.fill();
    ctx.clip();
    // dusty scale pattern
@@ -282,8 +291,6 @@ function moth(ctx,x,y,s,pass,seed,alt){seed=seed||51;alt=alt==null?60:alt;ctx.sa
    if(fore){ctx.strokeStyle='rgba(120,110,90,.35)';ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(side*46,-22,7,5,side*.4,0,TAU);ctx.stroke();ctx.strokeStyle='rgba(0,0,0,.6)';ctx.beginPath();ctx.ellipse(side*46,-22,3.5,2.5,side*.4,0,TAU);ctx.stroke();}
    // veins
    ctx.strokeStyle='rgba(0,0,0,.6)';ctx.lineWidth=.9;for(let v=0;v<5;v++){const a=fore?-.15-v*.13:.2+v*.18;ctx.beginPath();ctx.moveTo(0,fore?-3:4);ctx.quadraticCurveTo(side*30*Math.cos(a)+side*6,(fore?-3:4)+30*Math.sin(a)-4,side*80*Math.cos(a),(fore?-3:4)+80*Math.sin(a));ctx.stroke();}
-   // torn edges: bite out notches
-   ctx.globalCompositeOperation='destination-out';for(let i=0;i<7;i++){const tx=side*(30+r()*50),ty=fore?-40+r()*44:8+r()*32;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx+side*(4+r()*8),ty-3-r()*4);ctx.lineTo(tx+side*(2+r()*6),ty+3+r()*5);ctx.fill();}
    ctx.restore();
    // leading edge highlight
    if(fore){ctx.strokeStyle='rgba(200,180,150,.18)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-6);ctx.bezierCurveTo(side*20,-30,side*58,-44,side*78,-36);ctx.stroke();}
@@ -454,12 +461,13 @@ function groundTile(ctx,W,H,seed,tint){const img=ctx.createImageData(W,H);const 
   if(tint==='frost'){const f=ss(.45,.7,n);c=[mix(c[0],52,f*.4),mix(c[1],62,f*.4),mix(c[2],72,f*.4)];}
   const k=.82+m*.35;const i=(y*W+x)*4;d[i]=c[0]*k;d[i+1]=c[1]*k;d[i+2]=c[2]*k;d[i+3]=255;}
  ctx.putImageData(img,0,0);}
-const DKC={};function darkness(ctx,W,H,lights,amt){const key=W+'x'+H;if(!DKC[key]){const cc=document.createElement('canvas');cc.width=W;cc.height=H;DKC[key]=cc}const c=DKC[key];const x=c.getContext('2d');x.globalCompositeOperation='source-over';x.clearRect(0,0,W,H);
- const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,`rgba(6,9,16,${amt*.82})`);g.addColorStop(1,`rgba(3,4,8,${amt})`);x.fillStyle=g;x.fillRect(0,0,W,H);
- x.globalCompositeOperation='destination-out';lights.forEach(([lx,ly,r,s])=>{const gg=x.createRadialGradient(lx,ly,0,lx,ly,r);gg.addColorStop(0,`rgba(0,0,0,${s||1})`);gg.addColorStop(.5,`rgba(0,0,0,${(s||1)*.55})`);gg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=gg;x.beginPath();x.arc(lx,ly,r,0,TAU);x.fill();});
- ctx.drawImage(c,0,0);
+const DKC={};function darkness(ctx,W,H,lights,amt){const s=0.5,w=Math.ceil(W*s),h=Math.ceil(H*s),key=w+'x'+h;if(!DKC[key]){const cc=document.createElement('canvas');cc.width=w;cc.height=h;DKC[key]=cc}const c=DKC[key];const x=c.getContext('2d');x.save();x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.clearRect(0,0,w,h);
+ const g=x.createLinearGradient(0,0,w,h);g.addColorStop(0,`rgba(6,9,16,${amt*.82})`);g.addColorStop(1,`rgba(3,4,8,${amt})`);x.fillStyle=g;x.fillRect(0,0,w,h);
+ x.globalCompositeOperation='destination-out';lights.forEach(([lx,ly,r,st])=>{const slx=lx*s,sly=ly*s,sr=r*s;const gg=x.createRadialGradient(slx,sly,0,slx,sly,sr);gg.addColorStop(0,`rgba(0,0,0,${st||1})`);gg.addColorStop(.5,`rgba(0,0,0,${(st||1)*.55})`);gg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=gg;x.beginPath();x.arc(slx,sly,sr,0,TAU);x.fill();});
+ x.restore();
+ ctx.drawImage(c,0,0,W,H);
  // warm colour where lanterns burn
- ctx.save();ctx.globalCompositeOperation='soft-light';lights.forEach(([lx,ly,r,s,col])=>{if(!col)return;const c2=hex(col);const gg=ctx.createRadialGradient(lx,ly,0,lx,ly,r);gg.addColorStop(0,rgb(c2,.55));gg.addColorStop(1,rgb(c2,0));ctx.fillStyle=gg;ctx.beginPath();ctx.arc(lx,ly,r,0,TAU);ctx.fill();});ctx.restore();}
+ ctx.save();ctx.globalCompositeOperation='soft-light';lights.forEach(([lx,ly,r,st,col])=>{if(!col)return;const c2=hex(col);const gg=ctx.createRadialGradient(lx,ly,0,lx,ly,r);gg.addColorStop(0,rgb(c2,.55));gg.addColorStop(1,rgb(c2,0));ctx.fillStyle=gg;ctx.beginPath();ctx.arc(lx,ly,r,0,TAU);ctx.fill();});ctx.restore();}
 function vignette(ctx,W,H,a){const g=ctx.createRadialGradient(W/2,H*.55,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${a})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
 function fog(ctx,W,H,seed,t,a){const r=rng(seed);ctx.save();ctx.globalCompositeOperation='screen';for(let i=0;i<14;i++){const fx=(r()*W*1.3+t*(6+r()*8))%(W*1.3)-W*.15,fy=r()*H,fr=120+r()*200;ctx.save();ctx.translate(fx,fy);ctx.scale(1,.35);const g=ctx.createRadialGradient(0,0,0,0,0,fr);g.addColorStop(0,`rgba(120,135,160,${a*(.5+r()*.5)})`);g.addColorStop(1,'rgba(120,135,160,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,fr,0,TAU);ctx.fill();ctx.restore();}ctx.restore();}
 
@@ -662,20 +670,26 @@ function paintField(ctx,W,H,M){
  const waterM=mk(x=>{x.filter='blur(12px)';x.strokeStyle='#fff';x.lineCap='round';x.lineJoin='round';M.waters.forEach(Wt=>{x.lineWidth=Wt.w;strokePts(x,Wt.pts);x.stroke()})});
  const highM=mk(x=>{if(M.high&&M.high.length>2){x.fillStyle='#fff';poly(x,M.high);x.fill()}});
  const img=ctx.createImageData(W,H),d=img.data;const nA=makeNoise(3),nB=makeNoise(5);
+ const P=M.pal,biome=M.biome;
+ const gl0=P?P.grassLo[0]:22,gl1=P?P.grassLo[1]:21,gl2=P?P.grassLo[2]:18;
+ const gh0=P?P.grassHi[0]:34,gh1=P?P.grassHi[1]:31,gh2=P?P.grassHi[2]:24;
+ const ms0=P?P.moss[0]:26,ms1=P?P.moss[1]:36,ms2=P?P.moss[2]:22;
+ const hi0=P?P.high[0]:40,hi1=P?P.high[1]:42,hi2=P?P.high[2]:40;
+ const rl0=P?P.roadLo[0]:40,rl1=P?P.roadLo[1]:37,rl2=P?P.roadLo[2]:32;
+ const rh0=P?P.roadHi[0]:52,rh1=P?P.roadHi[1]:46,rh2=P?P.roadHi[2]:38;
+ const wt0=P?P.water[0]:13,wt1=P?P.water[1]:17,wt2=P?P.water[2]:22;
+ const bankMul=P?0.3:0.55;
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;const n=nA(x/90,y/45,5),m=nB(x/7,y/3.5,3),q=nA(x/22+300,y/11,3);
-  const P=M.pal;let c;
-  if(P){const moss=M.biome===2?0:ss(.5,.68,nB(x/60+20,y/30,4));c=[0,1,2].map(j=>mix(mix(P.grassLo[j],P.grassHi[j],n),P.moss[j],moss));
-   if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=c.map((v,j)=>mix(v,P.high[j],st*.55));}
-   const k=.9+m*.2;c=c.map(v=>v*k);}
-  else{c=[mix(22,34,n),mix(21,31,n),mix(18,24,n)];const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[mix(c[0],26,moss),mix(c[1],36,moss),mix(c[2],22,moss)];
-   if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=[mix(c[0],40,st*.6),mix(c[1],42,st*.6),mix(c[2],40,st*.6)];}
-   const k=.78+m*.42;c=c.map(v=>v*k);}
+  const moss=(P&&biome===2)?0:ss(.5,.68,nB(x/60+20,y/30,4));
+  let r0=mix(mix(gl0,gh0,n),ms0,moss),g0=mix(mix(gl1,gh1,n),ms1,moss),b0=mix(mix(gl2,gh2,n),ms2,moss);
+  if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4))*(P?.55:.6);r0=mix(r0,hi0,st);g0=mix(g0,hi1,st);b0=mix(b0,hi2,st);}
+  const k=P?(.9+m*.2):(.78+m*.42);r0*=k;g0*=k;b0*=k;
   const ra=roadM[i+3]/255;const road=ss(.42,.62,ra+(q-.5)*.5);
-  if(road>0){const rk=P?(.93+m*.12):(.85+m*.3);const rc=P?[0,1,2].map(j=>mix(P.roadLo[j],P.roadHi[j],n)*rk):[mix(40,52,n)*rk,mix(37,46,n)*rk,mix(32,38,n)*rk];c=c.map((v,j)=>mix(v,rc[j],road));}
+  if(road>0){const rk=P?(.93+m*.12):(.85+m*.3);r0=mix(r0,mix(rl0,rh0,n)*rk,road);g0=mix(g0,mix(rl1,rh1,n)*rk,road);b0=mix(b0,mix(rl2,rh2,n)*rk,road);}
   const wa=waterM[i+3]/255;const bank=ss(.25,.45,wa+(q-.5)*.3),water=ss(.55,.7,wa+(q-.5)*.2);
-  if(bank>0)c=c.map(v=>v*(1-bank*(P?.3:.55)));
-  if(water>0){const sh=Math.pow(nB(x/40,y/9,2),2.4)*.9;const wc=P?[P.water[0]+sh*50,P.water[1]+sh*55,P.water[2]+sh*50]:[13+sh*34,17+sh*40,22+sh*50];c=c.map((v,j)=>mix(v,wc[j],water));}
-  d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;}
+  if(bank>0){const bm=1-bank*bankMul;r0*=bm;g0*=bm;b0*=bm;}
+  if(water>0){const sh=Math.pow(nB(x/40,y/9,2),2.4)*.9;const wr=P?wt0+sh*50:wt0+sh*34,wg=P?wt1+sh*55:wt1+sh*40,wb=P?wt2+sh*50:wt2+sh*50;r0=mix(r0,wr,water);g0=mix(g0,wg,water);b0=mix(b0,wb,water);}
+  d[i]=r0;d[i+1]=g0;d[i+2]=b0;d[i+3]=255;}
  ctx.putImageData(img,0,0);
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';const rn=makeNoise(31),r=rng(77);
  M.roads.forEach((R,k)=>{if(R.w<40)return;[[-10,1],[10,2],[-3,3]].forEach(([o,sd],ri)=>{const p=offset(R.pts,o,sd+k*5,7);for(let i=1;i<p.length;i++){const v=rn(i*.08,ri*9+k*3);if(v<.42)continue;ctx.strokeStyle=M.pal?`rgba(120,92,60,${ri==2?.12:(v-.42)*.7})`:`rgba(10,9,7,${ri==2?.18:(v-.42)*1.2})`;ctx.lineWidth=ri==2?7:3+v*2;ctx.beginPath();ctx.moveTo(p[i-1][0],p[i-1][1]);ctx.lineTo(p[i][0],p[i][1]);ctx.stroke()}});

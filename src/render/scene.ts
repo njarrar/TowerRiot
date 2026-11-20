@@ -103,8 +103,20 @@ export class Scene {
   private area = { x: 0, y: 0, w: 0, h: 0 };
 
   constructor(private readonly canvas: HTMLCanvasElement) {
-    this.g = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('2D canvas context unavailable');
+    this.g = ctx;
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
+  }
+
+  /** Release cached offscreen canvases when leaving a battle to avoid mobile GPU memory spikes. */
+  dispose() {
+    if (this.bg) { this.bg.width = 0; this.bg.height = 0; }
+    if (this.gateSp) { this.gateSp.c.width = 0; this.gateSp.c.height = 0; }
+    for (const sp of this.sprites.values()) { sp.c.width = 0; sp.c.height = 0; }
+    this.sprites.clear();
+    this.parts = []; this.fx = []; this.floats = []; this.coins = [];
+    this.seeds.clear(); this.gaits.clear(); this.openedRoads.clear();
   }
 
   /** Paint the stage ground once. Slow (a second or so on a phone), so call it behind a loading screen. */
@@ -186,11 +198,14 @@ export class Scene {
   static towerScale(t: { lv: number }) { return 0.6 + 0.06 * (Math.min(t.lv, 5) - 1); }
 
   private towerSprite(t: Tower): Sprite {
-    const key = `${t.kind}:${Math.min(t.lv, 5)}:${t.split ?? ''}:${t.plot}`;
+    const lv = Math.min(t.lv, 5);
+    const key = `${t.kind}:${lv}:${t.split ?? ''}`;
     let sp = this.sprites.get(key);
     if (!sp) {
-      const S = Scene.towerScale(t), seed = 200 + t.plot * 7;
-      sp = this.sprite((x, ox, oy) => paintTower(x, t.kind, ox, oy, S, 'base', seed, t.lv, t.split), 280, 300, 140, 262);
+      const S = Scene.towerScale(t);
+      const seed = 200 + t.kind.charCodeAt(0) * 13 + lv * 7;
+      // Pass drawBarrel=false so Forge Cannon's rotating barrel is only drawn live in drawTowerBase.
+      sp = this.sprite((x, ox, oy) => paintTower(x, t.kind, ox, oy, S, 'base', seed, lv, t.split, false), 280, 300, 140, 262);
       this.sprites.set(key, sp);
     }
     return sp;
@@ -350,6 +365,10 @@ export class Scene {
           this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 180, life: 0.85, c: '255,215,120' });
           this.shake = Math.max(this.shake, 6);
           break;
+        case 'ironGate':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 140, life: 0.75, c: '235,195,125' });
+          this.shake = Math.max(this.shake, 5);
+          break;
         default: break;
       }
     }
@@ -410,7 +429,7 @@ export class Scene {
     this.step(dt);
     this.stepGaits(b, dt);
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    g.fillStyle = '#e4dccb'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    g.fillStyle = '#e4dccb'; g.fillRect(0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr);
     g.translate(this.ox, this.oy); g.scale(this.scale, this.scale);
     g.save();
     g.beginPath(); g.rect(0, 0, W, H); g.clip();
@@ -502,7 +521,7 @@ export class Scene {
     if (st.lighthouse) lights.push([st.lighthouse[0], st.lighthouse[1] - 120, 380, 1, '#ffe2a0']);
     for (const f of this.fx) if (f.k === 'boom') lights.push([f.x, f.y, 140 * f.life / 0.45 + 40, 0.9, '#ff8a3a']);
     const dark = b.hero.sunriseT > 0 ? 0 : b.night ? 0.62 : st.lava ? 0.14 : 0.03;
-    L.darkness(g, W, H, lights, dark);
+    if (dark > 0.05) L.darkness(g, W, H, lights, dark);
 
     // Sun wash and slow light shafts (not at night).
     if (!b.night) {
@@ -542,7 +561,7 @@ export class Scene {
       g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, lx, ly - 110, 62, '#ffe6b0', 0.55); g.restore();
     }
 
-    if (!view.still) this.drawShots(b);
+    if (!view.still) this.drawShots(b, dt);
     this.drawFx(T);
     if (st.weather === 'rain' && !view.reduceMotion) {
       g.save();
@@ -924,7 +943,44 @@ export class Scene {
     const surge = Math.sin(ph * 2) * gt.surge * v;
     const legs = f.blocked || v < 0.05 ? undefined : ph;
     if (f.under) {
-      if (pass === 'base') {
+      if (f.kind === 'tidewyrm') {
+        const dir = Math.sign(face || 1);
+        if (pass === 'base') {
+          g.save();
+          // Churning pelagic foam ripples & underwater dorsal fin silhouette
+          const w1 = (T * 0.9) % 1, w2 = (T * 0.9 + 0.5) % 1;
+          g.fillStyle = 'rgba(42,126,162,.45)';
+          g.beginPath(); g.ellipse(x, y, 42, 16, 0, 0, TAU); g.fill();
+          for (const phW of [w1, w2]) {
+            g.strokeStyle = `rgba(195,242,255,${(1 - phW) * 0.72})`; g.lineWidth = 2;
+            g.beginPath(); g.ellipse(x, y, 20 + phW * 38, (20 + phW * 38) * 0.36, 0, 0, TAU); g.stroke();
+          }
+          // Slicing dorsal fin skimming the surface
+          g.fillStyle = '#184458'; g.strokeStyle = '#7cd8f0'; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(x - dir * 18, y + 2); g.quadraticCurveTo(x - dir * 4, y - 18, x - dir * 14, y - 20); g.quadraticCurveTo(x + dir * 10, y - 10, x + dir * 14, y + 2); g.closePath(); g.fill(); g.stroke();
+          // Rising healing bubbles while submerged
+          for (let k = 0; k < 4; k++) {
+            const bp = (T * 1.4 + k * 0.25) % 1;
+            g.fillStyle = `rgba(120,245,195,${(1 - bp) * 0.8})`;
+            g.beginPath(); g.arc(x - 18 + k * 12 + Math.sin(T * 5 + k) * 3, y - bp * 26, 2.2 + (1 - bp) * 1.5, 0, TAU); g.fill();
+          }
+          // Resurface breach telegraph in final 1.2s
+          if (f.underT > 0 && f.underT < 1.2) {
+            const warn = 1 - f.underT / 1.2;
+            g.strokeStyle = `rgba(255,220,130,${0.4 + 0.5 * warn})`; g.lineWidth = 2.5; g.setLineDash([6, 4]);
+            g.beginPath(); g.ellipse(x, y, 48 * (1.15 - warn * 0.2), 18 * (1.15 - warn * 0.2), 0, 0, TAU); g.stroke(); g.setLineDash([]);
+          }
+          g.restore();
+        } else {
+          g.save();
+          g.globalCompositeOperation = 'lighter';
+          L.glow(g, x, y - 4, 34, '#5ad8ff', 0.32);
+          g.globalCompositeOperation = 'source-over';
+          g.globalAlpha = 0.6;
+          bar0(g, x, y - f.def.bar, f.hp / f.max, '#5ad8ff', 90);
+          g.restore();
+        }
+      } else if (pass === 'base') {
         g.fillStyle = 'rgba(40,32,24,.9)'; g.beginPath(); g.ellipse(x, y, 14 * f.def.size, 6 * f.def.size, 0, 0, TAU); g.fill();
         g.fillStyle = 'rgba(90,76,58,.8)'; for (let k = 0; k < 4; k++) g.fillRect(x - 10 + k * 6 + Math.sin(T * 9 + k) * 2, y - 3, 3, 3);
       }
@@ -1008,7 +1064,7 @@ export class Scene {
     if (this.moveMark) { const m = this.moveMark, a = m.t / 0.6; g.strokeStyle = `rgba(255,214,140,${a})`; g.lineWidth = 2; g.beginPath(); g.ellipse(m.x, m.y, 22 * (1.4 - a), 9 * (1.4 - a), 0, 0, TAU); g.stroke(); }
   }
 
-  private drawShots(b: Battle) {
+  private drawShots(b: Battle, dt: number) {
     const g = this.g;
     g.save(); g.globalCompositeOperation = 'lighter';
     for (const s of b.shots) {
@@ -1028,7 +1084,7 @@ export class Scene {
       const x = s.x0 + (s.tx - s.x0) * u, y = s.y0 + (s.ty - s.y0) * u - arc;
       g.fillStyle = '#0c0c0d'; g.beginPath(); g.arc(x, y, 4.5, 0, TAU); g.fill();
       g.fillStyle = 'rgba(200,205,215,.4)'; g.fillRect(x - 2, y - 3, 2, 1);
-      if (this.r() < 0.5) this.parts.push({ x, y, vx: 0, vy: -6, life: 0.7, max: 0.7, c: 'rgba(60,60,62,', s: 3, kind: 'smoke' });
+      if (dt > 0 && this.r() < 0.5) this.parts.push({ x, y, vx: 0, vy: -6, life: 0.7, max: 0.7, c: 'rgba(60,60,62,', s: 3, kind: 'smoke' });
     }
   }
 
@@ -1092,6 +1148,15 @@ export class Scene {
 
 /* ------------------------------------------------------------------ helpers */
 
+const TOWER_ANCHOR: Record<TowerKind, { trimX: number; trimY: number; crownY: number }> = {
+  watch:  { trimX: 25, trimY: -78, crownY: -158 },
+  cannon: { trimX: 30, trimY: -36, crownY: -80 },
+  bell:   { trimX: 28, trimY: -70, crownY: -148 },
+  pylon:  { trimX: 18, trimY: -66, crownY: -162 },
+  roots:  { trimX: 22, trimY: -44, crownY: -98 },
+  beacon: { trimX: 17, trimY: -74, crownY: -162 },
+};
+
 export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: number, y: number, s: number, pass: 'base' | 'emit', seed: number, lv = 1, split: 'a' | 'b' | null = null, drawBarrel = true) {
   if (pass === 'base' && lv >= 2) {
     // Reinforced iron/masonry plinth ring so upgraded towers carry clear visual weight from Lv 2+.
@@ -1111,24 +1176,25 @@ export function paintTower(c: CanvasRenderingContext2D, kind: TowerKind, x: numb
     case 'roots': X.rootGarden(c, x, y, s, pass, seed); if (pass === 'emit') X.rootPods(c, x, y, s, 1, 0.4); break;
   }
   if (pass === 'base' && split) {
-    // Distinct Lv 4 specialization trim: Split A wears heavy bastion/crimson banners; Split B wears sleek arcane/copper finials.
+    // Distinct Lv 4 specialization trim anchored to each tower's actual architecture height.
+    const anc = TOWER_ANCHOR[kind];
     c.save(); c.translate(x, y); c.scale(s, s);
     if (split === 'a') {
       for (const sd of [-1, 1]) {
-        c.fillStyle = '#9e3420'; c.beginPath(); c.moveTo(sd * 22, -46); c.lineTo(sd * 29, -44); c.lineTo(sd * 28, -26); c.lineTo(sd * 25, -30); c.lineTo(sd * 22, -26); c.closePath(); c.fill();
-        c.strokeStyle = '#e0ac4c'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(sd * 21, -46); c.lineTo(sd * 30, -44); c.stroke();
+        c.fillStyle = '#9e3420'; c.beginPath(); c.moveTo(sd * anc.trimX, anc.trimY); c.lineTo(sd * (anc.trimX + 7), anc.trimY + 2); c.lineTo(sd * (anc.trimX + 6), anc.trimY + 20); c.lineTo(sd * (anc.trimX + 3), anc.trimY + 16); c.lineTo(sd * anc.trimX, anc.trimY + 20); c.closePath(); c.fill();
+        c.strokeStyle = '#e0ac4c'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(sd * (anc.trimX - 1), anc.trimY); c.lineTo(sd * (anc.trimX + 8), anc.trimY + 2); c.stroke();
       }
     } else {
       for (const sd of [-1, 1]) {
-        c.fillStyle = '#485666'; c.beginPath(); c.moveTo(sd * 19, -40); c.lineTo(sd * 28, -58); c.lineTo(sd * 23, -36); c.closePath(); c.fill();
-        c.strokeStyle = '#9ed8f5'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(sd * 20, -40); c.lineTo(sd * 27.5, -57); c.stroke();
+        c.fillStyle = '#485666'; c.beginPath(); c.moveTo(sd * (anc.trimX - 2), anc.trimY + 4); c.lineTo(sd * (anc.trimX + 7), anc.trimY - 14); c.lineTo(sd * (anc.trimX + 2), anc.trimY + 8); c.closePath(); c.fill();
+        c.strokeStyle = '#9ed8f5'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(sd * (anc.trimX - 1), anc.trimY + 4); c.lineTo(sd * (anc.trimX + 6.5), anc.trimY - 13); c.stroke();
       }
     }
     if (lv >= 5) {
-      // Radiant Mastery crown halo at Lv 5
+      // Radiant Mastery crown halo at Lv 5 anchored above each tower's actual crest
       c.strokeStyle = '#ffd978'; c.lineWidth = 1.6;
-      c.beginPath(); c.ellipse(0, -138, 18, 5.5, 0, 0, TAU); c.stroke();
-      c.fillStyle = '#fff5cf'; c.beginPath(); c.arc(0, -144, 3.2, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(0, anc.crownY, 18, 5.5, 0, 0, TAU); c.stroke();
+      c.fillStyle = '#fff5cf'; c.beginPath(); c.arc(0, anc.crownY - 6, 3.2, 0, TAU); c.fill();
     }
     c.restore();
   }
