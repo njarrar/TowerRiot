@@ -43,7 +43,9 @@ object ArtFiles {
 
     fun readText(file: String): String? = try { ctx.assets.open(file).bufferedReader().use { it.readText() } } catch (_: Exception) { null }
 
-    fun ground(stage: Int): Bitmap? = bitmap(String.format("ground-%02d.jpg", stage))
+    /** The painted ground; Variant B has its own where one was baked. */
+    fun ground(stage: Int, alt: Boolean = false): Bitmap? =
+        (if (alt) bitmap(String.format("ground-%02d-alt.jpg", stage)) else null) ?: bitmap(String.format("ground-%02d.jpg", stage))
 
     fun font(id: Int): Typeface = ResourcesCompat.getFont(ctx, id) ?: Typeface.DEFAULT_BOLD
     val cinzel: Typeface by lazy { font(R.font.cinzel_extrabold) }

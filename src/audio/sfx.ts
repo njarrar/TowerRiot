@@ -7,6 +7,8 @@ export class Audio {
   private noise: AudioBuffer | null = null;
   private last = new Map<Sfx, number>();
   private on = true;
+  private activeVoices = 0;
+  private static readonly MAX_VOICES = 16;
 
   /** Muting also silences any sound already playing, not just the next one. */
   get enabled() { return this.on; }
@@ -15,19 +17,39 @@ export class Audio {
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(v ? 0.5 : 0, this.ctx.currentTime, 0.02);
   }
 
-  /** Browsers start audio only after a tap. Call this from the first input. */
+  /** Browsers start audio only after a tap; iOS Safari may also enter 'interrupted' after calls/backgrounding. */
   unlock() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') void this.ctx.resume(); return; }
+    if (this.ctx) {
+      if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => {});
+      return;
+    }
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
-    this.ctx = new AC();
-    this.master = this.ctx.createGain();
-    this.master.gain.value = this.on ? 0.5 : 0;
-    this.master.connect(this.ctx.destination);
-    const len = this.ctx.sampleRate;
-    this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-    const d = this.noise.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    try {
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.on ? 0.5 : 0;
+      const limiter = this.ctx.createDynamicsCompressor();
+      limiter.threshold.value = -12;
+      limiter.knee.value = 18;
+      limiter.ratio.value = 8;
+      limiter.attack.value = 0.004;
+      limiter.release.value = 0.12;
+      this.master.connect(limiter);
+      limiter.connect(this.ctx.destination);
+      const len = this.ctx.sampleRate;
+      this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = this.noise.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    } catch {
+      this.ctx = null;
+      this.master = null;
+    }
+  }
+
+  /** Suspend audio hardware cleanly while the tab/app is backgrounded. */
+  suspend() {
+    if (this.ctx && this.ctx.state === 'running') void this.ctx.suspend().catch(() => {});
   }
 
   play(s: Sfx) {
@@ -41,16 +63,25 @@ export class Audio {
     // Slight ±4% pitch jitter on rapid combat hits prevents machine-gun ear fatigue.
     const j = s === 'bolt' || s === 'boom' || s === 'zap' || s === 'hero' || s === 'root' ? 0.96 + Math.random() * 0.08 : 1;
     const tone = (type: OscillatorType, f0: number, f1: number, dur: number, vol: number, delay = 0) => {
+      if (this.activeVoices >= Audio.MAX_VOICES) return;
+      this.activeVoices++;
       const o = c.createOscillator(), gn = c.createGain();
       o.type = type; o.frequency.setValueAtTime(f0 * j, now + delay); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1 * j), now + delay + dur);
       gn.gain.setValueAtTime(0.0001, now + delay); gn.gain.exponentialRampToValueAtTime(vol, now + delay + 0.01); gn.gain.exponentialRampToValueAtTime(0.0001, now + delay + dur);
+      o.onended = () => { this.activeVoices = Math.max(0, this.activeVoices - 1); };
       o.connect(gn); gn.connect(m); o.start(now + delay); o.stop(now + delay + dur + 0.02);
     };
     const hiss = (freq: number, q: number, dur: number, vol: number, type: BiquadFilterType = 'lowpass') => {
-      if (!this.noise) return;
+      if (!this.noise || this.activeVoices >= Audio.MAX_VOICES) return;
+      this.activeVoices++;
       const src = c.createBufferSource(), f = c.createBiquadFilter(), gn = c.createGain();
-      src.buffer = this.noise; f.type = type; f.frequency.value = freq; f.Q.value = q;
-      gn.gain.setValueAtTime(vol, now); gn.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      src.buffer = this.noise;
+      if (dur > 0.45) src.loop = true;
+      f.type = type; f.frequency.value = freq; f.Q.value = q;
+      gn.gain.setValueAtTime(0.0001, now);
+      gn.gain.linearRampToValueAtTime(vol, now + 0.004);
+      gn.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      src.onended = () => { this.activeVoices = Math.max(0, this.activeVoices - 1); };
       src.connect(f); f.connect(gn); gn.connect(m); src.start(now, Math.random() * 0.5); src.stop(now + dur + 0.02);
     };
     switch (s) {

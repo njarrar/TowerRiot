@@ -50,6 +50,10 @@ class Path(val id: String, val pts: List<Vec>) {
 
     /** Point at distance d along the path. dir is +1 when the path heads right, -1 when it heads left. */
     fun point(d: Double): Point {
+        if (segs.isEmpty()) {
+            val p = pts.firstOrNull() ?: Vec(0.0, 0.0)
+            return Point(p.x, p.y, 1.0)
+        }
         val dd = max(0.0, min(tot, d))
         var lo = 0
         var hi = segs.size - 1
@@ -87,6 +91,25 @@ class Path(val id: String, val pts: List<Vec>) {
             d += 6
         }
         return bd
+    }
+
+    /** Every local nearest distance to a point (a road that crosses itself passes it more than once). */
+    fun allNearestDistances(at: Vec): List<Double> {
+        val ds = ArrayList<Double>()
+        var prev = Double.POSITIVE_INFINITY; var cur = Double.POSITIVE_INFINITY; var prevD = 0.0
+        var best = Double.POSITIVE_INFINITY; var bd = 0.0; var d = 0.0
+        while (d <= tot) {
+            val q = point(d)
+            val k = hypot2(q.x - at.x, q.y - at.y)
+            if (k < best) { best = k; bd = d }
+            if (cur < prev && cur <= k && cur <= 55) {
+                if (ds.none { kotlin.math.abs(it - prevD) < 60 }) ds.add(prevD)
+            }
+            prev = cur; cur = k; prevD = d
+            d += 6
+        }
+        if (ds.isEmpty()) ds.add(bd)
+        return ds
     }
 }
 

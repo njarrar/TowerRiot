@@ -74,19 +74,22 @@ public struct Save: Codable, Equatable, Sendable {
         pruneNodes()
     }
 
-    /// Drop nodes a save cannot hold: a missing prerequisite, both of an either-or pair, or more than its Embers pay for.
+    /// Drop nodes a save cannot hold: stage lock, missing prerequisite, either-or conflict, or Ember deficit.
     private mutating func pruneNodes() {
-        let known = GameData.shared.nodes
+        let data = GameData.shared
+        let known = data.nodes
+        let cl = cleared
         var changed = true
         while changed {
             changed = false
             var keep: [String] = []
             for id in nodes {
                 var ok = false
-                if let n = known[id], !keep.contains(id) {
+                if let n = known[id], let tree = data.tree(of: n), !keep.contains(id) {
+                    let unlocked = tree.after <= cl && (n.after ?? 0) <= cl
                     let reqOk = (n.req ?? "").isEmpty || nodes.contains(n.req!)
                     let exclHit = !(n.excl ?? "").isEmpty && keep.contains(n.excl!)
-                    ok = reqOk && !exclHit
+                    ok = unlocked && reqOk && !exclHit
                 }
                 if ok { keep.append(id) } else { changed = true }
             }

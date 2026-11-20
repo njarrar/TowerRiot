@@ -4,6 +4,7 @@ export type EnemyKind =
   | 'grub' | 'skitter' | 'shell' | 'moth' | 'warden' | 'mender' | 'shade'
   | 'splitter' | 'sapper' | 'burrower' | 'ashmoth' | 'elite'
   | 'husk' | 'hound' | 'glasshide' | 'veilmoth' | 'ram' | 'herald'
+  | 'runethief' | 'scarab' | 'wickleech' | 'tether'
   | 'mireking' | 'tidewyrm' | 'colossus' | 'queen';
 
 /** Special rules a foe follows. The battle code reads these flags, never the kind name. */
@@ -41,6 +42,16 @@ export interface Traits {
   /** Below each health share: summons and a speed burst. */
   phases?: number[];
   boss?: boolean;
+  /** Detours toward active map runes to steal them and rally nearby Hollow foes. */
+  runeHunter?: boolean;
+  /** Escapes cleanly without costing lives; huge gold reward if killed first. */
+  fugitive?: boolean;
+  /** Flying siphon that slows over Beacons and halves their light & aura radius. */
+  siphonBeacon?: boolean;
+  /** Spawns in linked pairs that split damage 50/50 while within 160 px. */
+  link?: boolean;
+  /** Active multi-phase boss signature ability. */
+  bossSkill?: 'mire' | 'tide' | 'colossus' | 'queen';
 }
 
 export interface EnemyDef {
@@ -84,11 +95,15 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   glasshide: { kind: 'glasshide', name: 'Glasshide', hp: 150, speed: 36, gold: 14, leak: 2, dps: 14, bar: 54, size: 1.35, traits: { panes: { n: 3, regrow: 2.5 } }, blurb: 'Three glass panes each stop one hit. Strip them with fast hits, then land the big ones.', answer: 'Fast hits to break panes (Repeater, Tesla crown, Spore pod, Frost bell), then big hits.' },
   veilmoth: { kind: 'veilmoth', name: 'Veil Moth', hp: 44, speed: 70, gold: 8, leak: 1, dps: 0, bar: 62, size: 0.95, flying: true, traits: { stealth: true, veil: true }, blurb: 'Flies unseen. Only a Beacon or Wren\'s lantern shows it to your towers.', answer: 'A Beacon on its flight line, plus Watch tower, Frost bell or Storm pylon.' },
   ram: { kind: 'ram', name: 'Hollow Ram', hp: 520, speed: 22, gold: 40, leak: 4, dps: 30, bar: 80, size: 2.1, traits: { armor: 5, stamp: { every: 6, r: 110, stun: 1.5 } }, blurb: 'Stamps and stuns towers near it. Pin it with roots or frost so it cannot stamp.', answer: 'Root garden or Glacier to pin it, plus Rail, Longbow or Siege mortar.' },
-  herald: { kind: 'herald', name: 'Herald', hp: 260, speed: 32, gold: 25, leak: 2, dps: 16, bar: 64, size: 1.4, traits: { aura: { r: 120, cut: 0.35 } }, blurb: 'Foes near it shrug off your most used element. Mix elements, or let Wren take it.', answer: 'Mix elements, or send Wren.' },
-  mireking: { kind: 'mireking', name: 'The Mire King', hp: 2400, speed: 20, gold: 150, leak: 12, dps: 40, bar: 110, size: 3, traits: { boss: true, phases: [0.5], summon: { kind: 'grub', n: 2, every: 5 } }, blurb: 'Drags the swamp with him and spits out Grubs.', answer: 'Steady damage, and clear the Grubs he spits out.' },
-  tidewyrm: { kind: 'tidewyrm', name: 'The Tidewyrm', hp: 2000, speed: 26, gold: 200, leak: 12, dps: 50, bar: 90, size: 2.6, takes: { storm: 1.25 }, traits: { boss: true, phases: [0.5], dive: { every: 9, dur: 3 } }, blurb: 'Dives under the tide to heal. Hit it while it is up.', answer: 'Storm pylon while it is above water.' },
-  colossus: { kind: 'colossus', name: 'The Brass Colossus', hp: 6000, speed: 16, gold: 260, leak: 12, dps: 70, bar: 140, size: 3.4, traits: { boss: true, phases: [0.5], plated: 0.35 }, blurb: 'Brass plates turn most damage. Chill it and the plates crack.', answer: 'Frost bell to crack the plates, then everything.' },
-  queen: { kind: 'queen', name: 'The Hollow Queen', hp: 5500, speed: 22, gold: 400, leak: 12, dps: 90, bar: 130, size: 3.2, flying: false, traits: { boss: true, phases: [0.66, 0.33], summon: { kind: 'shade', n: 2, every: 7 } }, blurb: 'Rewrites the map as she falls. Three phases.', answer: 'A full mix. She calls Shades, so keep a Beacon.' },
+  herald: { kind: 'herald', name: 'Herald', hp: 260, speed: 32, gold: 25, leak: 2, dps: 16, bar: 64, size: 1.4, traits: { aura: { r: 120, cut: 0.35 } }, blurb: 'Foes near it shrug off your most used element. Wren landing the kill strips 20% adaptation.', answer: 'Mix elements, or send Wren for the cleanse.' },
+  runethief: { kind: 'runethief', name: 'Rune Stalker', hp: 95, speed: 78, gold: 22, leak: 1, dps: 10, bar: 34, size: 1.0, traits: { runeHunter: true }, blurb: 'Veers off-road to steal active Runes and haste nearby Hollow foes. Wren gets +35g & refreshes the rune on a kill.', answer: 'Intercept with Wren or snipe with Watch towers before it reaches the Rune.' },
+  scarab: { kind: 'scarab', name: 'Gilded Scarab', hp: 165, speed: 86, gold: 70, leak: 0, dps: 0, bar: 30, size: 1.0, traits: { fugitive: true }, blurb: 'A glittering relic-bearer that costs 0 lives if it escapes, but drops a massive bounty when killed.', answer: 'Focus fire or send Wren to cash in the +50% last-hit jackpot.' },
+  wickleech: { kind: 'wickleech', name: 'Wick Leech', hp: 75, speed: 58, gold: 12, leak: 1, dps: 0, bar: 62, size: 0.95, flying: true, takes: { pierce: 1.2, storm: 1.2 }, traits: { siphonBeacon: true }, blurb: 'Hovers over Beacons to siphon their flame, halving aura and stealth reveal radius until slain.', answer: 'Watch tower or Storm pylon to swat it off your Beacon.' },
+  tether: { kind: 'tether', name: 'Tether Twin', hp: 150, speed: 46, gold: 13, leak: 1, dps: 12, bar: 36, size: 1.1, traits: { link: true }, blurb: 'Marches in linked pairs that split all damage 50/50 while within 160 px. AoE hits both halves at once.', answer: 'Forge cannon, Storm pylon, or Lantern Snare to blast both twins together.' },
+  mireking: { kind: 'mireking', name: 'The Mire King', hp: 2400, speed: 20, gold: 150, leak: 12, dps: 40, bar: 110, size: 3, traits: { boss: true, phases: [0.5], summon: { kind: 'grub', n: 2, every: 5 }, bossSkill: 'mire' }, blurb: 'Hurls Bog Globs that slow towers and regenerates in Phase 2 unless burning.', answer: 'Keep him burning with Forge cannon or Lantern Snare, and clear his Grubs.' },
+  tidewyrm: { kind: 'tidewyrm', name: 'The Tidewyrm', hp: 2000, speed: 26, gold: 200, leak: 12, dps: 50, bar: 90, size: 2.6, takes: { storm: 1.25 }, traits: { boss: true, phases: [0.5], dive: { every: 9, dur: 3 }, bossSkill: 'tide' }, blurb: 'Dives under the tide to heal; surfaces Drenched (+40% Storm damage) and erupts Tide-Spouts in Phase 2.', answer: 'Punish its 4 s Drenched window with Storm pylons each time it surfaces.' },
+  colossus: { kind: 'colossus', name: 'The Brass Colossus', hp: 6000, speed: 16, gold: 260, leak: 12, dps: 70, bar: 140, size: 3.4, traits: { boss: true, phases: [0.5], plated: 0.35, bossSkill: 'colossus' }, blurb: 'Vents scalding steam to knock Wren back. Below 50% HP it sheds its brass plates and surges at +35% speed.', answer: 'Frost bell to crack plates early, dodge the steam vent, then burst Phase 2.' },
+  queen: { kind: 'queen', name: 'The Hollow Queen', hp: 7400, speed: 22, gold: 400, leak: 12, dps: 90, bar: 130, size: 3.2, flying: false, traits: { boss: true, phases: [0.66, 0.33], summon: { kind: 'shade', n: 2, every: 7 }, bossSkill: 'queen' }, blurb: 'Casts Veil Eclipse, calls Twin Heralds in Phase 2, and ascends into Spectral Flight in Phase 3.', answer: 'Keep Beacons lit, anti-air ready for Phase 3 flight, and let Wren cleanse her Heralds.' },
 };
 
 /** Health scale per stage so later stages hit harder. The Ashen Rift (16 to 20) climbs twice as fast, so the last region is the hardest. */

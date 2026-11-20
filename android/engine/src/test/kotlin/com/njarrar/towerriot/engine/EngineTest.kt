@@ -149,7 +149,7 @@ class EngineTest {
         assertFalse(free.roads.first { it.def.id == roadId }.closed)
         for (b in listOf(held, free)) repeat(4) { b.step(0.5) }
         assertFalse(walkers[0].dead)
-        assertEquals(hold - 40, walkers[0].d, 1e-9, "the walker waits 40 px short of the boom")
+        assertEquals(hold - 30, walkers[0].d, 1e-9, "the walker waits 30 px short of the boom without stepping back")
         assertTrue(walkers[1].d > hold, "with the gate open the same walker is past the boom by now")
         assertEquals(cd, held.switches[si].cdLeft, 1e-9, "the cooldown waits for the gate to open")
         var t = 2.0
@@ -158,7 +158,7 @@ class EngineTest {
         assertEquals(0, held.switches[si].state)
         held.step(1.0)
         assertFalse(held.roads.first { it.def.id == roadId }.closed)
-        assertTrue(walkers[0].dead || walkers[0].d > hold - 40)
+        assertTrue(walkers[0].dead || walkers[0].d > hold - 30)
         assertTrue(held.switches[si].cdLeft < cd)
     }
 
@@ -183,7 +183,12 @@ class EngineTest {
             val events = b.drain()
             assertEquals(1, events.count { it is BattleEvent.RiftOpen && it.road == roadId })
             assertEquals(1, events.count { it is BattleEvent.Phase })
-            if (boss.def.traits?.summon != null) assertEquals(before + 6, b.foes.size) else assertEquals(before, b.foes.size)
+            if (boss.def.traits?.summon != null) {
+                if (bossKind == EnemyKind.queen) {
+                    assertEquals(before + 8, b.foes.size, "stage $stageId: the Hollow Queen calls six shades and two Heralds")
+                    assertEquals(2, b.foes.count { it.kind == EnemyKind.herald }, "stage $stageId: two Heralds come with the second phase")
+                } else assertEquals(before + 6, b.foes.size)
+            } else assertEquals(before, b.foes.size)
             assertTrue(b.spawns.any { (_, rs) -> rs.any { it === road } })
         }
     }

@@ -76,7 +76,7 @@ class BattleRenderer(val battle: Battle) {
     private fun R() = rng.next()
     private val TAU = PI * 2
 
-    private val ground: Bitmap? = ArtFiles.ground(battle.stage.id)
+    private val ground: Bitmap? = ArtFiles.ground(battle.stage.id, battle.variant == com.njarrar.towerriot.engine.StageVariant.alt)
     private val vignette = Gfx.vignette()
     private val sunWash = if (battle.stage.isLava) Gfx.sun(255, 170, 110, 0.55) else Gfx.sun(255, 232, 180, 0.32)
     private val posts: List<Vec>
@@ -281,6 +281,11 @@ class BattleRenderer(val battle: Battle) {
                     addFx(FxKind.ring, e.toX, e.toY, 0.0, 54.0, 0.65, rgb(255, 150, 70))
                 }
                 is BattleEvent.GateShock -> { addFx(FxKind.ring, e.x, e.y, 0.0, 180.0, 0.85, rgb(255, 215, 120)); shake = max(shake, 6.0) }
+                is BattleEvent.IronGate -> { addFx(FxKind.ring, e.x, e.y, 0.0, 140.0, 0.75, rgb(235, 195, 125)); shake = max(shake, 5.0) }
+                is BattleEvent.HeraldCleanse -> { addFx(FxKind.ring, e.x, e.y, 0.0, 150.0, 0.85, rgb(120, 245, 200)); float(e.x, e.y - 54, "Cleanse -20%", rgb(0x7cf0c4), true) }
+                is BattleEvent.RuneStolen -> { addFx(FxKind.ring, e.x, e.y, 0.0, 140.0, 0.9, rgb(255, 195, 70)); float(e.x, e.y - 50, "Rune stolen!", rgb(0xffb040), true) }
+                is BattleEvent.Escape -> float(e.x, e.y - 44, "Escaped!", rgb(0xe8c468), false)
+                is BattleEvent.Bog -> addFx(FxKind.ring, e.x, e.y, 0.0, 52.0, 0.7, rgb(115, 175, 75))
                 else -> {}
             }
         }
@@ -329,8 +334,8 @@ class BattleRenderer(val battle: Battle) {
         if (f.def.isFlying) return GaitKind.fly
         if (f.def.isBoss) return GaitKind.stomp
         return when (f.kind) {
-            EnemyKind.skitter, EnemyKind.hound -> GaitKind.scuttle
-            EnemyKind.shell, EnemyKind.sapper, EnemyKind.elite, EnemyKind.warden, EnemyKind.glasshide, EnemyKind.herald -> GaitKind.plod
+            EnemyKind.skitter, EnemyKind.hound, EnemyKind.runethief, EnemyKind.scarab -> GaitKind.scuttle
+            EnemyKind.shell, EnemyKind.sapper, EnemyKind.elite, EnemyKind.warden, EnemyKind.glasshide, EnemyKind.herald, EnemyKind.tether -> GaitKind.plod
             EnemyKind.ram -> GaitKind.stomp
             else -> GaitKind.crawl
         }
@@ -711,6 +716,17 @@ class BattleRenderer(val battle: Battle) {
             val pose = pose(f)
             units.add(Item(10 + depth / 100) { c -> drawFoeBase(c, f, pose) })
             if (!f.under) emits.add(Item(40 + depth / 100) { c -> drawFoeEmit(c, f, pose) })
+            // A Mender's beam to the ally it is mending.
+            val tid = f.healTarget
+            if (!f.dead && tid != null) {
+                val tgt = battle.foes.firstOrNull { it.id == tid && !it.dead && !it.under }
+                if (tgt != null) emits.add(Item(40 + depth / 100) { c ->
+                    val ax = f.x + (if (f.dir == 0.0) 1.0 else f.dir) * 12; val ay = f.y - 16
+                    val bx = tgt.x; val by = tgt.y - tgt.def.bar * 0.45
+                    val pth = android.graphics.Path().apply { moveTo(ax.toFloat(), ay.toFloat()); quadTo(((ax + bx) / 2).toFloat(), (min(ay, by) - 18).toFloat(), bx.toFloat(), by.toFloat()) }
+                    g.path(c, pth, rgb(150, 250, 185, 0.85), 2.4, blend = Blend.add)
+                })
+            }
         }
     }
 

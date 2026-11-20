@@ -82,7 +82,9 @@ class Save {
 
     /** Drop nodes a save cannot hold: a missing prerequisite, both of an either-or pair, or more than its Embers pay for. */
     private fun pruneNodes() {
-        val known = GameData.shared.nodes
+        val data = GameData.shared
+        val known = data.nodes
+        val cl = cleared
         var changed = true
         while (changed) {
             changed = false
@@ -90,10 +92,12 @@ class Save {
             for (id in nodes) {
                 var ok = false
                 val n = known[id]
-                if (n != null && id !in keep) {
+                val tree = n?.let { data.treeOf(it) }
+                if (n != null && tree != null && id !in keep) {
+                    val unlocked = tree.after <= cl && (n.after ?: 0) <= cl
                     val reqOk = n.req.isNullOrEmpty() || n.req in nodes
                     val exclHit = !n.excl.isNullOrEmpty() && n.excl in keep
-                    ok = reqOk && !exclHit
+                    ok = unlocked && reqOk && !exclHit
                 }
                 if (ok) keep.add(id) else changed = true
             }

@@ -85,6 +85,10 @@ class BattleController(stageId: Int, val variant: StageVariant, val oaths: List<
     private val bannerQ = ArrayDeque<Triple<String, String, Double>>()
     private var bannerId = 0
     private var lvlT = 0.0
+    /** Steps the fight in fixed 1/30 s slices, as the web and iPhone builds do, whatever the screen's frame rate. */
+    private var clockAcc = 0.0
+    private val fixedStep = 1.0 / 30.0
+    private val openedRoads = HashSet<String>()
     private val leakBy = HashMap<EnemyKind, Int>()
     private var exitWasPaused = false
     private var ended = false
@@ -160,16 +164,24 @@ class BattleController(stageId: Int, val variant: StageVariant, val oaths: List<
 
     /** One frame of `dt` real seconds: step the fight, react, and move the picture on. */
     fun frame(dt: Double) {
-        val simDt = if (aimingW) dt * 0.25 else dt
-        battle.step(simDt)
+        // Nothing to throw once Wren cannot use W (down, on cooldown, or the fight is over).
+        if (aimingW && !battle.skillReady(SkillKey.w)) endAim()
+        if (!battle.paused) {
+            val slow = if (aimingW) 0.25 else 1.0
+            clockAcc = min(clockAcc + dt * slow, fixedStep * 6)
+            var steps = 0
+            while (clockAcc >= fixedStep && steps < 6) {
+                battle.step(fixedStep)
+                clockAcc -= fixedStep
+                steps += 1
+            }
+        }
         val events = battle.drain()
         react(events)
         // Auto-call waits for a clear field, so waves never pile up on each other.
         if (autoNext && !battle.paused && !battle.over && battle.status == Status.running && battle.nextIn != null && battle.wave < battle.totalWaves && battle.foes.isEmpty()) {
             battle.callWave()
         }
-        // Nothing to throw once Wren is down or the fight is over: time must not stay slowed.
-        if (aimingW && (battle.hero.dead || battle.over)) endAim()
         if (sellArmedId != null && now() >= sellArmedUntil) sellArmedId = null
         scene.look.showLeash = showLeash || aimingW
         if (bannerT > 0) {
@@ -204,11 +216,16 @@ class BattleController(stageId: Int, val variant: StageVariant, val oaths: List<
                 is BattleEvent.SwitchFlip -> { sound.play(Sound.Sfx.switchFlip); showBanner(e.label, if (e.state != 0) "Mechanism engaged!" else "Mechanism reset.", 1.8) }
                 is BattleEvent.Warp -> sound.play(Sound.Sfx.warp)
                 is BattleEvent.RiftWarn -> showBanner("New breach forming", "Watch the marked path before Wave ${e.wave}.", 2.6)
-                is BattleEvent.RiftOpen -> { sound.play(Sound.Sfx.wave); showBanner("Rift torn open", "A new lane has activated on the field!", 2.4) }
+                is BattleEvent.RiftOpen -> if (openedRoads.add(e.road)) { sound.play(Sound.Sfx.wave); showBanner("Rift torn open", "A new lane has activated on the field!", 2.4) }
                 is BattleEvent.Terraform -> { sound.play(Sound.Sfx.boss); showBanner("Ground shifts", e.label, 3.0, now = true) }
                 is BattleEvent.Stamp -> sound.play(Sound.Sfx.boom)
                 is BattleEvent.Pane -> sound.play(Sound.Sfx.bell)
                 is BattleEvent.GateShock -> { sound.play(Sound.Sfx.sunrise); showBanner("Bastion bell!", "The Keep shockwave stuns intruders at the gate.", 2.2) }
+                is BattleEvent.IronGate -> { sound.play(Sound.Sfx.build); showBanner("Iron Gate holds!", "The portcullis repels the breach and knocks intruders back.", 2.2) }
+                is BattleEvent.HeraldCleanse -> { sound.play(Sound.Sfx.sunrise); showBanner("Herald broken!", "Wren's kill strips 20% ${Words.element[e.el] ?: e.el.name} resistance from the Hollow.", 2.4) }
+                is BattleEvent.RuneStolen -> { sound.play(Sound.Sfx.leak); showBanner("Rune stolen!", "A Rune Stalker snatched the Rune and rallied nearby foes!", 2.4) }
+                is BattleEvent.Escape -> { sound.play(Sound.Sfx.warp); showBanner("Scarab escaped", "No lives lost, but its treasure slipped away.", 2.0) }
+                is BattleEvent.Bog -> sound.play(Sound.Sfx.root)
                 is BattleEvent.Level -> { sound.play(Sound.Sfx.level); lvlT = 0.9; levelFlash = true; if (autoSkills) b.autoLearn() }
                 is BattleEvent.Wave -> {
                     sound.play(Sound.Sfx.wave); showBanner("Wave ${e.n} of ${b.totalWaves}", e.hint, 2.0)
@@ -238,7 +255,7 @@ class BattleController(stageId: Int, val variant: StageVariant, val oaths: List<
                 is BattleEvent.HeroDown -> showBanner("Wren falls", "She returns at the gate in ${ceil(b.hero.respawnT).toInt()} s.", 2.4)
                 is BattleEvent.Revive -> showBanner("Second dawn", "Wren stands back up.", 2.0)
                 is BattleEvent.Early -> showBanner("Called early", "+${e.gold} gold", 1.6)
-                is BattleEvent.Won -> { sound.play(Sound.Sfx.win); scheduleEnd(true, e.stars) }
+                is BattleEvent.Won -> if (b.status == Status.won) { sound.play(Sound.Sfx.win); scheduleEnd(true, e.stars) }
                 is BattleEvent.Lost -> { sound.play(Sound.Sfx.lose); scheduleEnd(false, 0) }
                 else -> {}
             }

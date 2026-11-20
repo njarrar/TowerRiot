@@ -45,6 +45,10 @@ public struct Path: Sendable {
 
     /// Point at distance d along the path. dir is +1 when the path heads right, -1 when it heads left.
     public func point(at d: Double) -> Point {
+        if segs.isEmpty {
+            let p = pts.first ?? Vec(0, 0)
+            return Point(x: p.x, y: p.y, dir: 1)
+        }
         let dd = max(0, min(tot, d))
         var lo = 0, hi = segs.count - 1
         while lo < hi {
@@ -78,6 +82,25 @@ public struct Path: Sendable {
             d += 6
         }
         return bd
+    }
+
+    /// All local-minimum distances near a point (handles self-intersecting figure-8 roads).
+    public func allNearestDistances(to at: Vec) -> [Double] {
+        var ds: [Double] = []
+        var prev = Double.infinity, cur = Double.infinity, prevD = 0.0
+        var best = Double.infinity, bd = 0.0, d = 0.0
+        while d <= tot {
+            let q = point(at: d)
+            let k = hypot2(q.x - at.x, q.y - at.y)
+            if k < best { best = k; bd = d }
+            if cur < prev && cur <= k && cur <= 55 {
+                if !ds.contains(where: { abs($0 - prevD) < 60 }) { ds.append(prevD) }
+            }
+            prev = cur; cur = k; prevD = d
+            d += 6
+        }
+        if ds.isEmpty { ds.append(bd) }
+        return ds
     }
 }
 

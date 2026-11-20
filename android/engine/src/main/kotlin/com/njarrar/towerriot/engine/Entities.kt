@@ -2,6 +2,8 @@
 
 package com.njarrar.towerriot.engine
 
+import kotlin.math.max
+
 enum class TargetMode { first, strong, armored, close }
 
 /** What dealt the damage: an element, or the map itself (vents). */
@@ -20,12 +22,16 @@ class RoadRt(val def: Road, val path: Path, var active: Boolean, var telegraph: 
     /** Distance along the road where a tide or lava closure sits, if any. */
     var closeAt: Double? = null
         internal set
+    /** Every point along the road where a closure holds foes (a road can pass one ford twice). */
+    val closeAts = ArrayList<Double>()
     var barrier: BarrierState? = null
         internal set
     val belts = ArrayList<BeltState>()
     internal var threat = 0.0
     internal var airThreat = 0.0
 }
+
+enum class EliteAffix { swift, volatile, wardborn }
 
 class Foe internal constructor(
     val id: Int,
@@ -37,6 +43,8 @@ class Foe internal constructor(
     off: Double,
     hp: Double,
     val speed: Double,
+    /** Crowned Elite affix on Variant B and Oath runs. */
+    val affix: EliteAffix? = null,
 ) {
     var road = road; internal set
     var d = d; internal set
@@ -55,6 +63,8 @@ class Foe internal constructor(
     internal var freezeImmune = 0.0
     var burnT = 0.0; internal set
     internal var burnDps = 0.0
+    var lanternBurnT = 0.0; internal set
+    internal var lanternBurnDps = 0.0
     var vulnT = 0.0; internal set
     var blocked = false; internal set
     var hidden = false; internal set
@@ -62,7 +72,7 @@ class Foe internal constructor(
     /** Underground (burrower) or under the tide (Tidewyrm). */
     var under = false; internal set
     internal var underT: Double = def.traits?.burrow?.get(1) ?: def.traits?.dive?.every ?: 0.0
-    internal var abilityT: Double = def.traits?.summon?.every ?: def.traits?.lunge?.every ?: def.traits?.stamp?.every ?: 2.0
+    var abilityT: Double = def.traits?.summon?.every ?: def.traits?.lunge?.every ?: def.traits?.stamp?.every ?: 2.0; internal set
     var phase = 0; internal set
     internal var burstT = 0.0
     var hitT = 0.0; internal set
@@ -71,11 +81,32 @@ class Foe internal constructor(
     /** Seconds left in a Cinder Hound's lunge. */
     var lungeT = 0.0; internal set
     /** Glasshide panes left, seconds until the next grows back, and a short gap so one burst breaks one pane. */
-    var panes: Int = def.traits?.panes?.n ?: 0; internal set
+    var panes: Int = max(def.traits?.panes?.n ?: 0, if (affix == EliteAffix.wardborn) 1 else 0); internal set
     internal var paneT = 0.0
     internal var paneCd = 0.0
+    internal var sporePaneCd = 0.0
     /** Inside a Herald's aura this tick. */
     var warded = false; internal set
+    /** The ally a Mender is beaming heal into, and how long its beam stays broken after being held. */
+    var healTarget: Int? = null; internal set
+    internal var healInterruptT = 0.0
+    /** A Sapper still carries its powder keg (it goes off when the Sapper dies). */
+    var kegArmed: Boolean = def.traits?.sapper ?: false; internal set
+    /** Tether Twins partner: damage splits 50/50 within 160 px. */
+    var linkPartnerId: Int? = null; internal set
+    /** The Beacon a Wick Leech is draining. */
+    var siphonTowerId: Int? = null; internal set
+    /** Tidewyrm after a dive: Storm hits it 40% harder. */
+    var drenchedT = 0.0; internal set
+    /** Hollow Queen's Veil Eclipse: hidden for a while. */
+    var eclipseT = 0.0; internal set
+    /** Hollow Queen phase 3: flying for a while. */
+    var flightT = 0.0; internal set
+    internal var bossSkillT: Double = when (def.traits?.bossSkill) { "mire" -> 8.0; "colossus" -> 10.0; "queen" -> 12.0; else -> 0.0 }
+    /** Warning before the Brass Colossus vents steam. */
+    var ventWarnT = 0.0; internal set
+    /** A Rune Stalker off the road, going for a rune or back. */
+    internal var detouring = false
 }
 
 class Tower internal constructor(
@@ -100,8 +131,12 @@ class Tower internal constructor(
     /** Seconds since its last attack, for the renderer. */
     var fired = 9.0; internal set
     internal var shotCount = 0
-    /** Seconds left stunned by a Hollow Ram's stamp. */
+    /** Seconds left stunned by a Hollow Ram's stamp or a Tide-Spout. */
     var stunT = 0.0; internal set
+    /** Seconds left slowed by the Mire King's Bog Glob (a third slower). */
+    var bogT = 0.0; internal set
+    /** A Wick Leech is draining this Beacon (half its reach). */
+    var siphoned = false; internal set
     var dmgDealt = 0.0; internal set
     var kills = 0; internal set
 }
@@ -198,6 +233,7 @@ class HeroState(x: Double, y: Double, level: Int, points: Int) {
     var double = 0.0; internal set
     var regenT = 0.0; internal set
     var sunriseT = 0.0; internal set
+    var attuneSurgeT = 0.0; internal set
     var face = 1.0; internal set
     var swing = 0.0; internal set
     var moving = false; internal set
@@ -251,6 +287,11 @@ sealed class BattleEvent {
     data class Terraform(val label: String) : BattleEvent()
     data class Warp(val fromX: Double, val fromY: Double, val toX: Double, val toY: Double, val kind: PortalKind) : BattleEvent()
     data class GateShock(val x: Double, val y: Double) : BattleEvent()
+    data class IronGate(val x: Double, val y: Double) : BattleEvent()
+    data class HeraldCleanse(val el: Element, val x: Double, val y: Double) : BattleEvent()
+    data class RuneStolen(val x: Double, val y: Double) : BattleEvent()
+    data class Escape(val x: Double, val y: Double, val kind: EnemyKind) : BattleEvent()
+    data class Bog(val tower: Int, val x: Double, val y: Double) : BattleEvent()
     data class Stamp(val x: Double, val y: Double, val r: Double) : BattleEvent()
     data class Pane(val x: Double, val y: Double, val left: Int) : BattleEvent()
     data class Lunge(val x: Double, val y: Double) : BattleEvent()

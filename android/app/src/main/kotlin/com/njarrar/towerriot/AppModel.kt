@@ -41,6 +41,10 @@ class AppModel(context: Context) {
 
     init { sound.enabled = _save.settings.sound }
 
+    /** Set by the battle screen: pauses a running fight when the app leaves the screen. */
+    var backgroundHook: (() -> Unit)? = null
+    fun onBackground() { backgroundHook?.invoke() }
+
     private fun persist() { Save.write(_save, file); rev += 1 }
 
     /** Sound on or off, from any screen. The choice lives in the save, so it holds next time. */

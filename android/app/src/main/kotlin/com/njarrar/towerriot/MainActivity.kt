@@ -1,6 +1,8 @@
 package com.njarrar.towerriot
 
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -32,6 +34,11 @@ class MainActivity : ComponentActivity() {
         // The manifest keeps the activity through a rotation, so the fight carries on as the phone turns.
         app = AppModel(applicationContext)
         enableEdgeToEdge()
+        // The screen stays on through a fight, and the map runs under a camera cutout.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.also { it.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES }
+        }
         // A game fills the screen: the system bars slide in on a swipe and hide again.
         val bars = WindowCompat.getInsetsController(window, window.decorView)
         bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -40,7 +47,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onResume() { super.onResume(); app.sound.start() }
-    override fun onPause() { app.sound.stop(); super.onPause() }
+    override fun onPause() { app.onBackground(); app.sound.stop(); super.onPause() }
 }
 
 @Composable

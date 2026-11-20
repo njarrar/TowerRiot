@@ -19,7 +19,6 @@ final class AppModel: ObservableObject {
     init() {
         save = Save.load(from: store)
         sound.enabled = save.settings.sound
-        AppHolder.shared = self
     }
 
     private func persist() { save.write(to: store) }

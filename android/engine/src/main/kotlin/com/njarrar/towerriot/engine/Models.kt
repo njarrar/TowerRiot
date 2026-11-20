@@ -35,6 +35,7 @@ data class RubbleDef(
 enum class EnemyKind {
     grub, skitter, shell, moth, warden, mender, shade, splitter, sapper, burrower, ashmoth, elite,
     husk, hound, glasshide, veilmoth, ram, herald,
+    runethief, scarab, wickleech, tether,
     mireking, tidewyrm, colossus, queen,
 }
 
@@ -98,6 +99,11 @@ data class Traits(
     val aura: Aura? = null,
     val phases: List<Double>? = null,
     val boss: Boolean? = null,
+    val runeHunter: Boolean? = null,
+    val fugitive: Boolean? = null,
+    val siphonBeacon: Boolean? = null,
+    val link: Boolean? = null,
+    val bossSkill: String? = null,
 ) {
     @Serializable data class Split(val kind: EnemyKind, val n: Int)
     @Serializable data class Summon(val kind: EnemyKind, val n: Int, val every: Double)
@@ -307,6 +313,8 @@ data class StageAlt(
     val portalOpenAtWave: Int? = null,
     /** Tides, lava and steam cycle this much faster or slower (0.8 = every 40 s instead of 50 s). */
     val shiftEveryMul: Double? = null,
+    val switches: List<SwitchDef>? = null,
+    val portals: List<PortalDef>? = null,
     /** Foe health for this layout, on top of the stage's own `hpMul`. */
     val hpMul: Double? = null,
 ) {
@@ -405,6 +413,8 @@ data class StageDef(
             a.weather?.let { out = out.copy(weather = it) }
             a.adaptEvery?.let { out = out.copy(adaptEvery = it) }
             a.portalOpenAtWave?.let { pw -> out = out.copy(portals = out.portals?.map { it.copy(openAtWave = pw) }) }
+            a.switches?.let { out = out.copy(switches = it) }
+            a.portals?.let { out = out.copy(portals = it) }
             val mul = a.shiftEveryMul
             val sh = out.shifts
             if (mul != null && !sh.isNullOrEmpty()) out = out.copy(shifts = scaleShifts(sh, mul))

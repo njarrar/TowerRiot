@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -127,6 +128,11 @@ fun BattleScreen(app: AppModel, s: AppModel.Screen.Battle) {
             ctl.shopOpen -> ctl.shopOpen = false
             else -> ctl.requestExit()
         }
+    }
+    DisposableEffect(ctl) {
+        // Leaving the app pauses a fight under way, so nothing is lost while the phone is away.
+        app.backgroundHook = { if (ctl.battle.status == Status.running && ctl.result == null) ctl.battle.paused = true }
+        onDispose { app.backgroundHook = null }
     }
     LaunchedEffect(ctl) {
         var last = 0L

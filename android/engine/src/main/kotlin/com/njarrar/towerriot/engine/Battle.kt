@@ -1,6 +1,7 @@
 package com.njarrar.towerriot.engine
 
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -85,7 +86,9 @@ class Battle(
     private var ids = 1
     private var shiftShift = 0.0
     private var leakedThisWave = false
+    private var ironGateCd = 0.0
     private var gateShockUsedWave = -1
+    private var eliteSpawnedWave = -1
     private var threatDirty = true
     private val shiftOn: BooleanArray
 
@@ -100,11 +103,17 @@ class Battle(
             val active = openWave <= 1 && (def.openOnPhase ?: 0) == 0
             val spawnOpen = active && (def.closeAtWave == null || def.closeAtWave > 1)
             val rt = RoadRt(def, path, active, openWave == 2, spawnOpen)
-            for (s in stage.shifts ?: emptyList()) if (def.id in s.closes) rt.closeAt = path.nearestDistance(s.at)
+            for (s in stage.shifts ?: emptyList()) if (def.id in s.closes) {
+                for (d in path.allNearestDistances(s.at)) if (rt.closeAts.none { abs(it - d) < 60 }) rt.closeAts.add(d)
+            }
             // A gate switch holds walkers at its boom, exactly like a tide holds them at a ford.
             for (sw in stage.switches ?: emptyList()) {
-                if (sw.mode == SwitchMode.gate && rt.closeAt == null && def.id in (sw.closesB ?: emptyList())) rt.closeAt = path.nearestDistance(sw.at)
+                if (sw.mode == SwitchMode.gate && def.id in (sw.closesB ?: emptyList())) {
+                    for (d in path.allNearestDistances(sw.at)) if (rt.closeAts.none { abs(it - d) < 60 }) rt.closeAts.add(d)
+                }
             }
+            rt.closeAts.sort()
+            rt.closeAt = rt.closeAts.firstOrNull()
             for (b in stage.barriers ?: emptyList()) if (b.road == def.id) {
                 val p = path.point(path.tot * b.at)
                 rt.barrier = RoadRt.BarrierState(b.hp * sc, b.hp * sc, path.tot * b.at, p.x, p.y)
@@ -426,7 +435,7 @@ class Battle(
         val dmg = data.sweep.dmg[r - 1] * (1 + mods.sweep) * heroDmgMul()
         eachFoe { f ->
             if (reachable(f, true) && ell(f.x - hero.x, f.y - hero.y) < data.sweep.radius) {
-                damage(f, dmg, DamageSource.El(Element.hero), byHero = true, bucket = Bucket.skills)
+                damage(f, dmg, DamageSource.El(Element.hero), byHero = true, bucket = Bucket.skills, shatterSkill = true)
             }
         }
         hero.cd[SkillKey.q.ordinal] = data.skill(SkillKey.q).cd[r - 1]
@@ -451,9 +460,9 @@ class Battle(
         eachFoe { f ->
             if (reachable(f, true) && !f.def.isFlying && ell(f.x - x, f.y - y) < sn.radius) {
                 if (!f.def.isBoss) f.rootT = max(f.rootT, hold)
-                f.burnT = max(f.burnT, sn.burnSec)
-                f.burnDps = max(f.burnDps, burnDps)
-                damage(f, burst, DamageSource.El(Element.hero), byHero = true, bucket = Bucket.skills)
+                f.lanternBurnT = max(f.lanternBurnT, sn.burnSec)
+                f.lanternBurnDps = max(f.lanternBurnDps, burnDps)
+                damage(f, burst, DamageSource.El(Element.hero), byHero = true, bucket = Bucket.skills, shatterSkill = true)
             }
         }
         hero.cd[SkillKey.w.ordinal] = data.skill(SkillKey.w).cd[r - 1]
@@ -485,6 +494,7 @@ class Battle(
 
     fun canBuy(id: ItemId): Boolean {
         val it = data.item(id)
+        if (id == ItemId.seconddawn && hero.revived) return false
         return canShop() && hero.items.size < data.itemSlots && gold >= itemCost(id) && mods.shopAfter >= it.after && id !in hero.items
     }
 
@@ -539,8 +549,9 @@ class Battle(
         val splitMul = if (b.split != null) 1.1 else 1.0
         val highMul = if (b.high) 1.2 else 1.0
         val allMul = 1.0 + mods.rangeAll + bw
+        val siphonMul = if (b.siphoned) 0.5 else 1.0
         // Same left-to-right order as the web engine.
-        return data.tower(TowerKind.beacon).range[bi] * splitMul * br * allMul * highMul
+        return data.tower(TowerKind.beacon).range[bi] * splitMul * br * allMul * highMul * siphonMul
     }
 
     /** Final numbers for a tower right now, after levels, splits, mastery, trees, beacons, night and Wren.
@@ -608,18 +619,24 @@ class Battle(
             }
         }
         val h = hero
-        if (!h.dead && ell(h.x - t.x, h.y - t.y) < data.attune.radius) {
-            if (h.rank(SkillKey.e) > 0) {
-                val aRate = data.attune.rate[h.rank(SkillKey.e) - 1] + mods.attune
+        val nearHero = !h.dead && ell(h.x - t.x, h.y - t.y) < data.attune.radius
+        val surge = h.attuneSurgeT > 0
+        if (nearHero || surge) {
+            if (h.rank(SkillKey.e) > 0 || surge) {
+                val aRate = data.attune.rate[max(0, h.rank(SkillKey.e) - 1)] + mods.attune
                 rateMul += aRate
-                buffs.add("Attune +${jsRound(aRate * 100).toInt()}% spd")
+                buffs.add("${if (surge && !nearHero) "Runic Attune" else "Attune"} +${jsRound(aRate * 100).toInt()}% spd")
             }
-            val aura = sumItems { it.auraDmg }
-            if (aura > 0) { dmg *= 1 + aura; buffs.add("Mantle +12%") }
-            if (h.double > 0) { dmg *= 2; buffs.add("2x Rune") }
+            if (nearHero) {
+                val aura = sumItems { it.auraDmg }
+                if (aura > 0) { dmg *= 1 + aura; buffs.add("Mantle +12%") }
+                if (h.double > 0) { dmg *= 2; buffs.add("2x Rune") }
+            }
         }
         if (h.sunriseT > 0) { rateMul *= 2; buffs.add("Sunrise 2x") }
-        if (stage.weather == "rain" && def.element == Element.fire) { dmg *= 0.8; buffs.add("Rain -20%") }
+        if (stage.weather == "rain" && def.element == Element.fire && t.kind != TowerKind.beacon) { dmg *= 0.8; buffs.add("Rain -20%") }
+        if (t.kind == TowerKind.beacon && t.siphoned) { range *= 0.5; buffs.add("Siphoned -50% rng") }
+        if (t.bogT > 0 && t.kind != TowerKind.beacon) { rate *= 1.5; buffs.add("Bogged -33% spd") }
         return TowerStats(dmg, range, rate / rateMul, crit, jumps, splash, shells, def.hitsFlying, buffs)
     }
 
@@ -646,12 +663,14 @@ class Battle(
     private fun tick(dt: Double) {
         val running = status == Status.running
         if (running) clock += dt
+        ironGateCd = max(0.0, ironGateCd - dt)
         updateSwitches(dt)
         updateShifts()
         if (running) updateWave(dt)
         if (running) updateRunes(dt)
-        updateVents(dt)
+        if (running) updateVents(dt)
         updateFoes(dt)
+        if (lives <= 0) { foes.removeAll { it.dead }; finish(false); return }
         updateHero(dt)
         updateTowers(dt)
         updateShots(dt)
@@ -858,10 +877,28 @@ class Battle(
         }
         val id = nextId()
         val p = road.path.point(d)
+        var hp = def.hp * scale
+        var affix: EliteAffix? = null
+        // Crowned Elites: on Variant B and Oath runs, one foe of waves 4, 7 and the second to last wears a crown.
+        if (atRoad == null && (variant == StageVariant.alt || oaths.isNotEmpty()) && !def.isBoss && def.traits?.fugitive != true &&
+            eliteSpawnedWave != wave && (wave == 4 || wave == 7 || wave == totalWaves - 1)) {
+            eliteSpawnedWave = wave
+            val pool = listOf(EliteAffix.swift, EliteAffix.volatile, EliteAffix.wardborn)
+            affix = pool[floor(rng.next() * pool.size).toInt()]
+            hp *= 1.45
+        }
         val off = if (def.isBoss) 0.0 else (rng.next() - 0.5) * road.def.w * 0.5
-        val hp = def.hp * scale
         val speed = def.speed * (0.94 + rng.next() * 0.12)
-        val f = Foe(id, kind, def, road, d, p, off, hp, speed)
+        val f = Foe(id, kind, def, road, d, p, off, hp, speed, affix)
+        if (def.traits?.link == true) {
+            for (cand in foes.asReversed()) {
+                if (!cand.dead && cand.def.traits?.link == true && cand.linkPartnerId == null && cand.road === road) {
+                    cand.linkPartnerId = f.id
+                    f.linkPartnerId = cand.id
+                    break
+                }
+            }
+        }
         foes.add(f)
         if (def.isBoss) events.add(BattleEvent.Boss(kind))
         return f
@@ -978,7 +1015,7 @@ class Battle(
                 RuneKind.regen -> hero.regenT = data.rune(RuneKind.regen).dur
                 RuneKind.bounty -> { gold += 30 + wave * 6; giveXp(40 + wave.toDouble() * 20) }
             }
-            if (mods.runeAttune) hero.sunriseT = max(hero.sunriseT, 3.0)
+            if (mods.runeAttune) hero.attuneSurgeT += 3.0
             events.add(BattleEvent.RuneEv(r.kind, true))
         } else if (r.ttl <= 0) {
             rune = null
@@ -1015,7 +1052,14 @@ class Battle(
         val wardens = foes.filter { (it.def.traits?.shield ?: 0.0) != 0.0 && !it.dead }
         val heralds = foes.filter { it.def.traits?.aura != null && !it.dead && !it.under }
         val beacons = towers.filter { it.kind == TowerKind.beacon && !it.down }
-        val beaconRange = data.tower(TowerKind.beacon).range
+        for (t in towers) t.siphoned = false
+        for (f in foes) {
+            if (f.dead || f.under || f.def.traits?.siphonBeacon != true) continue
+            var best: Tower? = null
+            var bestD = 120.0
+            for (b in beacons) { val d = ell(b.x - f.x, b.y - f.y); if (d < bestD) { bestD = d; best = b } }
+            if (best != null) { f.siphonTowerId = best.id; best.siphoned = true } else f.siphonTowerId = null
+        }
         var blocking = 0
         val sight = heroSight()
         val hd = data.hero
@@ -1034,16 +1078,27 @@ class Battle(
             f.burstT = max(0.0, f.burstT - dt)
             f.hitT = max(0.0, f.hitT - dt)
             f.paneCd = max(0.0, f.paneCd - dt)
-            val pn = tr?.panes
-            if (pn != null && f.panes < pn.n) {
+            f.sporePaneCd = max(0.0, f.sporePaneCd - dt)
+            f.healInterruptT = max(0.0, f.healInterruptT - dt)
+            f.drenchedT = max(0.0, f.drenchedT - dt)
+            f.eclipseT = max(0.0, f.eclipseT - dt)
+            f.flightT = max(0.0, f.flightT - dt)
+            val maxPanes = max(tr?.panes?.n ?: 0, if (f.affix == EliteAffix.wardborn) 1 else 0)
+            if (maxPanes > 0 && f.panes < maxPanes) {
                 f.paneT -= dt
-                if (f.paneT <= 0) { f.panes += 1; f.paneT = pn.regrow }
+                if (f.paneT <= 0) { f.panes += 1; f.paneT = tr?.panes?.regrow ?: 4.0 }
             }
             if (f.burnT > 0) {
                 f.burnT -= dt
                 damage(f, f.burnDps * dt, DamageSource.El(Element.fire), byHero = false, quiet = true, bucket = Bucket.status)
                 if (f.dead) continue
                 if (f.burnT <= 0) { f.burnT = 0.0; f.burnDps = 0.0 }
+            }
+            if (f.lanternBurnT > 0) {
+                f.lanternBurnT -= dt
+                damage(f, f.lanternBurnDps * dt, DamageSource.El(Element.hero), byHero = true, quiet = true, bucket = Bucket.skills, shatterSkill = true)
+                if (f.dead) continue
+                if (f.lanternBurnT <= 0) { f.lanternBurnT = 0.0; f.lanternBurnDps = 0.0 }
             }
 
             tr?.burrow?.let { b ->
@@ -1053,8 +1108,16 @@ class Battle(
             tr?.dive?.let { dv ->
                 f.underT -= dt
                 if (f.underT <= 0) {
+                    val wasUnder = f.under
                     f.under = !f.under; f.underT = if (f.under) dv.dur else dv.every
                     events.add(BattleEvent.Dive(f.x, f.y, f.under))
+                    if (wasUnder && !f.under && tr.bossSkill == "tide") {
+                        f.drenchedT = 4.0
+                        if (f.phase >= 1) {
+                            for (t in towers) if (ell(t.x - f.x, t.y - f.y) < 110) t.stunT = max(t.stunT, 1.0)
+                            events.add(BattleEvent.Stamp(f.x, f.y, 110.0))
+                        }
+                    }
                 }
                 if (f.under) f.hp = min(f.max, f.hp + f.max * 0.01 * dt)
             }
@@ -1087,10 +1150,70 @@ class Battle(
             }
             val heal = tr?.heal
             if (heal != null && heal != 0.0) {
-                f.abilityT -= dt
-                if (f.abilityT <= 0) {
-                    f.abilityT = 2.0
-                    for (o in foes) if (!o.dead && ell(o.x - f.x, o.y - f.y) < 100) o.hp = min(o.max, o.hp + o.max * heal)
+                if (held || f.blocked) {
+                    // Holding a Mender breaks its beam for a while.
+                    f.healTarget = null
+                    f.healInterruptT = max(f.healInterruptT, 3.0)
+                } else if (f.healInterruptT <= 0) {
+                    var best: Foe? = null
+                    var bestD = 120.0
+                    for (o in foes) {
+                        if (o.dead || o.def.isFlying || o.under || o.hp >= o.max || o.id == f.id) continue
+                        val d = ell(o.x - f.x, o.y - f.y)
+                        if (d < bestD) { bestD = d; best = o }
+                    }
+                    if (best == null && f.hp < f.max) best = f
+                    if (best != null) {
+                        f.healTarget = best.id
+                        val rate = if (best.def.isBoss) heal * 0.125 else heal * 0.5
+                        best.hp = min(best.max, best.hp + best.max * rate * dt)
+                    } else f.healTarget = null
+                } else f.healTarget = null
+            }
+            // The bosses' own skills.
+            when (tr?.bossSkill) {
+                "mire" -> {
+                    f.bossSkillT -= dt
+                    if (f.bossSkillT <= 0) {
+                        f.bossSkillT = 8.0
+                        var best: Tower? = null
+                        var bestD = 220.0
+                        for (t in towers) {
+                            if (t.down || t.kind == TowerKind.beacon) continue
+                            val d = ell(t.x - f.x, t.y - f.y)
+                            if (d < bestD) { bestD = d; best = t }
+                        }
+                        if (best != null) { best.bogT = max(best.bogT, 4.0); events.add(BattleEvent.Bog(best.id, best.x, best.y)) }
+                    }
+                    if (f.phase >= 1 && f.burnT <= 0 && f.lanternBurnT <= 0) f.hp = min(f.max, f.hp + f.max * 0.008 * dt)
+                }
+                "colossus" -> {
+                    if (f.ventWarnT > 0) {
+                        f.ventWarnT -= dt
+                        if (f.ventWarnT <= 0) {
+                            f.ventWarnT = 0.0
+                            events.add(BattleEvent.VentEv(f.x, f.y))
+                            if (!hero.dead && ell(hero.x - f.x, hero.y - f.y) < 120) {
+                                hero.hp -= 20
+                                val dx = hero.x - f.x; val dy = hero.y - f.y
+                                val dl = if (hypot2(dx, dy) == 0.0) 1.0 else hypot2(dx, dy)
+                                val kx = max(40.0, min(1240.0, hero.x + (dx / dl) * 55))
+                                val ky = max(60.0, min(680.0, hero.y + (dy / dl) * 55))
+                                hero.x = kx; hero.tx = kx; hero.anchorX = kx
+                                hero.y = ky; hero.ty = ky; hero.anchorY = ky
+                            }
+                        }
+                    } else {
+                        f.bossSkillT -= dt
+                        if (f.bossSkillT <= 0) { f.bossSkillT = 10.0; f.ventWarnT = 1.5 }
+                    }
+                }
+                "queen" -> {
+                    f.bossSkillT -= dt
+                    if (f.bossSkillT <= 0) {
+                        f.bossSkillT = 12.0
+                        for (o in foes) if (!o.dead && !o.under && !o.def.isBoss && ell(o.x - f.x, o.y - f.y) < 160) o.eclipseT = max(o.eclipseT, 3.5)
+                    }
                 }
             }
             val ph = tr?.phases
@@ -1111,52 +1234,83 @@ class Battle(
                 tr.summon?.kind?.let { brood ->
                     for (k in 0 until 6) spawn(brood, atRoad = f.road, atD = max(0.0, f.d - 30 - k * 16.0))
                 }
+                if (tr.bossSkill == "queen" && f.phase == 1) {
+                    spawn(EnemyKind.herald, atRoad = f.road, atD = max(0.0, f.d - 24))
+                    spawn(EnemyKind.herald, atRoad = f.road, atD = max(0.0, f.d - 42))
+                }
+                if (tr.bossSkill == "queen" && f.phase == 2) f.flightT = 6.0
                 events.add(BattleEvent.Phase(f.phase, f.x, f.y))
             }
 
             f.shielded = (tr?.shield ?: 0.0) == 0.0 && wardens.any { ell(it.x - f.x, it.y - f.y) < (it.def.traits?.shield ?: 0.0) }
             f.warded = tr?.aura == null && heralds.any { ell(it.x - f.x, it.y - f.y) < (it.def.traits?.aura?.r ?: 0.0) }
-            if (tr?.stealth == true) {
+            if (tr?.stealth == true || f.eclipseT > 0) {
                 val seen = (!hero.dead && hypot2(hero.x - f.x, hero.y - f.y) < sight) ||
                     hero.sunriseT > 0 ||
                     inLighthouse(f.x, f.y) ||
-                    (tr.veil != true && towers.any { ell(it.x - f.x, it.y - f.y) < TOWER_SIGHT }) ||
-                    beacons.any { ell(it.x - f.x, it.y - f.y) < beaconRange[min(it.lv, 3) - 1] }
+                    (tr?.veil != true && towers.any { !it.down && it.stunT <= 0 && ell(it.x - f.x, it.y - f.y) < TOWER_SIGHT }) ||
+                    beacons.any { it.stunT <= 0 && ell(it.x - f.x, it.y - f.y) < beaconRange(it) }
                 f.hidden = !seen
             } else {
                 f.hidden = false
             }
 
-            // Pin and leash hold: stepping inside 36 px of the pinned anchor keeps Wren's block active.
+            // Pin and leash hold: inside her leash of the pinned anchor, Wren keeps blocking.
+            val flyNow = isFlying(f)
             f.blocked = false
-            val inLeash = hypot2(hero.x - hero.anchorX, hero.y - hero.anchorY) <= 36
-            if (!hero.dead && (!hero.moving || inLeash) && !f.def.isFlying && !f.under && blocking < hd.blocks && hypot2(hero.x - f.x, hero.y - f.y) < 30 + f.def.size * 10) {
+            val inLeash = hero.focus == null && hypot2(hero.x - hero.anchorX, hero.y - hero.anchorY) <= hd.leash
+            if (!hero.dead && (!hero.moving || inLeash) && !flyNow && !f.under && blocking < hd.blocks && hypot2(hero.x - f.x, hero.y - f.y) < 30 + f.def.size * 10) {
                 f.blocked = true; blocking += 1
                 val armor = min(0.6, sumItems { it.armor })
                 hero.hp -= f.def.dps * scale * 0.6 * (1 - armor) * dt
             }
 
-            var mul = if (f.slow > 0) 1 - f.slow else 1.0
-            if (f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked) mul = 0.0
-            if (f.burstT > 0) mul *= 1.6
-            if (f.lungeT > 0) tr?.lunge?.let { mul *= it.mult }
-            val activeBrake = switches.firstOrNull { it.def.mode == SwitchMode.belt && it.activeT > 0 && it.def.targetRoad == f.road.def.id }
-            if (activeBrake != null) {
-                mul *= activeBrake.def.beltMult ?: 0.55
-            } else {
-                for (b in f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult
+            // A Rune Stalker leaves the road for a rune: taking it hastens the Hollow around it.
+            val rn = rune
+            if (tr?.runeHunter == true && rn != null && !f.under && !held && !f.blocked) {
+                f.detouring = true
+                val rdx = rn.x - f.x; val rdy = rn.y - f.y; val rdist = hypot2(rdx, rdy)
+                val step = effectiveSpeed(f) * dt
+                if (rdist <= max(24.0, step)) {
+                    f.x = rn.x; f.y = rn.y
+                    rune = null
+                    f.detouring = false
+                    events.add(BattleEvent.RuneStolen(f.x, f.y))
+                    for (o in foes) if (!o.dead && hypot2(o.x - f.x, o.y - f.y) < 140) o.burstT = max(o.burstT, 4.0)
+                } else if (rdist > 0.01) {
+                    val mx = (rdx / rdist) * step; val my = (rdy / rdist) * step
+                    if (abs(mx) > 0.01) f.dir = jsSign(mx)
+                    f.x += mx; f.y += my
+                }
+                continue
+            } else if (f.detouring) {
+                val rp = f.road.path.point(f.d)
+                val rdx = rp.x - f.x; val rdy = rp.y - f.y; val rdist = hypot2(rdx, rdy)
+                val step = effectiveSpeed(f) * dt
+                if (rdist <= max(14.0, step)) {
+                    f.x = rp.x; f.y = rp.y; f.detouring = false
+                } else if (rdist > 0.01) {
+                    val mx = (rdx / rdist) * step; val my = (rdy / rdist) * step
+                    if (abs(mx) > 0.01) f.dir = jsSign(mx)
+                    f.x += mx; f.y += my
+                    continue
+                }
             }
-            if (f.under && tr?.burrow != null) mul *= 1.4
-            var nd = f.d + f.speed * mul * dt
-            val c = f.road.closeAt
-            if (f.road.closed && c != null && f.d < c - 30 && !f.def.isFlying) nd = min(nd, c - 40)
+
+            var nd = f.d + effectiveSpeed(f) * dt
+            if (f.road.closed && !flyNow) {
+                for (ca in f.road.closeAts) {
+                    if (f.d <= ca - 30) { nd = min(nd, max(f.d, ca - 30)); break }
+                }
+            }
             val bar = f.road.barrier
-            if (bar != null && bar.hp > 0 && !f.def.isFlying && f.d < bar.d) {
+            if (bar != null && bar.hp > 0 && !flyNow && f.d < bar.d) {
                 nd = min(nd, bar.d - 26)
                 if (tr?.sapper == true && nd >= bar.d - 30) {
                     bar.hp -= 40 * dt
                     if (bar.hp <= 0) {
                         bar.hp = 0.0
+                        f.kegArmed = false
                         threatDirty = true
                         events.add(BattleEvent.BarrierEv(f.road.def.id, true))
                     }
@@ -1197,14 +1351,51 @@ class Battle(
         }
     }
 
+    private fun isFlying(f: Foe): Boolean = f.def.isFlying || f.flightT > 0
+
+    private fun effectiveSpeed(f: Foe): Double {
+        if (f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked) return 0.0
+        val tr = f.def.traits
+        var mul = if (f.slow > 0) 1 - f.slow else 1.0
+        if (f.burstT > 0) mul *= 1.6
+        if (f.lungeT > 0) tr?.lunge?.let { mul *= it.mult }
+        val activeBrake = switches.firstOrNull { it.def.mode == SwitchMode.belt && it.activeT > 0 && it.def.targetRoad == f.road.def.id }
+        if (activeBrake != null) {
+            mul *= activeBrake.def.beltMult ?: 0.55
+        } else {
+            for (b in f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult
+        }
+        if (f.under && tr?.burrow != null) mul *= 1.4
+        if (f.affix == EliteAffix.swift) mul *= 1.2
+        if (tr?.bossSkill == "colossus" && f.phase >= 1) mul *= 1.35
+        if (f.siphonTowerId != null) mul *= 0.55
+        if (f.kind == EnemyKind.grub) {
+            var pack = 0
+            for (o in foes) if (!o.dead && !o.under && o.kind == EnemyKind.grub && hypot2(o.x - f.x, o.y - f.y) < 70) pack += 1
+            if (pack >= 4) mul *= 1.15
+        }
+        return f.speed * mul
+    }
+
     private fun leak(f: Foe) {
         f.dead = true
-        if ((mods.ironGate || mods.gateShock) && !leakedThisWave && !f.def.isBoss) {
+        if (f.def.traits?.fugitive == true || f.def.leak <= 0) {
+            events.add(BattleEvent.Escape(f.x, f.y, f.kind))
+            return
+        }
+        if ((mods.ironGate || mods.gateShock) && !leakedThisWave && ironGateCd <= 0 && !f.def.isBoss) {
             leakedThisWave = true
+            ironGateCd = 15.0
             if (mods.gateShock && gateShockUsedWave != wave) {
                 gateShockUsedWave = wave
                 events.add(BattleEvent.GateShock(f.x, f.y))
-                for (o in foes) if (!o.dead && !o.def.isBoss && hypot2(o.x - f.x, o.y - f.y) < 160) o.rootT = max(o.rootT, 2.5)
+                for (o in foes) if (!o.dead && !o.def.isBoss && !o.def.isFlying && !o.under && hypot2(o.x - f.x, o.y - f.y) < 160) {
+                    o.d = max(0.0, o.d - 80)
+                    o.staggerT = max(o.staggerT, 1.5)
+                    o.rootT = max(o.rootT, 2.5)
+                }
+            } else {
+                events.add(BattleEvent.IronGate(f.x, f.y))
             }
             return
         }
@@ -1224,23 +1415,45 @@ class Battle(
     internal fun damage(
         f: Foe, amount0: Double, src: DamageSource, byHero: Boolean, quiet: Boolean = false, crit: Boolean = false,
         sourceTower: Tower? = null, bucket: Bucket? = null, armorPierceExtra: Double = 0.0,
+        shatterSkill: Boolean = false, fromLink: Boolean = false,
     ): Double {
         if (!reachable(f, true) || amount0 <= 0) return 0.0
+        var amount = amount0
+        val pid = f.linkPartnerId
+        if (!fromLink && pid != null) {
+            val partner = foes.firstOrNull { it.id == pid && !it.dead && !it.under }
+            if (partner != null && hypot2(partner.x - f.x, partner.y - f.y) <= 160) {
+                amount *= 0.5
+                damage(partner, amount, src, byHero, quiet, crit, sourceTower, bucket, armorPierceExtra, shatterSkill, fromLink = true)
+            }
+        }
         if (f.panes > 0) {
             // Each hit breaks one pane and does no harm. Burns and vents only scratch the glass;
             // a spore cloud breaks a pane now and then.
             val tick = bucket == Bucket.status
             if (tick && src != DamageSource.El(Element.nature)) return 0.0
-            if (f.paneCd > 0) return 0.0
+            if (tick) {
+                if (f.sporePaneCd > 0) return 0.0
+                f.sporePaneCd = 0.6
+            } else {
+                if (f.paneCd > 0) return 0.0
+                f.paneCd = 0.02
+            }
             f.panes -= 1
-            f.paneCd = if (tick) 0.6 else 0.12
-            f.paneT = f.def.traits?.panes?.regrow ?: 2.5
+            f.paneT = f.def.traits?.panes?.regrow ?: (if (f.affix == EliteAffix.wardborn) 4.0 else 2.5)
             events.add(BattleEvent.Pane(f.x, f.y - f.def.bar * 0.6, f.panes))
             return 0.0
         }
-        var amount = amount0
         val srcEl = (src as? DamageSource.El)?.el
         if (f.warded && srcEl != null && srcEl != Element.hero && srcEl == heraldEl()) amount *= 1 - heraldCut
+        // Warden front aegis: towers firing ahead of its march lose 40%; flanks, behind, Wren and Storm get through.
+        if (f.kind == EnemyKind.warden && !byHero && sourceTower != null && srcEl != null && srcEl != Element.storm && srcEl != Element.hero && bucket != Bucket.status) {
+            val p0 = f.road.path.point(f.d)
+            val p1 = f.road.path.point(min(f.road.path.tot, f.d + 8))
+            val hx = p1.x - p0.x; val hy = p1.y - p0.y; val hl = hypot2(hx, hy)
+            val tx = sourceTower.x - f.x; val ty = sourceTower.y - f.y; val tl = hypot2(tx, ty)
+            if (hl > 0.01 && tl > 0.01 && (hx * tx + hy * ty) / (hl * tl) > 0.35) amount *= 0.6
+        }
         var m = 1.0
         var dmgEl: Element? = null
         if (srcEl != null) {
@@ -1250,12 +1463,12 @@ class Battle(
         }
         if (f.shielded) m *= 0.6
         if (f.vulnT > 0) m *= 1.25
+        if (f.drenchedT > 0 && dmgEl == Element.storm) m *= 1.4
         val chilled = f.slowT > 0 || f.freezeT > 0
-        if (chilled && ((dmgEl == Element.fire && mods.shatter) || ((dmgEl == Element.hero || dmgEl == Element.fire) && mods.burnShatter && (byHero || quiet)))) {
-            m *= 1.5
-        }
+        if (chilled && dmgEl == Element.fire && mods.shatter) m *= 1.5
+        if (chilled && shatterSkill && mods.burnShatter) m *= 1.5
         val plated = f.def.traits?.plated
-        if (plated != null && plated != 0.0 && !chilled) m *= plated
+        if (plated != null && plated != 0.0 && !chilled && !(f.def.traits.bossSkill == "colossus" && f.phase >= 1)) m *= plated
         var dmg = amount * m
         val armor = f.def.traits?.armor
         if (armor != null && armor != 0.0 && !quiet) {
@@ -1297,6 +1510,37 @@ class Battle(
                 c.off = (k - 1) * 12.0
             }
         }
+        // An armed Sapper's keg goes off when it dies, burning the Hollow around it.
+        if (f.kegArmed) {
+            f.kegArmed = false
+            events.add(BattleEvent.Boom(f.x, f.y, 85.0))
+            eachFoe { o ->
+                if (!o.dead && !o.under && o.id != f.id && ell(o.x - f.x, o.y - f.y) < 85) {
+                    damage(o, 120 * scale, DamageSource.El(Element.fire), byHero, sourceTower = sourceTower, bucket = Bucket.status)
+                }
+            }
+        }
+        // Wren killing a Herald strips 20% from the Hollow's top resistance.
+        if (f.kind == EnemyKind.herald && byHero) {
+            var topEl: Element? = null
+            var topVal = 0.0
+            for (el in listOf(Element.pierce, Element.fire, Element.frost, Element.storm, Element.nature)) {
+                val v = resistArr[el.ordinal]
+                if (v > topVal) { topVal = v; topEl = el }
+            }
+            if (topEl != null && topVal > 0) {
+                resistArr[topEl.ordinal] = max(0.0, topVal - 0.2)
+                events.add(BattleEvent.HeraldCleanse(topEl, f.x, f.y))
+            }
+        }
+        if (f.def.traits?.runeHunter == true && byHero) {
+            gold += 35
+            rune?.ttl = data.runeLifetime
+        }
+        if (f.affix == EliteAffix.volatile) {
+            events.add(BattleEvent.Boom(f.x, f.y, 70.0))
+            for (t in towers) if (ell(t.x - f.x, t.y - f.y) < 70) t.stunT = max(t.stunT, 1.2)
+        }
         if (hero.focus == f.id) hero.focus = null
     }
 
@@ -1330,7 +1574,7 @@ class Battle(
         val hd = data.hero
         for (k in listOf(SkillKey.q, SkillKey.w, SkillKey.r)) hero.cd[k.ordinal] = max(0.0, hero.cooldown(k) - dt)
         hero.haste = max(0.0, hero.haste - dt); hero.double = max(0.0, hero.double - dt); hero.regenT = max(0.0, hero.regenT - dt)
-        hero.sunriseT = max(0.0, hero.sunriseT - dt); hero.swing = max(0.0, hero.swing - dt)
+        hero.sunriseT = max(0.0, hero.sunriseT - dt); hero.attuneSurgeT = max(0.0, hero.attuneSurgeT - dt); hero.swing = max(0.0, hero.swing - dt)
         if (hero.dead) {
             hero.respawnT -= dt
             if (hero.respawnT <= 0) {
@@ -1445,7 +1689,7 @@ class Battle(
     // ---------------------------------------------------------------- towers
 
     private fun targetable(f: Foe, t: Tower, range: Double, flying: Boolean): Boolean {
-        if (!reachable(f) || (f.def.isFlying && !flying)) return false
+        if (!reachable(f) || (isFlying(f) && !flying)) return false
         return ell(f.x - t.x, f.y - t.y) < range
     }
 
@@ -1468,6 +1712,7 @@ class Battle(
     private fun updateTowers(dt: Double) {
         for (t in towers.toList()) {
             t.fired += dt
+            t.bogT = max(0.0, t.bogT - dt)
             if (t.stunT > 0) { t.stunT = max(0.0, t.stunT - dt); continue }
             if (t.kind == TowerKind.beacon || t.down) continue
             val s = stats(t)
@@ -1511,12 +1756,17 @@ class Battle(
             }
             TowerKind.cannon -> {
                 val dur = if (t.split == SplitId.a) 0.65 else 0.68
-                var belt = 1.0
-                for (b in target.road.belts) if (target.d >= b.from && target.d <= b.to) belt *= b.mult
-                val lead = if (target.rootT > 0 || target.freezeT > 0 || target.blocked) 0.0 else target.speed * (1 - target.slow) * belt * dur
+                var predD = target.d + effectiveSpeed(target) * dur
+                if (target.road.closed && !target.def.isFlying) {
+                    for (ca in target.road.closeAts) {
+                        if (target.d <= ca - 30) { predD = min(predD, max(target.d, ca - 30)); break }
+                    }
+                }
+                val tb = target.road.barrier
+                if (tb != null && tb.hp > 0 && !target.def.isFlying && target.d < tb.d) predD = min(predD, tb.d - 26)
                 for (i in 0 until s.shells) {
                     val off = if (s.shells > 1) (i - 1) * 54.0 else 0.0
-                    val p = target.road.path.point(target.d + lead + off)
+                    val p = target.road.path.point(predD + off)
                     shots.add(Shot(nextId(), ShotKind.shell, t.id, t.x, t.y - 44, p.x, p.y, target.id, -i * 0.08, dur, s.dmg, el, s.splash, t.round, false))
                 }
                 events.add(BattleEvent.ShotFired(t.id, ShotKind.shell))
@@ -1540,7 +1790,7 @@ class Battle(
                 val hit = HashSet<Int>()
                 val held = target.rootT > 0 || target.freezeT > 0
                 var cur: Foe? = target
-                var dmg = if (t.split == SplitId.b && held) s.dmg * 1.35 else s.dmg
+                var dmg = if (t.split == SplitId.b && held) s.dmg * (if (mods.overload) 1.7 else 1.35) else s.dmg
                 val pierceExtra = if (t.lv >= data.maxTowerLevel && t.split == SplitId.b && !target.def.isBoss) 0.3 else 0.0
                 var jumps = if (t.split == SplitId.b) 0 else s.jumps + (if (mods.overload && held) 2 else 0)
                 val reach = if (stage.weather == "rain") 220.0 else 120.0

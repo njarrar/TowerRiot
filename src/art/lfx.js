@@ -267,13 +267,22 @@ function grub(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk
 
 // Moth: torn wings, vein glow, body hairs. Flies, so its shadow sits far below.
 function moth(ctx,x,y,s,pass,seed,alt){seed=seed||51;alt=alt==null?60:alt;ctx.save();ctx.translate(x,y);ctx.scale(s,s);
- const wing=(side,fore)=>{const k=side;ctx.beginPath();if(fore){ctx.moveTo(0,-6);ctx.bezierCurveTo(k*20,-30,k*58,-44,k*78,-36);ctx.bezierCurveTo(k*74,-20,k*62,-8,k*40,0);ctx.bezierCurveTo(k*22,4,k*8,2,0,0);}
-   else{ctx.moveTo(0,2);ctx.bezierCurveTo(k*20,4,k*48,8,k*56,26);ctx.bezierCurveTo(k*44,40,k*20,34,k*6,18);ctx.closePath();}ctx.closePath();};
+ const wing=(side,fore,rNotch)=>{const k=side;ctx.beginPath();if(fore){
+   ctx.moveTo(0,-6);ctx.bezierCurveTo(k*20,-30,k*58,-44,k*78,-36);
+   // Tattered trailing edge baked directly into the contour (never destination-out on the live canvas).
+   ctx.lineTo(k*75,-28);ctx.lineTo(k*(66+(rNotch?rNotch()*4:2)),-25);ctx.lineTo(k*72,-20);
+   ctx.lineTo(k*65,-13);ctx.lineTo(k*(54+(rNotch?rNotch()*5:2)),-12);ctx.lineTo(k*59,-7);
+   ctx.bezierCurveTo(k*48,-2,k*26,4,0,0);
+  } else {
+   ctx.moveTo(0,2);ctx.bezierCurveTo(k*20,4,k*48,8,k*56,26);
+   ctx.lineTo(k*49,31);ctx.lineTo(k*(42+(rNotch?rNotch()*4:2)),25);ctx.lineTo(k*43,35);
+   ctx.bezierCurveTo(k*32,39,k*18,32,k*6,18);
+  }ctx.closePath();};
  if(pass==='base'){
   shadow(ctx,0,alt,46,8,.55);
   const r=rng(seed);
   for(const side of[-1,1]){for(const fore of[false,true]){
-   ctx.save();wing(side,fore);
+   ctx.save();wing(side,fore,r);
    const g=ctx.createLinearGradient(0,-30,side*70,20);g.addColorStop(0,'#4a4036');g.addColorStop(.55,'#2b241d');g.addColorStop(1,'#14110e');ctx.fillStyle=g;ctx.fill();
    ctx.clip();
    // dusty scale pattern
@@ -282,8 +291,6 @@ function moth(ctx,x,y,s,pass,seed,alt){seed=seed||51;alt=alt==null?60:alt;ctx.sa
    if(fore){ctx.strokeStyle='rgba(120,110,90,.35)';ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(side*46,-22,7,5,side*.4,0,TAU);ctx.stroke();ctx.strokeStyle='rgba(0,0,0,.6)';ctx.beginPath();ctx.ellipse(side*46,-22,3.5,2.5,side*.4,0,TAU);ctx.stroke();}
    // veins
    ctx.strokeStyle='rgba(0,0,0,.6)';ctx.lineWidth=.9;for(let v=0;v<5;v++){const a=fore?-.15-v*.13:.2+v*.18;ctx.beginPath();ctx.moveTo(0,fore?-3:4);ctx.quadraticCurveTo(side*30*Math.cos(a)+side*6,(fore?-3:4)+30*Math.sin(a)-4,side*80*Math.cos(a),(fore?-3:4)+80*Math.sin(a));ctx.stroke();}
-   // torn edges: bite out notches
-   ctx.globalCompositeOperation='destination-out';for(let i=0;i<7;i++){const tx=side*(30+r()*50),ty=fore?-40+r()*44:8+r()*32;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx+side*(4+r()*8),ty-3-r()*4);ctx.lineTo(tx+side*(2+r()*6),ty+3+r()*5);ctx.fill();}
    ctx.restore();
    // leading edge highlight
    if(fore){ctx.strokeStyle='rgba(200,180,150,.18)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-6);ctx.bezierCurveTo(side*20,-30,side*58,-44,side*78,-36);ctx.stroke();}
@@ -454,12 +461,13 @@ function groundTile(ctx,W,H,seed,tint){const img=ctx.createImageData(W,H);const 
   if(tint==='frost'){const f=ss(.45,.7,n);c=[mix(c[0],52,f*.4),mix(c[1],62,f*.4),mix(c[2],72,f*.4)];}
   const k=.82+m*.35;const i=(y*W+x)*4;d[i]=c[0]*k;d[i+1]=c[1]*k;d[i+2]=c[2]*k;d[i+3]=255;}
  ctx.putImageData(img,0,0);}
-const DKC={};function darkness(ctx,W,H,lights,amt){const key=W+'x'+H;if(!DKC[key]){const cc=document.createElement('canvas');cc.width=W;cc.height=H;DKC[key]=cc}const c=DKC[key];const x=c.getContext('2d');x.globalCompositeOperation='source-over';x.clearRect(0,0,W,H);
- const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,`rgba(6,9,16,${amt*.82})`);g.addColorStop(1,`rgba(3,4,8,${amt})`);x.fillStyle=g;x.fillRect(0,0,W,H);
- x.globalCompositeOperation='destination-out';lights.forEach(([lx,ly,r,s])=>{const gg=x.createRadialGradient(lx,ly,0,lx,ly,r);gg.addColorStop(0,`rgba(0,0,0,${s||1})`);gg.addColorStop(.5,`rgba(0,0,0,${(s||1)*.55})`);gg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=gg;x.beginPath();x.arc(lx,ly,r,0,TAU);x.fill();});
- ctx.drawImage(c,0,0);
+const DKC={};function darkness(ctx,W,H,lights,amt){const s=0.5,w=Math.ceil(W*s),h=Math.ceil(H*s),key=w+'x'+h;if(!DKC[key]){const cc=document.createElement('canvas');cc.width=w;cc.height=h;DKC[key]=cc}const c=DKC[key];const x=c.getContext('2d');x.save();x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.clearRect(0,0,w,h);
+ const g=x.createLinearGradient(0,0,w,h);g.addColorStop(0,`rgba(6,9,16,${amt*.82})`);g.addColorStop(1,`rgba(3,4,8,${amt})`);x.fillStyle=g;x.fillRect(0,0,w,h);
+ x.globalCompositeOperation='destination-out';lights.forEach(([lx,ly,r,st])=>{const slx=lx*s,sly=ly*s,sr=r*s;const gg=x.createRadialGradient(slx,sly,0,slx,sly,sr);gg.addColorStop(0,`rgba(0,0,0,${st||1})`);gg.addColorStop(.5,`rgba(0,0,0,${(st||1)*.55})`);gg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=gg;x.beginPath();x.arc(slx,sly,sr,0,TAU);x.fill();});
+ x.restore();
+ ctx.drawImage(c,0,0,W,H);
  // warm colour where lanterns burn
- ctx.save();ctx.globalCompositeOperation='soft-light';lights.forEach(([lx,ly,r,s,col])=>{if(!col)return;const c2=hex(col);const gg=ctx.createRadialGradient(lx,ly,0,lx,ly,r);gg.addColorStop(0,rgb(c2,.55));gg.addColorStop(1,rgb(c2,0));ctx.fillStyle=gg;ctx.beginPath();ctx.arc(lx,ly,r,0,TAU);ctx.fill();});ctx.restore();}
+ ctx.save();ctx.globalCompositeOperation='soft-light';lights.forEach(([lx,ly,r,st,col])=>{if(!col)return;const c2=hex(col);const gg=ctx.createRadialGradient(lx,ly,0,lx,ly,r);gg.addColorStop(0,rgb(c2,.55));gg.addColorStop(1,rgb(c2,0));ctx.fillStyle=gg;ctx.beginPath();ctx.arc(lx,ly,r,0,TAU);ctx.fill();});ctx.restore();}
 function vignette(ctx,W,H,a){const g=ctx.createRadialGradient(W/2,H*.55,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${a})`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
 function fog(ctx,W,H,seed,t,a){const r=rng(seed);ctx.save();ctx.globalCompositeOperation='screen';for(let i=0;i<14;i++){const fx=(r()*W*1.3+t*(6+r()*8))%(W*1.3)-W*.15,fy=r()*H,fr=120+r()*200;ctx.save();ctx.translate(fx,fy);ctx.scale(1,.35);const g=ctx.createRadialGradient(0,0,0,0,0,fr);g.addColorStop(0,`rgba(120,135,160,${a*(.5+r()*.5)})`);g.addColorStop(1,'rgba(120,135,160,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,fr,0,TAU);ctx.fill();ctx.restore();}ctx.restore();}
 
@@ -662,20 +670,26 @@ function paintField(ctx,W,H,M){
  const waterM=mk(x=>{x.filter='blur(12px)';x.strokeStyle='#fff';x.lineCap='round';x.lineJoin='round';M.waters.forEach(Wt=>{x.lineWidth=Wt.w;strokePts(x,Wt.pts);x.stroke()})});
  const highM=mk(x=>{if(M.high&&M.high.length>2){x.fillStyle='#fff';poly(x,M.high);x.fill()}});
  const img=ctx.createImageData(W,H),d=img.data;const nA=makeNoise(3),nB=makeNoise(5);
+ const P=M.pal,biome=M.biome;
+ const gl0=P?P.grassLo[0]:22,gl1=P?P.grassLo[1]:21,gl2=P?P.grassLo[2]:18;
+ const gh0=P?P.grassHi[0]:34,gh1=P?P.grassHi[1]:31,gh2=P?P.grassHi[2]:24;
+ const ms0=P?P.moss[0]:26,ms1=P?P.moss[1]:36,ms2=P?P.moss[2]:22;
+ const hi0=P?P.high[0]:40,hi1=P?P.high[1]:42,hi2=P?P.high[2]:40;
+ const rl0=P?P.roadLo[0]:40,rl1=P?P.roadLo[1]:37,rl2=P?P.roadLo[2]:32;
+ const rh0=P?P.roadHi[0]:52,rh1=P?P.roadHi[1]:46,rh2=P?P.roadHi[2]:38;
+ const wt0=P?P.water[0]:13,wt1=P?P.water[1]:17,wt2=P?P.water[2]:22;
+ const bankMul=P?0.3:0.55;
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;const n=nA(x/90,y/45,5),m=nB(x/7,y/3.5,3),q=nA(x/22+300,y/11,3);
-  const P=M.pal;let c;
-  if(P){const moss=M.biome===2?0:ss(.5,.68,nB(x/60+20,y/30,4));c=[0,1,2].map(j=>mix(mix(P.grassLo[j],P.grassHi[j],n),P.moss[j],moss));
-   if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=c.map((v,j)=>mix(v,P.high[j],st*.55));}
-   const k=.9+m*.2;c=c.map(v=>v*k);}
-  else{c=[mix(22,34,n),mix(21,31,n),mix(18,24,n)];const moss=ss(.5,.68,nB(x/60+20,y/30,4));c=[mix(c[0],26,moss),mix(c[1],36,moss),mix(c[2],22,moss)];
-   if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4));c=[mix(c[0],40,st*.6),mix(c[1],42,st*.6),mix(c[2],40,st*.6)];}
-   const k=.78+m*.42;c=c.map(v=>v*k);}
+  const moss=(P&&biome===2)?0:ss(.5,.68,nB(x/60+20,y/30,4));
+  let r0=mix(mix(gl0,gh0,n),ms0,moss),g0=mix(mix(gl1,gh1,n),ms1,moss),b0=mix(mix(gl2,gh2,n),ms2,moss);
+  if(highM[i+3]>0){const st=ss(.4,.7,nA(x/30,y/15,4))*(P?.55:.6);r0=mix(r0,hi0,st);g0=mix(g0,hi1,st);b0=mix(b0,hi2,st);}
+  const k=P?(.9+m*.2):(.78+m*.42);r0*=k;g0*=k;b0*=k;
   const ra=roadM[i+3]/255;const road=ss(.42,.62,ra+(q-.5)*.5);
-  if(road>0){const rk=P?(.93+m*.12):(.85+m*.3);const rc=P?[0,1,2].map(j=>mix(P.roadLo[j],P.roadHi[j],n)*rk):[mix(40,52,n)*rk,mix(37,46,n)*rk,mix(32,38,n)*rk];c=c.map((v,j)=>mix(v,rc[j],road));}
+  if(road>0){const rk=P?(.93+m*.12):(.85+m*.3);r0=mix(r0,mix(rl0,rh0,n)*rk,road);g0=mix(g0,mix(rl1,rh1,n)*rk,road);b0=mix(b0,mix(rl2,rh2,n)*rk,road);}
   const wa=waterM[i+3]/255;const bank=ss(.25,.45,wa+(q-.5)*.3),water=ss(.55,.7,wa+(q-.5)*.2);
-  if(bank>0)c=c.map(v=>v*(1-bank*(P?.3:.55)));
-  if(water>0){const sh=Math.pow(nB(x/40,y/9,2),2.4)*.9;const wc=P?[P.water[0]+sh*50,P.water[1]+sh*55,P.water[2]+sh*50]:[13+sh*34,17+sh*40,22+sh*50];c=c.map((v,j)=>mix(v,wc[j],water));}
-  d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;}
+  if(bank>0){const bm=1-bank*bankMul;r0*=bm;g0*=bm;b0*=bm;}
+  if(water>0){const sh=Math.pow(nB(x/40,y/9,2),2.4)*.9;const wr=P?wt0+sh*50:wt0+sh*34,wg=P?wt1+sh*55:wt1+sh*40,wb=P?wt2+sh*50:wt2+sh*50;r0=mix(r0,wr,water);g0=mix(g0,wg,water);b0=mix(b0,wb,water);}
+  d[i]=r0;d[i+1]=g0;d[i+2]=b0;d[i+3]=255;}
  ctx.putImageData(img,0,0);
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';const rn=makeNoise(31),r=rng(77);
  M.roads.forEach((R,k)=>{if(R.w<40)return;[[-10,1],[10,2],[-3,3]].forEach(([o,sd],ri)=>{const p=offset(R.pts,o,sd+k*5,7);for(let i=1;i<p.length;i++){const v=rn(i*.08,ri*9+k*3);if(v<.42)continue;ctx.strokeStyle=M.pal?`rgba(120,92,60,${ri==2?.12:(v-.42)*.7})`:`rgba(10,9,7,${ri==2?.18:(v-.42)*1.2})`;ctx.lineWidth=ri==2?7:3+v*2;ctx.beginPath();ctx.moveTo(p[i-1][0],p[i-1][1]);ctx.lineTo(p[i][0],p[i][1]);ctx.stroke()}});
@@ -718,7 +732,248 @@ function paintField(ctx,W,H,M){
  }
  M.plots.forEach(([x,y],i)=>plot(ctx,x,y,600+i*3,1));
 }
-const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField};
+/* ---------- bespoke Hollow silhouettes (Wave 1 Overhaul) ---------- */
+// Acolyte (Mender): hunched fungal-hooded druid with swaying moss censer & emerald spore cap.
+function acolyte(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk=ph!=null;ph=ph||0;const bob=walk?Math.sin(ph)*2.2:0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,2,2,26,7,.65);
+  // tattered fungal cloak trailing into mist
+  const cg=ctx.createLinearGradient(0,-48,0,0);cg.addColorStop(0,'#2a3a2c');cg.addColorStop(.55,'#19231b');cg.addColorStop(1,'#0d120e');
+  ctx.fillStyle=cg;ctx.beginPath();ctx.moveTo(-8,-38+bob);ctx.quadraticCurveTo(-22,-18+bob,-20+Math.sin(ph)*2,-2);ctx.lineTo(-8,-4);ctx.lineTo(0,0);ctx.lineTo(10,-3);ctx.quadraticCurveTo(18,-18+bob,10,-38+bob);ctx.closePath();ctx.fill();
+  // broad layered mushroom cowl
+  const mg=ctx.createRadialGradient(-2,-48+bob,3,0,-44+bob,24);mg.addColorStop(0,'#547a4c');mg.addColorStop(.6,'#284029');mg.addColorStop(1,'#142016');
+  ctx.fillStyle=mg;ctx.beginPath();ctx.moveTo(-22,-38+bob);ctx.quadraticCurveTo(-18,-56+bob,2,-54+bob);ctx.quadraticCurveTo(22,-52+bob,24,-36+bob);ctx.quadraticCurveTo(2,-32+bob,-22,-38+bob);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(155,235,170,.35)';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(-18,-40+bob);ctx.quadraticCurveTo(0,-52+bob,20,-39+bob);ctx.stroke();
+  // gills underneath
+  ctx.fillStyle='#0a0e0b';ctx.beginPath();ctx.ellipse(2,-36+bob,15,4,0,0,TAU);ctx.fill();
+  // crooked staff & swinging censer out front
+  ctx.strokeStyle='#3d2e1e';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(8,-28+bob);ctx.quadraticCurveTo(18,-36+bob,24,-32+bob);ctx.stroke();
+  const sw=walk?Math.sin(ph*1.5)*4:0;
+  ctx.strokeStyle='#6c7a68';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(24,-32+bob);ctx.lineTo(24+sw,-16+bob);ctx.stroke();
+  ctx.fillStyle='#1f2d24';ctx.beginPath();ctx.moveTo(19+sw,-16+bob);ctx.lineTo(29+sw,-16+bob);ctx.lineTo(26+sw,-8+bob);ctx.lineTo(22+sw,-8+bob);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#72f29c';ctx.beginPath();ctx.arc(24+sw,-12+bob,2.6,0,TAU);ctx.fill();
+ } else {
+  const sw=walk?Math.sin(ph*1.5)*4:0;
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,24+sw,-12+bob,18,'#6ef08e',.5);
+  glow(ctx,2,-36+bob,16,'#52d882',.28);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Wraith (Shade): floating twilight torso with torn cloak ribbons & slit cowl, no legs.
+function wraith(ctx,x,y,s,pass,seed,face,ph){seed=seed||51;face=face||1;const walk=ph!=null;ph=ph||0;const hov=Math.sin(ph*1.2)*3;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,3,22,5,.38);
+  // trailing ink-violet ribbons
+  const rg=ctx.createLinearGradient(-34,-28,16,-8);rg.addColorStop(0,'rgba(64,46,118,0)');rg.addColorStop(.5,'rgba(56,42,102,.65)');rg.addColorStop(1,'rgba(22,18,40,.92)');
+  ctx.fillStyle=rg;
+  ctx.beginPath();ctx.moveTo(14,-34+hov);ctx.quadraticCurveTo(-8,-42+hov,-34,-28+hov*1.4);ctx.lineTo(-22,-18+hov);ctx.lineTo(-36,-10+hov*.8);ctx.quadraticCurveTo(-10,-8+hov,14,-14+hov);ctx.closePath();ctx.fill();
+  // narrow angular cowl + hunched shoulders
+  ctx.fillStyle='#1b162c';ctx.beginPath();ctx.moveTo(-10,-16+hov);ctx.quadraticCurveTo(-14,-36+hov,2,-46+hov);ctx.quadraticCurveTo(16,-44+hov,18,-28+hov);ctx.lineTo(10,-12+hov);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(176,148,255,.42)';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(-8,-32+hov);ctx.quadraticCurveTo(2,-45+hov,15,-34+hov);ctx.stroke();
+  // hollow slit face
+  ctx.fillStyle='#07050c';ctx.beginPath();ctx.ellipse(8,-34+hov,4.5,6.5,-.15,0,TAU);ctx.fill();
+  ctx.fillStyle='#bfa4ff';ctx.fillRect(7,-36+hov,3.2,1.6);
+  // elongated spectral claws reaching ahead
+  ctx.strokeStyle='#2c2444';ctx.lineWidth=1.8;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(12,-24+hov);ctx.lineTo(24,-20+hov);ctx.lineTo(28,-16+hov);ctx.moveTo(12,-20+hov);ctx.lineTo(22,-14+hov);ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,8,-35+hov,16,'#a688ff',.5);
+  glow(ctx,-6,-20+hov,22,'#7c5ee8',.25);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Stiltpod (Splitter): tall pulsing twin-lobed brood pod suspended on 4 spindly articulated stilts.
+function stiltpod(ctx,x,y,s,pass,seed,face,ph){seed=seed||71;face=face||1;const walk=ph!=null;ph=ph||0;const pulse=1+Math.sin(ph*2)*.06;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,34,7,.65);
+  // 4 tall spindly insect stilts
+  ctx.strokeStyle='#151a18';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';
+  [[-16,-1],[16,1],[-8,1],[8,-1]].forEach(([ox,sd],i)=>{
+   const q=ph+(i%2)*Math.PI,fx=walk?Math.sin(q)*5:0,fy=walk?Math.max(0,Math.cos(q))*4:0;
+   ctx.beginPath();ctx.moveTo(ox*.7,-22);ctx.lineTo(ox*1.35+fx*.5,-32-fy*.4);ctx.lineTo(ox*1.25+fx,-fy);ctx.stroke();
+   ctx.fillStyle='#5be8be';ctx.beginPath();ctx.arc(ox*1.35+fx*.5,-32-fy*.4,1.6,0,TAU);ctx.fill();
+  });
+  // twin-chambered translucent brood sac suspended high
+  ctx.save();ctx.translate(0,-30);ctx.scale(pulse,1/pulse);
+  for(const sd of[-1,1]){
+   const g=ctx.createRadialGradient(sd*7,-6,2,sd*8,0,15);g.addColorStop(0,'#467a6e');g.addColorStop(.55,'#1d3832');g.addColorStop(1,'#0c1816');
+   ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(sd*8,0,11.5,14,sd*.18,0,TAU);ctx.fill();
+   ctx.strokeStyle='rgba(140,250,218,.35)';ctx.lineWidth=1;ctx.stroke();
+  }
+  // glowing cleavage fissure down the centre
+  ctx.strokeStyle='#88ffda';ctx.lineWidth=2.6;ctx.beginPath();ctx.moveTo(0,-14);ctx.lineTo(-1,0);ctx.lineTo(0,13);ctx.stroke();
+  ctx.restore();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,0,-30,24,'#6ef5cb',.48);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Obelisk (Warden): hovering carved stone-and-iron monolith with frontward concave ward shield & rotating top prism.
+function obelisk(ctx,x,y,s,pass,seed,face,ph){seed=seed||66;face=face||1;const walk=ph!=null;ph=ph||0;const hov=Math.sin(ph*1.4)*2.5;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,2,3,38,9,.75);
+  // monolith tapered body
+  const mg=ctx.createLinearGradient(-16,-62,18,-10);mg.addColorStop(0,'#545c60');mg.addColorStop(.55,'#2a3034');mg.addColorStop(1,'#14181a');
+  ctx.fillStyle=mg;poly(ctx,[[-14,-8+hov],[14,-8+hov],[10,-58+hov],[-10,-58+hov]]);ctx.fill();
+  ctx.strokeStyle='#0d1012';ctx.lineWidth=1.8;ctx.stroke();
+  // carved rune bands
+  ctx.strokeStyle='#5cf0c6';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-9,-42+hov);ctx.lineTo(9,-42+hov);ctx.moveTo(-11,-24+hov);ctx.lineTo(11,-24+hov);ctx.stroke();
+  // floating concave Front Aegis shield facing forward (+x)
+  const sg=ctx.createLinearGradient(16,-54+hov,32,-12+hov);sg.addColorStop(0,'#6ef2cc');sg.addColorStop(.5,'#2a7866');sg.addColorStop(1,'#153d34');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.moveTo(18,-54+hov);ctx.quadraticCurveTo(32,-34+hov,18,-10+hov);ctx.lineTo(13,-14+hov);ctx.quadraticCurveTo(24,-34+hov,13,-50+hov);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#b8ffea';ctx.lineWidth=1.4;ctx.stroke();
+  // suspended spinning crown prism
+  const py=-72+hov+Math.sin(ph*2.2)*2;
+  ctx.fillStyle='#72f7d4';poly(ctx,[[0,py-9],[6,py],[0,py+9],[-6,py]]);ctx.fill();
+  ctx.strokeStyle='#e8fff8';ctx.lineWidth=1;ctx.stroke();
+ } else {
+  const py=-72+hov+Math.sin(ph*2.2)*2;
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,0,py,24,'#5ce6c0',.55);
+  glow(ctx,22,-32+hov,22,'#5ce6c0',.38);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Serpent (Tidewyrm): sinuous multi-looping sea-serpent with sweeping pelagic dorsal fins & abyssal jaw.
+function serpent(ctx,x,y,s,pass,seed,face,ph){seed=seed||47;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ const pts=[];const n=11;
+ for(let i=0;i<n;i++){const t=i/(n-1);const px=-64+t*126;const py=-12-Math.sin(t*Math.PI*2.1+(walk?ph:0))*12-Math.sin(t*Math.PI)*8;const r=5+Math.sin(t*Math.PI)*11+(t>.8?4:0);pts.push([px,py,r]);}
+ if(pass==='base'){
+  shadow(ctx,0,4,72,14,.7);
+  // sweeping pelagic sail fins behind crest arches
+  for(const idx of[2,4,6,8]){const [px,py,rr]=pts[idx];const fg=ctx.createLinearGradient(px,py-rr-24,px,py-rr);fg.addColorStop(0,'#72d6f0');fg.addColorStop(1,'#184256');
+   ctx.fillStyle=fg;ctx.beginPath();ctx.moveTo(px-9,py-rr*.6);ctx.quadraticCurveTo(px-4,py-rr-22,px-14,py-rr-24);ctx.quadraticCurveTo(px+8,py-rr-12,px+9,py-rr*.5);ctx.closePath();ctx.fill();}
+  // sinuous scaled body segments
+  for(let i=0;i<n;i++){const [px,py,rr]=pts[i];const g=ctx.createRadialGradient(px-rr*.3,py-rr*.5,1,px,py,rr*1.3);
+   g.addColorStop(0,'#3e7a8e');g.addColorStop(.55,'#193c4a');g.addColorStop(1,'#09171e');
+   ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(px,py,rr*1.15,rr*.92,0,0,TAU);ctx.fill();
+   ctx.strokeStyle='rgba(130,228,248,.32)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(px,py,rr,rr*.82,0,Math.PI*1.1,Math.PI*1.7);ctx.stroke();}
+  // horned sea-wyrm head & abyssal jaw
+  const [hx,hy,hr]=pts[n-1];
+  ctx.fillStyle='#13303d';ctx.beginPath();ctx.moveTo(hx-10,hy-hr);ctx.quadraticCurveTo(hx+14,hy-hr-6,hx+26,hy-2);ctx.lineTo(hx+16,hy+4);ctx.lineTo(hx+22,hy+10);ctx.quadraticCurveTo(hx+4,hy+hr+2,hx-10,hy+hr*.7);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#7ee8ff';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(hx+10,hy-hr*.8);ctx.quadraticCurveTo(hx-6,hy-hr-14,hx-16,hy-hr-12);ctx.stroke();
+  ctx.fillStyle='#96f4ff';ctx.beginPath();ctx.arc(hx+11,hy-3,2.4,0,TAU);ctx.fill();
+ } else {
+  const [hx,hy]=pts[n-1];
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let i=2;i<n-1;i+=2){const [px,py]=pts[i];glow(ctx,px,py,12,'#5ad8ff',.3);}
+  glow(ctx,hx+14,hy-2,24,'#5ad8ff',.52);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Dreadnought (Brass Colossus): heavy riveted Foundry steam walker with twin stacks, flywheel & furnace core.
+function dreadnought(ctx,x,y,s,pass,seed,face,frost,ph){seed=seed||61;face=face||1;const walk=ph!=null;ph=ph||0;const stomp=walk?Math.abs(Math.sin(ph))*3.5:0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,6,4,72,15,.85);
+  // heavy piston legs
+  [-28,-6,16,34].forEach((lx,i)=>{const q=ph+(i%2)*Math.PI,fx=walk?Math.sin(q)*8:0,up=walk?Math.max(0,Math.cos(q))*5:0;
+   ctx.fillStyle='#242220';poly(ctx,[[lx-7,-24-stomp],[lx+7,-24-stomp],[lx+9+fx,-up],[lx-5+fx,-up]]);ctx.fill();
+   ctx.fillStyle='#b88234';ctx.fillRect(lx-6+fx*.5,-16-up*.5,12,3.2);});
+  // twin iron smokestacks behind hull
+  for(const sx of[-24,10]){ctx.fillStyle='#262422';ctx.fillRect(sx,-82-stomp,12,34);ctx.fillStyle='#c48e3c';ctx.fillRect(sx-2,-84-stomp,16,4.5);}
+  // riveted bronze boiler carapace
+  const bg=ctx.createLinearGradient(-48,-66-stomp,48,-12-stomp);bg.addColorStop(0,'#c68f3d');bg.addColorStop(.45,'#755024');bg.addColorStop(1,'#29221c');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.moveTo(-48,-18-stomp);ctx.lineTo(-42,-54-stomp);ctx.quadraticCurveTo(0,-70-stomp,44,-52-stomp);ctx.lineTo(52,-20-stomp);ctx.quadraticCurveTo(0,-10-stomp,-48,-18-stomp);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#181410';ctx.lineWidth=2.2;ctx.stroke();
+  // rivets along upper rim
+  ctx.fillStyle='#f0ca78';for(let k=-34;k<=36;k+=14){ctx.beginPath();ctx.arc(k,-52-stomp,1.8,0,TAU);ctx.fill();}
+  // glowing furnace grate on chest
+  ctx.fillStyle='#140a06';ctx.fillRect(22,-42-stomp,22,18);
+  ctx.fillStyle='#ff8a2a';ctx.fillRect(24,-40-stomp,18,14);
+  ctx.strokeStyle='#1c1816';ctx.lineWidth=2;for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(27+k*5.5,-42-stomp);ctx.lineTo(27+k*5.5,-24-stomp);ctx.stroke();}
+  // spinning dorsal brass flywheel
+  ctx.save();ctx.translate(-8,-42-stomp);ctx.rotate(walk?ph*.7:.3);
+  ctx.strokeStyle='#dca446';ctx.lineWidth=4.5;ctx.beginPath();ctx.arc(0,0,17,0,TAU);ctx.stroke();
+  for(let k=0;k<8;k++){const a=k/8*TAU;ctx.beginPath();ctx.moveTo(Math.cos(a)*14,Math.sin(a)*14);ctx.lineTo(Math.cos(a)*22,Math.sin(a)*22);ctx.stroke();}
+  ctx.fillStyle='#2a2018';ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.fill();ctx.restore();
+  if(frost){frostDust(ctx,-44,-64-stomp,46,-16-stomp,90,seed+3,true);}
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,33,-33-stomp,26,'#ff8828',.55);
+  glow(ctx,-18,-86-stomp,22,'#ff7a28',.42);
+  glow(ctx,16,-86-stomp,22,'#ff7a28',.42);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Stalker (Rune Stalker): lean jackal-like Hollow sprinter with hooked rune-thief talons & golden rune aura.
+function stalker(ctx,x,y,s,pass,seed,face,ph){seed=seed||81;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,26,6,.6);
+  ctx.strokeStyle='#191522';ctx.lineWidth=2.4;ctx.lineCap='round';
+  [-14,-4,8,16].forEach((lx,i)=>{const sw=walk?Math.sin(ph*2+i*1.6)*6:0;ctx.beginPath();ctx.moveTo(lx,-14);ctx.lineTo(lx+sw,0);ctx.stroke();});
+  const bg=ctx.createLinearGradient(-22,-26,22,-8);bg.addColorStop(0,'#2c243a');bg.addColorStop(.6,'#44365c');bg.addColorStop(1,'#181322');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.moveTo(-22,-14);ctx.quadraticCurveTo(-8,-26,12,-24);ctx.lineTo(24,-18);ctx.lineTo(18,-10);ctx.quadraticCurveTo(-4,-8,-22,-14);ctx.closePath();ctx.fill();
+  // swept ears & bright amber thief crest
+  ctx.fillStyle='#e8b84a';ctx.beginPath();ctx.moveTo(10,-24);ctx.lineTo(2,-35);ctx.lineTo(14,-26);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#ffd466';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-14,-19);ctx.quadraticCurveTo(2,-23,18,-16);ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,16,-18,16,'#ffd466',.45);ctx.restore();
+ }
+ ctx.restore();}
+
+// Scarab (Gilded Scarab): gleaming faceted gold-and-jade treasure beetle with fluttering wingcases.
+function scarab(ctx,x,y,s,pass,seed,face,ph){seed=seed||82;face=face||1;const walk=ph!=null;ph=ph||0;const jit=walk?Math.sin(ph*3)*1.5:0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,24,6,.55);
+  ctx.strokeStyle='#4a3410';ctx.lineWidth=1.8;
+  [-12,-2,8].forEach((lx,i)=>{const sw=walk?Math.sin(ph*2.5+i*1.8)*4:0;ctx.beginPath();ctx.moveTo(lx,-8);ctx.lineTo(lx+sw,0);ctx.stroke();});
+  // burnished golden carapace
+  const gg=ctx.createRadialGradient(4,-20+jit,3,0,-14+jit,24);gg.addColorStop(0,'#fff0a6');gg.addColorStop(.45,'#e2a832');gg.addColorStop(1,'#6a460c');
+  ctx.fillStyle=gg;ctx.beginPath();ctx.ellipse(0,-14+jit,21,13,0,0,TAU);ctx.fill();
+  ctx.strokeStyle='#3a2406';ctx.lineWidth=1.5;ctx.stroke();
+  // emerald gemstone inlay + pincer crown
+  ctx.fillStyle='#5cf0be';ctx.beginPath();ctx.moveTo(-6,-17+jit);ctx.lineTo(2,-22+jit);ctx.lineTo(10,-17+jit);ctx.lineTo(2,-12+jit);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#f5c856';ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(19,-15+jit);ctx.quadraticCurveTo(28,-20+jit,30,-13+jit);ctx.moveTo(19,-11+jit);ctx.quadraticCurveTo(27,-6+jit,29,-11+jit);ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,2,-16+jit,24,'#ffd860',.55);ctx.restore();
+ }
+ ctx.restore();}
+
+// Leech (Wick Leech): floating translucent lamprey-moth with hanging violet siphon tendrils.
+function leech(ctx,x,y,s,pass,seed,alt){seed=seed||83;alt=alt==null?58:alt;ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+ if(pass==='base'){
+  shadow(ctx,0,alt,32,6,.45);
+  // translucent dark-violet umbrella fins
+  for(const sd of[-1,1]){
+   const fg=ctx.createLinearGradient(0,-18,sd*46,10);fg.addColorStop(0,'#3b224a');fg.addColorStop(.6,'#241432');fg.addColorStop(1,'rgba(24,14,34,.2)');
+   ctx.fillStyle=fg;ctx.beginPath();ctx.moveTo(0,-10);ctx.bezierCurveTo(sd*18,-26,sd*42,-20,sd*48,-4);ctx.bezierCurveTo(sd*36,10,sd*16,8,0,4);ctx.closePath();ctx.fill();
+   ctx.strokeStyle='rgba(205,140,255,.45)';ctx.lineWidth=1;ctx.stroke();
+  }
+  // lamprey body + hanging siphon proboscis
+  ctx.fillStyle='#190f24';ctx.beginPath();ctx.ellipse(0,-4,8,12,0,0,TAU);ctx.fill();
+  ctx.strokeStyle='#b878ff';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(0,8);ctx.quadraticCurveTo(-4,18,0,28);ctx.stroke();
+  ctx.fillStyle='#ff9a42';ctx.beginPath();ctx.arc(0,-4,3.5,0,TAU);ctx.fill();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,0,-4,18,'#c878ff',.5);glow(ctx,0,22,12,'#ff9a42',.4);ctx.restore();
+ }
+ ctx.restore();}
+
+// Twin (Tether Twin): angular obsidian crystal-backed walker with glowing violet link pylon on its spine.
+function twin(ctx,x,y,s,pass,seed,face,ph){seed=seed||84;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,28,7,.7);
+  ctx.strokeStyle='#161522';ctx.lineWidth=2.6;ctx.lineCap='round';
+  [-12,0,12].forEach((lx,i)=>{const sw=walk?Math.sin(ph*2+i*2)*5:0;ctx.beginPath();ctx.moveTo(lx,-14);ctx.lineTo(lx+sw,0);ctx.stroke();});
+  const bg=ctx.createLinearGradient(-18,-30,18,-8);bg.addColorStop(0,'#3e3a54');bg.addColorStop(.5,'#232032');bg.addColorStop(1,'#111018');
+  ctx.fillStyle=bg;poly(ctx,[[-20,-12],[-14,-28],[12,-28],[22,-14],[12,-8],[-14,-8]]);ctx.fill();
+  ctx.strokeStyle='rgba(190,165,255,.4)';ctx.lineWidth=1.2;ctx.stroke();
+  // twin crystalline link spire rising from back
+  ctx.fillStyle='#c494ff';poly(ctx,[[-4,-28],[0,-46],[5,-28]]);ctx.fill();
+  ctx.strokeStyle='#f2e6ff';ctx.lineWidth=1;ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,0,-40,18,'#c494ff',.58);ctx.restore();
+ }
+ ctx.restore();}
+
+const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField,acolyte,wraith,stiltpod,obelisk,serpent,dreadnought,stalker,scarab,leech,twin};
 
 return{watchTower,frostBell,stormPylon,grub,moth,shellback,wren,gate,block,ruinWall,deadTree,leafyTree,standingStone,plot,masonry,planks,shadow,glow,darkness,vignette,fog,makeNoise,rng,mix,ss,clamp,catmull,strokePts,offset,poly,bolt,shade,hex,rgb,groundTile,TAU,EXTRA:typeof EXTRA!=="undefined"?EXTRA:null};
 })();

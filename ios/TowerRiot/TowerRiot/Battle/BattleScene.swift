@@ -76,6 +76,9 @@ final class BattleScene: SKScene {
     /* ------------------------------------------------------------------ setup */
 
     private var posts: [Vec] = []
+    private var riftNodes: [(glow: SKSpriteNode, phase: Double)] = []
+    private var openedRoads = Set<String>()
+    private var lightFrame = 0
     private var waters: [(path: CGPath, w: Double)] = []
     private var waterNodes: [(glint: SKShapeNode, lava: SKShapeNode?, path: CGPath)] = []
     private var drainWaterNodes: [(idx: Int, wet: SKShapeNode, glint: SKShapeNode, dry: SKShapeNode, path: CGPath)] = []
@@ -107,15 +110,38 @@ final class BattleScene: SKScene {
 
     private func load() {
         let st = battle.stage
-        // The ground, painted once by the web painters with the plots and rifts set into it.
+        // The ground, painted once by the web painters. Variant B loads ground-XX-alt.jpg when baked.
         let ground = SKSpriteNode()
-        if let u = ArtFiles.url(String(format: "ground-%02d", st.id), "jpg"), let img = UIImage(contentsOfFile: u.path) {
+        let altURL = battle.variant == .alt ? ArtFiles.url(String(format: "ground-%02d-alt", st.id), "jpg") : nil
+        if let u = altURL ?? ArtFiles.url(String(format: "ground-%02d", st.id), "jpg"), let img = UIImage(contentsOfFile: u.path) {
             ground.texture = SKTexture(image: img)
         }
         ground.size = size
         ground.anchorPoint = .zero
         ground.zPosition = Z.ground
         world.addChild(ground)
+
+        // Live pulsing Rift tear markers positioned from active battle.spawns (always accurate on Variant B reversed roads).
+        var riftIdx = 0
+        for rs in battle.spawns.map({ $0.roads }) {
+            guard let first = rs.first else { continue }
+            let p0 = first.path.point(at: 30)
+            let rx = max(64.0, min(World.width - 64.0, p0.x))
+            let ry = max(80.0, min(World.height - 50.0, p0.y))
+            let tear = SKShapeNode(ellipseOf: CGSize(width: 66, height: 24))
+            tear.fillColor = UIColor(hex: 0x0a0d0c)
+            tear.strokeColor = UIColor(96, 226, 180, 0.85)
+            tear.lineWidth = 1.6
+            tear.position = P(rx, ry)
+            tear.zPosition = Z.plots + 0.05
+            world.addChild(tear)
+            let gl = glowSprite(color: UIColor(hex: 0x5ac8a8), r: 40, a: 0.32)
+            gl.position = P(rx, ry - 2)
+            gl.zPosition = Z.plots + 0.06
+            world.addChild(gl)
+            riftNodes.append((gl, Double(riftIdx)))
+            riftIdx += 1
+        }
 
         let meta = ArtFiles.maps[st.id]
         posts = (meta?.posts ?? []).map { Vec($0[0], $0[1]) }
@@ -373,8 +399,8 @@ final class BattleScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         let dt = lastTime.map { min(0.05, max(0, currentTime - $0)) } ?? 0
         lastTime = currentTime
-        T += dt
         let simDt = look.aiming ? dt * 0.25 : dt
+        if !battle.paused { T += simDt }
         let events = onFrame?(dt) ?? []
         consume(events)
         render(dt: battle.paused ? 0 : simDt)
@@ -432,6 +458,7 @@ final class BattleScene: SKScene {
         }
         drawMapRules()
         drawPlots()
+        for rn in riftNodes { rn.glow.alpha = 0.32 + 0.04 * sin(T * 1.5 + rn.phase) }
         drawRune()
         syncTowers()
         syncFoes()
@@ -439,7 +466,7 @@ final class BattleScene: SKScene {
         drawParts()
         drawClouds()
         drawLight()
-        drawShots()
+        drawShots(dt: dt)
         drawFx()
         drawRanges()
         drawCrows(dt)
@@ -541,10 +568,13 @@ final class BattleScene: SKScene {
                     addFx(.ring, p.x, p.y, r: 0, max: 85, life: 1.1, color: UIColor(255, 155, 70))
                 }
             case let .riftOpen(road):
-                if let r = b.roads.first(where: { $0.def.id == road }) {
-                    let p = r.path.point(at: 36)
-                    addFx(.ring, p.x, p.y, r: 0, max: 140, life: 1, color: UIColor(96, 226, 180))
-                    shake = max(shake, 5)
+                if !openedRoads.contains(road) {
+                    openedRoads.insert(road)
+                    if let r = b.roads.first(where: { $0.def.id == road }) {
+                        let p = r.path.point(at: 36)
+                        addFx(.ring, p.x, p.y, r: 0, max: 140, life: 1, color: UIColor(96, 226, 180))
+                        shake = max(shake, 5)
+                    }
                 }
             case let .clearPlot(plot, free):
                 if plot >= 0 && plot < b.plots.count {
@@ -567,6 +597,19 @@ final class BattleScene: SKScene {
             case let .gateShock(gx, gy):
                 addFx(.ring, gx, gy, r: 0, max: 180, life: 0.85, color: UIColor(255, 215, 120))
                 shake = max(shake, 6)
+            case let .ironGate(gx, gy):
+                addFx(.ring, gx, gy, r: 0, max: 140, life: 0.75, color: UIColor(235, 195, 125))
+                shake = max(shake, 5)
+            case let .heraldCleanse(_, hx, hy):
+                addFx(.ring, hx, hy, r: 0, max: 150, life: 0.85, color: UIColor(120, 245, 200))
+                float(hx, hy - 54, "Cleanse -20%", UIColor(hex: 0x7cf0c4), big: true)
+            case let .runeStolen(rx, ry):
+                addFx(.ring, rx, ry, r: 0, max: 140, life: 0.9, color: UIColor(255, 195, 70))
+                float(rx, ry - 50, "Rune stolen!", UIColor(hex: 0xffb040), big: true)
+            case let .escape(ex, ey, _):
+                float(ex, ey - 44, "Escaped!", UIColor(hex: 0xe8c468), big: false)
+            case let .bog(_, bx, by):
+                addFx(.ring, bx, by, r: 0, max: 52, life: 0.7, color: UIColor(115, 175, 75))
             default: break
             }
         }
@@ -800,8 +843,8 @@ final class BattleScene: SKScene {
         if f.def.isFlying { return .fly }
         if f.def.isBoss { return .stomp }
         switch f.kind {
-        case .skitter, .hound: return .scuttle
-        case .shell, .sapper, .elite, .warden, .glasshide, .herald: return .plod
+        case .skitter, .hound, .runethief, .scarab: return .scuttle
+        case .shell, .sapper, .elite, .warden, .glasshide, .herald, .tether: return .plod
         case .ram: return .stomp
         default: return .crawl
         }
@@ -836,9 +879,13 @@ final class BattleScene: SKScene {
     }
 
     private var foeNodes: [Int: FoeNode] = [:]
+    private var healBeamNodes: [SKShapeNode] = []
+    private var ramWarnNodes: [SKShapeNode] = []
 
     private func syncFoes() {
         var seen = Set<Int>()
+        var healPairs: [(Foe, Foe)] = []
+        var ramWarns: [(Foe, Double, Double)] = []
         for f in battle.foes {
             seen.insert(f.id)
             let n = foeNodes[f.id] ?? {
@@ -847,8 +894,40 @@ final class BattleScene: SKScene {
                 return n
             }()
             drawFoe(f, n)
+            if !f.dead, let tid = f.healTarget, let target = battle.foes.first(where: { $0.id == tid && !$0.dead && !$0.under }) {
+                healPairs.append((f, target))
+            }
+            if !f.dead, !f.under, let st = f.def.traits?.stamp, f.abilityT > 0, f.abilityT < 1.2, f.rootT <= 0, f.freezeT <= 0, f.staggerT <= 0 {
+                ramWarns.append((f, st.r, 1 - f.abilityT / 1.2))
+            }
         }
         for (id, n) in foeNodes where !seen.contains(id) { n.remove(); foeNodes[id] = nil }
+        while healBeamNodes.count < healPairs.count {
+            let s = SKShapeNode(); s.strokeColor = UIColor(150, 250, 185, 0.85); s.lineWidth = 2.4; s.blendMode = .add; s.zPosition = Z.fx
+            world.addChild(s); healBeamNodes.append(s)
+        }
+        for (i, s) in healBeamNodes.enumerated() {
+            guard i < healPairs.count else { s.isHidden = true; continue }
+            s.isHidden = false
+            let (m, tgt) = healPairs[i]
+            let a = P(m.x + (m.dir == 0 ? 1 : m.dir) * 12, m.y - 16)
+            let bPt = P(tgt.x, tgt.y - tgt.def.bar * 0.45)
+            let ctrl = CGPoint(x: (a.x + bPt.x) / 2, y: max(a.y, bPt.y) + 18)
+            let path = CGMutablePath(); path.move(to: a); path.addQuadCurve(to: bPt, control: ctrl)
+            s.path = path
+        }
+        while ramWarnNodes.count < ramWarns.count {
+            let s = SKShapeNode(); s.fillColor = UIColor(235, 95, 48, 0.12); s.lineWidth = 2.2; s.zPosition = Z.rules + 0.05
+            world.addChild(s); ramWarnNodes.append(s)
+        }
+        for (i, s) in ramWarnNodes.enumerated() {
+            guard i < ramWarns.count else { s.isHidden = true; continue }
+            s.isHidden = false
+            let (f, rr, warn) = ramWarns[i]
+            s.position = P(f.x, f.y)
+            s.strokeColor = UIColor(235, 95, 48, 0.35 + 0.55 * warn)
+            s.path = CGPath(ellipseIn: CGRect(x: -rr, y: -rr / World.ySquash, width: rr * 2, height: rr * 2 / World.ySquash), transform: nil)
+        }
     }
 
     private func drawFoe(_ f: Foe, _ n: FoeNode) {
@@ -872,7 +951,7 @@ final class BattleScene: SKScene {
         n.emit.zPosition = Z.emit(depthY)
 
         if f.under {
-            n.showUnder(x: x, y: y, size: f.def.size, T: T)
+            n.showUnder(foe: f, x: x, y: y, face: face, T: T)
             return
         }
         n.hideUnder()
@@ -990,6 +1069,10 @@ final class BattleScene: SKScene {
         let amt = b.hero.sunriseT > 0 ? 0 : b.night ? 0.62 : st.isLava ? 0.14 : 0.03
         sunWash.isHidden = b.night
         guard amt > 0.05 else { dark.isHidden = true; return }
+        // Throttle CPU darkness mask rasterization to 20 Hz and freeze uploads while paused.
+        if battle.paused && dark.texture != nil { dark.isHidden = false; return }
+        lightFrame &+= 1
+        if dark.texture != nil && lightFrame % 3 != 0 { dark.isHidden = false; return }
         var lights: [(Double, Double, Double, Double)] = []
         let fk = 1 + sin(T * 7) * 0.03
         for t in b.towers { let r = t.kind == .beacon ? b.stats(t).range * 0.8 : Self.towerLight[t.kind]!.1; lights.append((t.x, t.y - 50, r * fk, 0.9)) }
@@ -1021,7 +1104,7 @@ final class BattleScene: SKScene {
     private var boltNodes: [SKSpriteNode] = []
     private var shellNodes: [SKSpriteNode] = []
 
-    private func drawShots() {
+    private func drawShots(dt: Double) {
         let shots = look.still ? [] : battle.shots.filter { $0.t >= 0 }
         let bolts = shots.filter { $0.kind == .bolt }, shells = shots.filter { $0.kind == .shell }
         pool(&boltNodes, bolts.count) { let s = SKSpriteNode(texture: art.streak); s.anchorPoint = CGPoint(x: 1, y: 0.5); s.blendMode = .add; s.colorBlendFactor = 1; s.zPosition = Z.shots; return s }
@@ -1042,7 +1125,7 @@ final class BattleScene: SKScene {
             let u = min(1, s.t / s.dur), arc = sin(u * .pi) * 90
             let x = s.x0 + (s.tx - s.x0) * u, y = s.y0 + (s.ty - s.y0) * u - arc
             shellNodes[i].position = P(x, y)
-            if R() < 0.5 { parts.append(Part(x: x, y: y, vx: 0, vy: -6, life: 0.7, max: 0.7, color: UIColor(60, 60, 62), s: 3, kind: .smoke)) }
+            if dt > 0 && R() < 0.5 { parts.append(Part(x: x, y: y, vx: 0, vy: -6, life: 0.7, max: 0.7, color: UIColor(60, 60, 62), s: 3, kind: .smoke)) }
         }
     }
 
@@ -1389,20 +1472,46 @@ final class BattleScene: SKScene {
             scene.world.addChild(base); scene.world.addChild(emit)
         }
 
-        func showUnder(x: Double, y: Double, size S: Double, T: Double) {
-            [body, bodyEmit, seam, hit, bar.root, shieldRing].forEach { $0.isHidden = true }
+        func showUnder(foe f: Foe, x: Double, y: Double, face: Double, T: Double) {
+            let S = f.def.size
+            [body, bodyEmit, seam, hit, shieldRing].forEach { $0.isHidden = true }
             wings?.isHidden = true; wingsEmit?.isHidden = true; ring?.isHidden = true; ashGlow?.isHidden = true
             [marks, slow, burn, vuln].forEach { $0.isHidden = true }
             under.isHidden = false
             let path = CGMutablePath()
-            path.addEllipse(in: CGRect(x: -14 * S, y: -6 * S, width: 28 * S, height: 12 * S))
-            for k in 0..<4 { path.addRect(CGRect(x: -10 + Double(k) * 6 + sin(T * 9 + Double(k)) * 2, y: 0, width: 3, height: 3)) }
+            if f.kind == .tidewyrm {
+                let dir: CGFloat = face < 0 ? -1 : 1
+                let pulse = (T * 0.9).truncatingRemainder(dividingBy: 1.0)
+                let rw = 24 + pulse * 34
+                path.addEllipse(in: CGRect(x: -rw, y: -rw * 0.36, width: rw * 2, height: rw * 0.72))
+                // Slicing dorsal fin skimming the water surface
+                path.move(to: CGPoint(x: -16 * dir, y: -2))
+                path.addQuadCurve(to: CGPoint(x: -12 * dir, y: 20), control: CGPoint(x: -3 * dir, y: 18))
+                path.addQuadCurve(to: CGPoint(x: 14 * dir, y: -2), control: CGPoint(x: 10 * dir, y: 10))
+                path.closeSubpath()
+                under.fillColor = UIColor(42, 126, 162, 0.6)
+                under.strokeColor = UIColor(195, 242, 255, 0.8)
+                under.lineWidth = 1.8
+                // Keep a dim persistent boss HP bar visible during Tidewyrm's dive.
+                bar.root.isHidden = false
+                bar.root.alpha = 0.6
+                bar.root.position = P(x, y - f.def.bar)
+                bar.set(f.hp / f.max)
+            } else {
+                bar.root.isHidden = true
+                under.fillColor = UIColor(40, 32, 24, 0.9)
+                under.strokeColor = .clear
+                under.lineWidth = 0
+                path.addEllipse(in: CGRect(x: -14 * S, y: -6 * S, width: 28 * S, height: 12 * S))
+                for k in 0..<4 { path.addRect(CGRect(x: -10 + Double(k) * 6 + sin(T * 9 + Double(k)) * 2, y: 0, width: 3, height: 3)) }
+            }
             under.path = path
             under.position = P(x, y)
         }
 
         func hideUnder() {
             under.isHidden = true
+            bar.root.alpha = 1
             [body, bodyEmit].forEach { $0.isHidden = false }
             wings?.isHidden = false; wingsEmit?.isHidden = false; ashGlow?.isHidden = false
         }
@@ -1504,8 +1613,8 @@ final class BattleScene: SKScene {
         }
 
         func update(_ t: Tower, battle b: Battle, T: Double) {
-            let lv = min(t.lv, b.data.maxTowerLevel), fbLv = min(lv, 4), splitTag = t.split.map { "-\($0.rawValue)" } ?? ""
-            let S = lv >= 5 ? 0.86 : 0.6 + 0.06 * Double(fbLv - 1)
+            let lv = min(t.lv, b.data.maxTowerLevel), fbLv = min(lv, 5), splitTag = t.split.map { "-\($0.rawValue)" } ?? ""
+            let S = 0.6 + 0.06 * Double(fbLv - 1)
             let k = "\(lv)|\(splitTag)|\(t.round?.rawValue ?? "")|\(t.down)|\(t.stunT > 0)"
             if k != key {
                 key = k

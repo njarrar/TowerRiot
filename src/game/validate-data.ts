@@ -29,7 +29,7 @@ export function validateGameData(): string[] {
   }
 
   for (const [k, e] of Object.entries(ENEMIES)) {
-    if (e.hp <= 0 || e.speed <= 0 || e.leak < 1) errs.push(`enemy ${k} bad base stats`);
+    if (e.hp <= 0 || e.speed <= 0 || (e.leak < 1 && !e.traits?.fugitive)) errs.push(`enemy ${k} bad base stats`);
     if (e.traits?.splitInto && !ENEMIES[e.traits.splitInto.kind]) errs.push(`enemy ${k} unknown splitInto`);
     if (e.traits?.summon && !ENEMIES[e.traits.summon.kind]) errs.push(`enemy ${k} unknown summon`);
   }
@@ -61,6 +61,15 @@ export function validateGameData(): string[] {
     const sp = spawnsOf(st);
     const rIds = new Set(st.roads.map(r => r.id));
     const wIds = new Set(st.waters.map(w => w.id).filter(Boolean) as string[]);
+    for (const r of st.roads) {
+      if (r.ctrl.length < 2) errs.push(`stage ${st.id} road ${r.id} has < 2 ctrl points`);
+      if (r.openAtWave !== undefined && r.openAtWave > st.waves.length) errs.push(`stage ${st.id} road ${r.id} openAtWave ${r.openAtWave} > waves ${st.waves.length}`);
+    }
+    for (let pi = 0; pi < st.plots.length; pi++) {
+      const p = st.plots[pi];
+      if (p.sinkAt !== undefined && p.sinkAt > st.waves.length) errs.push(`stage ${st.id} plot ${pi} sinkAt ${p.sinkAt} > waves ${st.waves.length}`);
+      if (p.openAtWave !== undefined && p.openAtWave > st.waves.length) errs.push(`stage ${st.id} plot ${pi} openAtWave ${p.openAtWave} > waves ${st.waves.length}`);
+    }
     for (const w of st.waves) for (const g of w.groups) if (g.spawn && !sp.has(g.spawn)) errs.push(`stage ${st.id} unknown spawn @${g.spawn}`);
     for (const s of st.shifts ?? []) for (const c of s.closes) if (!rIds.has(c)) errs.push(`stage ${st.id} unknown shift road ${c}`);
     for (const b of st.barriers ?? []) if (!rIds.has(b.road)) errs.push(`stage ${st.id} unknown barrier road ${b.road}`);

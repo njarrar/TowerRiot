@@ -1,9 +1,32 @@
 /**
  * Offline play.
  * - The iOS and Android apps are native and carry everything they need, so this file is for the web build only.
- * - On the web a service worker caches every file on first visit; after that the game opens offline.
+ * - On the web a service worker caches every file on first visit; updates wait politely until the player clicks Reload.
  */
-export function registerOffline() {
+export function registerOffline(onUpdateReady?: (apply: () => void) => void) {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:' || import.meta.env.DEV) return;
-  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => { /* the game still runs online */ }); });
+  window.addEventListener('load', () => {
+    // A first visit has no worker yet. When the first one takes over there is nothing new to load, so do not reload then.
+    const hadWorker = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading || !hadWorker) return;
+      reloading = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      const announce = (worker: ServiceWorker | null) => {
+        if (!worker || !onUpdateReady) return;
+        onUpdateReady(() => worker.postMessage({ type: 'SKIP_WAITING' }));
+      };
+      if (reg.waiting) announce(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const next = reg.installing;
+        if (!next) return;
+        next.addEventListener('statechange', () => {
+          if (next.state === 'installed' && navigator.serviceWorker.controller) announce(next);
+        });
+      });
+    }).catch(() => { /* the game still runs online */ });
+  });
 }
