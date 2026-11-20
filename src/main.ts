@@ -7,26 +7,17 @@ import './styles.css';
 import { App } from './ui/app';
 import { h, clear } from './ui/dom';
 import { registerOffline } from './offline';
-import { App as Native } from '@capacitor/app';
 
 const root = document.getElementById('app')!;
 const app = new App(root);
 app.title();
 registerOffline(apply => app.showUpdateToast(apply));
 
-// Auto-pause active battles and suspend audio when the browser tab or native app moves to the background.
+// Auto-pause active battles and suspend audio when the browser tab moves to the background.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) app.onBackground();
   else app.onForeground();
 });
-void Native.addListener('appStateChange', ({ isActive }) => {
-  if (isActive) app.onForeground();
-  else app.onBackground();
-}).catch(() => { /* not on a device */ });
-
-// Android back button: step back through screens, close the app from the title.
-void Native.addListener('backButton', () => { if (!app.back()) void Native.exitApp(); }).catch(() => { /* not on a device */ });
-
 // Global recovery boundary so a canvas/runtime exception never leaves a dead parchment screen.
 let crashed = false;
 function showCrashCard(detail: string) {

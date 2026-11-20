@@ -1,11 +1,10 @@
 /**
  * Offline play.
- * - On iOS and Android the game ships inside the app (Capacitor), so it never needs the network.
+ * - The iOS and Android apps are native and carry everything they need, so this file is for the web build only.
  * - On the web a service worker caches every file on first visit; updates wait politely until the player clicks Reload.
  */
 export function registerOffline(onUpdateReady?: (apply: () => void) => void) {
-  const native = !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
-  if (native || !('serviceWorker' in navigator) || location.protocol === 'file:' || import.meta.env.DEV) return;
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:' || import.meta.env.DEV) return;
   window.addEventListener('load', () => {
     // A first visit has no worker yet. When the first one takes over there is nothing new to load, so do not reload then.
     const hadWorker = !!navigator.serviceWorker.controller;
