@@ -7,6 +7,7 @@ const DEFAULT_GAP: Partial<Record<EnemyKind, number>> = {
   grub: 0.9, skitter: 0.5, shell: 2.2, moth: 0.8, warden: 6, mender: 4, shade: 1.2,
   splitter: 1.6, sapper: 2, burrower: 1.4, ashmoth: 0.9, elite: 2.6,
   husk: 0.9, hound: 0.7, glasshide: 2.4, veilmoth: 0.9, ram: 7, herald: 6,
+  runethief: 3, scarab: 4, wickleech: 1.4, tether: 0.7,
 };
 
 /**

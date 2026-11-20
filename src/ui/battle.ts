@@ -258,6 +258,9 @@ export class BattleScreen {
         case 'gateShock': a.play('sunrise'); this.showBanner('Bastion bell!', 'The Keep shockwave stuns intruders at the gate.', 2.2); break;
         case 'ironGate': a.play('build'); this.showBanner('Iron Gate holds!', 'The portcullis repels the breach and knocks intruders back.', 2.2); break;
         case 'heraldCleanse': a.play('sunrise'); this.showBanner('Herald broken!', `Wren's kill strips 20% ${ELEMENT_NAME[e.el] ?? e.el} resistance from the Hollow.`, 2.4); break;
+        case 'runeStolen': a.play('leak'); this.showBanner('Rune stolen!', 'A Rune Stalker snatched the Rune and rallied nearby foes!', 2.4); break;
+        case 'escape': a.play('warp'); this.showBanner('Scarab escaped', 'No lives lost, but its treasure slipped away.', 2.0); break;
+        case 'bog': a.play('root'); break;
         case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
         case 'wave': {
           a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2);

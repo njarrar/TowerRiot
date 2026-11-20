@@ -29,7 +29,7 @@ export function validateGameData(): string[] {
   }
 
   for (const [k, e] of Object.entries(ENEMIES)) {
-    if (e.hp <= 0 || e.speed <= 0 || e.leak < 1) errs.push(`enemy ${k} bad base stats`);
+    if (e.hp <= 0 || e.speed <= 0 || (e.leak < 1 && !e.traits?.fugitive)) errs.push(`enemy ${k} bad base stats`);
     if (e.traits?.splitInto && !ENEMIES[e.traits.splitInto.kind]) errs.push(`enemy ${k} unknown splitInto`);
     if (e.traits?.summon && !ENEMIES[e.traits.summon.kind]) errs.push(`enemy ${k} unknown summon`);
   }

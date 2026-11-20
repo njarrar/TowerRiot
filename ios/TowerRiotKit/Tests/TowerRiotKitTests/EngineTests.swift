@@ -191,7 +191,12 @@ final class EngineTests: XCTestCase {
             let phased = events.filter { if case .phase = $0 { return true }; return false }.count
             XCTAssertEqual(phased, 1)
             if boss.def.traits?.summon != nil {
-                XCTAssertEqual(b.foes.count, before + 6, "stage \(stageId): the boss calls six of its brood")
+                if bossKind == .queen {
+                    XCTAssertEqual(b.foes.count, before + 8, "stage \(stageId): the Hollow Queen calls six shades plus twin Heralds")
+                    XCTAssertEqual(b.foes.filter { $0.kind == .herald }.count, 2, "stage \(stageId): twin Heralds spawn on Phase 2")
+                } else {
+                    XCTAssertEqual(b.foes.count, before + 6, "stage \(stageId): the boss calls six of its brood")
+                }
             } else {
                 XCTAssertEqual(b.foes.count, before, "stage \(stageId): a boss with no brood calls nothing")
             }

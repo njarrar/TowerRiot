@@ -374,6 +374,16 @@ export class Scene {
           this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 150, life: 0.85, c: '120,245,200' });
           this.float(e.x, e.y - 54, 'Cleanse -20%', '#7cf0c4', true);
           break;
+        case 'runeStolen':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 140, life: 0.9, c: '255,195,70' });
+          this.float(e.x, e.y - 50, 'Rune stolen!', '#ffb040', true);
+          break;
+        case 'escape':
+          this.float(e.x, e.y - 44, 'Escaped!', '#e8c468', false);
+          break;
+        case 'bog':
+          this.fx.push({ k: 'ring', x: e.x, y: e.y, r: 0, max: 52, life: 0.7, c: '115,175,75' });
+          break;
         default: break;
       }
     }
@@ -573,6 +583,30 @@ export class Scene {
       g.setLineDash([]);
       L.glow(g, tx, ty, 16, '#6ef08e', 0.35 + 0.1 * Math.sin(T * 7));
       g.restore();
+    }
+    // Tether Twin violet soul-link chains (50/50 damage split within 160 px)
+    for (const f of b.foes) {
+      if (f.dead || f.under || f.linkPartnerId === null || f.id > f.linkPartnerId) continue;
+      const p = b.foes.find(o => o.id === f.linkPartnerId && !o.dead && !o.under);
+      if (!p || Math.hypot(p.x - f.x, p.y - f.y) > 160) continue;
+      g.save(); g.globalCompositeOperation = 'lighter';
+      g.strokeStyle = 'rgba(196,148,255,.35)'; g.lineWidth = 5;
+      g.beginPath(); g.moveTo(f.x, f.y - 24); g.lineTo(p.x, p.y - 24); g.stroke();
+      g.strokeStyle = 'rgba(240,224,255,.9)'; g.lineWidth = 1.6; g.setLineDash([6, 4]); g.lineDashOffset = -T * 36;
+      g.beginPath(); g.moveTo(f.x, f.y - 24); g.lineTo(p.x, p.y - 24); g.stroke();
+      g.setLineDash([]); g.restore();
+    }
+    // Wick Leech dark-violet flame siphon beams draining Beacons
+    for (const f of b.foes) {
+      if (f.dead || f.under || f.siphonTowerId === null) continue;
+      const tw = b.tower(f.siphonTowerId);
+      if (!tw || tw.down) continue;
+      g.save(); g.globalCompositeOperation = 'lighter';
+      g.strokeStyle = 'rgba(195,115,255,.45)'; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(tw.x, tw.y - 78); g.lineTo(f.x, f.y - 10); g.stroke();
+      g.strokeStyle = 'rgba(255,168,80,.85)'; g.lineWidth = 1.6; g.setLineDash([5, 6]); g.lineDashOffset = -T * 40;
+      g.beginPath(); g.moveTo(tw.x, tw.y - 78); g.lineTo(f.x, f.y - 10); g.stroke();
+      g.setLineDash([]); g.restore();
     }
     if (!b.hero.dead) this.drawHero(b, 'emit', T, !!view.still);
     for (const [gx, gy] of b.gate) L.gate(g, gx, gy, 'emit');
@@ -964,6 +998,14 @@ export class Scene {
       for (let k = 0; k < 3; k++) { const a = a0 + k * TAU / 3; g.beginPath(); g.arc(t.x + Math.cos(a) * 14, hy + Math.sin(a) * 4, 2.4, 0, TAU); g.fill(); }
       g.restore();
     }
+    if (t.bogT > 0) {
+      // Mire King Bog Glob sludge clinging to tower plinth (-33% fire rate).
+      g.save();
+      g.fillStyle = 'rgba(84,126,56,.62)';
+      g.beginPath(); g.ellipse(t.x, t.y - 4, 34, 12, 0, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(150,215,95,.8)'; g.lineWidth = 1.5; g.stroke();
+      g.restore();
+    }
   }
 
   private drawTowerEmit(b: Battle, t: Tower, T: number) {
@@ -1057,7 +1099,7 @@ export class Scene {
     const hidden = f.hidden;
     if (hidden) g.globalAlpha = f.kind === 'veilmoth' ? 0.42 : 0.3;
     const S = f.def.size;
-    // Ram 1.2s pre-stamp warning ring on the ground so players can interrupt with Roots/Frost/Stagger.
+    // Ram 1.2s pre-stamp warning ring or Brass Colossus 1.5s Steam Vent telegraph on the ground.
     if (pass === 'base' && f.def.traits?.stamp && f.abilityT > 0 && f.abilityT < 1.2 && f.rootT <= 0 && f.freezeT <= 0 && f.staggerT <= 0) {
       const warn = 1 - f.abilityT / 1.2;
       const rr = f.def.traits.stamp.r;
@@ -1070,23 +1112,43 @@ export class Scene {
       g.beginPath(); g.ellipse(x, y, rr * (1 - warn * 0.85), (rr / Y_SQUASH) * (1 - warn * 0.85), 0, 0, TAU); g.stroke();
       g.restore();
     }
+    if (pass === 'base' && f.ventWarnT > 0) {
+      const warn = 1 - f.ventWarnT / 1.5;
+      g.save();
+      g.strokeStyle = `rgba(255,148,58,${0.4 + 0.5 * warn})`;
+      g.fillStyle = `rgba(255,148,58,${0.12 * warn})`;
+      g.lineWidth = 2.4; g.setLineDash([6, 4]);
+      g.beginPath(); g.ellipse(x, y, 120, 120 / Y_SQUASH, 0, 0, TAU); g.fill(); g.stroke();
+      g.setLineDash([]); g.restore();
+    }
     // Small foes are drawn a fifth bigger than their art scale so they read at 3x and on phones.
     const K = f.def.traits?.boss ? 1 : 1.2;
     const lungeStretchX = f.lungeT > 0 ? 1.18 : 1;
     const lungeStretchY = f.lungeT > 0 ? 0.88 : 1;
+    const flightLift = f.flightT > 0 ? 28 + Math.sin(T * 5) * 4 : 0;
     g.save();
-    g.translate(bx, by); g.rotate(tilt); g.scale(K * (1 + surge) * lungeStretchX, K * (1 - surge * 0.8) * lungeStretchY); g.translate(-bx, -by);
+    g.translate(bx, by - flightLift); g.rotate(tilt); g.scale(K * (1 + surge) * lungeStretchX, K * (1 - surge * 0.8) * lungeStretchY); g.translate(-bx, -(by - flightLift));
     // Wings beat: seen from the front, a flap reads as the wings folding in and opening out.
-    const flap = (k: number) => { g.save(); g.translate(bx, by); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -by); };
-    const mothY = by + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
-    paintFoe(g, f.kind, bx, by, pass, seed, face, legs, { chilled: f.slowT > 0 || f.freezeT > 0, T, flap, mothY, panes: f.panes, adaptEl, lunging: f.lungeT > 0, regrowing: !!(f.def.traits?.panes && f.panes < f.def.traits.panes.n && f.paneT < 0.8) });
+    const flap = (k: number) => { g.save(); g.translate(bx, by - flightLift); g.scale(1 - k * (0.5 + 0.5 * Math.sin(T * 13 + seed)), 1); g.translate(-bx, -(by - flightLift)); };
+    const mothY = (by - flightLift) + Math.sin(T * 3 + seed) * 3 - Math.max(0, Math.sin(T * 13 + seed)) * 2;
+    paintFoe(g, f.kind, bx, by - flightLift, pass, seed, face, legs, { chilled: f.slowT > 0 || f.freezeT > 0, T, flap, mothY, panes: f.panes, adaptEl, lunging: f.lungeT > 0, regrowing: !!(f.def.traits?.panes && f.panes < f.def.traits.panes.n && f.paneT < 0.8) });
     // Veil Moth pulsing violet rim while veiled so it reads as intentional stealth rather than a render glitch.
     if (pass === 'emit' && hidden && f.kind === 'veilmoth') {
       ringGlow(g, bx, mothY - 4, 22, '175,140,255', 0.32 + 0.14 * Math.sin(T * 5));
     }
     // The green glow in their seams: the one strong colour the Hollow owns.
-    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
+    if (pass === 'emit' && !hidden && !f.def.flying) { g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx, by - flightLift - f.def.bar * 0.35, 12 + 6 * S, '#3be0b8', 0.28); g.restore(); }
     g.restore();
+    // Crowned Elite golden crest & affix pip on Variant B / Oath runs.
+    if (pass === 'emit' && !hidden && f.affix) {
+      const cy = y - f.def.bar * K - 14;
+      const col = f.affix === 'swift' ? '#62d4ff' : f.affix === 'volatile' ? '#ff7c3a' : '#7cf0c4';
+      g.save();
+      g.fillStyle = '#f5c84c'; g.strokeStyle = '#3a2408'; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(x - 8, cy + 4); g.lineTo(x - 9, cy - 4); g.lineTo(x - 3, cy); g.lineTo(x, cy - 6); g.lineTo(x + 3, cy); g.lineTo(x + 9, cy - 4); g.lineTo(x + 8, cy + 4); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = col; g.beginPath(); g.arc(x, cy + 1, 2.2, 0, TAU); g.fill();
+      g.restore();
+    }
     g.globalAlpha = 1;
     if (pass === 'base') {
       if (f.rootT > 0) { g.fillStyle = '#182414'; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU, rx = x + Math.cos(a) * 14 * S, ry = y + Math.sin(a) * 4; g.beginPath(); g.moveTo(rx - 3, ry); g.lineTo(rx + Math.cos(a) * 3, ry - 12 - f.rootT * 4); g.lineTo(rx + 3, ry); g.fill(); } }
@@ -1561,6 +1623,20 @@ export function paintFoe(
         g.save(); g.globalCompositeOperation = 'lighter'; L.glow(g, bx + dir * 16, by - 67, 20, '#7cf0c4', 0.6 + 0.1 * Math.sin(T * 7)); g.restore();
       }
       break;
+    case 'runethief':
+      X.stalker(g, bx, by, 0.7, pass, seed + 19, face, legs);
+      break;
+    case 'scarab':
+      X.scarab(g, bx, by, 0.68, pass, seed + 21, face, legs);
+      break;
+    case 'wickleech':
+      if (opts.flap) opts.flap(0.28);
+      X.leech(g, bx, mothY, 0.56, pass, seed + 23, alt);
+      if (opts.flap) g.restore();
+      break;
+    case 'tether':
+      X.twin(g, bx, by, 0.66, pass, seed + 25, face, legs);
+      break;
     case 'mireking':
       L.grub(g, bx, by, 1.25, pass, 41, face, legs);
       // Gnarled bog-antler crown draped with swamp moss & glowing fen orbs.
@@ -1720,11 +1796,11 @@ const GAIT: Record<GaitKind, { stride: number; lift: number; rock: number; surge
   fly: { stride: 60, lift: 0, rock: 0.04, surge: 0 },
 };
 function gaitOf(f: Foe): GaitKind {
-  if (f.def.flying) return 'fly';
+  if (f.def.flying || f.flightT > 0) return 'fly';
   if (f.def.traits?.boss) return 'stomp';
   switch (f.kind) {
-    case 'skitter': case 'hound': return 'scuttle';
-    case 'shell': case 'sapper': case 'elite': case 'warden': case 'glasshide': case 'herald': return 'plod';
+    case 'skitter': case 'hound': case 'runethief': case 'scarab': return 'scuttle';
+    case 'shell': case 'sapper': case 'elite': case 'warden': case 'glasshide': case 'herald': case 'tether': return 'plod';
     case 'ram': return 'stomp';
     default: return 'crawl';
   }

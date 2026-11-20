@@ -15,6 +15,8 @@ export interface DamageTarget {
   vulnT: number;
   slowT: number;
   freezeT: number;
+  phase?: number;
+  drenchedT?: number;
   def: EnemyDef;
 }
 
@@ -53,6 +55,7 @@ export function deliverDamage(
   if (el !== 'env' && el !== 'hero') m *= 1 - ctx.resist[el];
   if (f.shielded) m *= 0.6;
   if (f.vulnT > 0) m *= 1.25;
+  if ((f.drenchedT ?? 0) > 0 && el === 'storm') m *= 1.4;
 
   const chilled = f.slowT > 0 || f.freezeT > 0;
   let chilledShatter = false;
@@ -64,7 +67,7 @@ export function deliverDamage(
     m *= 1.5;
     chilledShatter = true;
   }
-  if (f.def.traits?.plated && !chilled) m *= f.def.traits.plated;
+  if (f.def.traits?.plated && !chilled && !(f.def.traits.bossSkill === 'colossus' && (f.phase ?? 0) >= 1)) m *= f.def.traits.plated;
 
   let dmg = amount * m;
   const armor = f.def.traits?.armor;

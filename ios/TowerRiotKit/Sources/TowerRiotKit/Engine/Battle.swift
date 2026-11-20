@@ -74,6 +74,7 @@ public final class Battle {
     private var leakedThisWave = false
     private var ironGateCd = 0.0
     private var gateShockUsedWave = -1
+    private var eliteSpawnedWave = -1
     private var threatDirty = true
     private var threat: [ObjectIdentifier: Double] = [:]
     private var airThreat: [ObjectIdentifier: Double] = [:]
@@ -553,8 +554,9 @@ public final class Battle {
         let splitMul: Double = b.split != nil ? 1.1 : 1.0
         let highMul: Double = b.high ? 1.2 : 1.0
         let allMul: Double = 1.0 + mods.rangeAll + bw
+        let siphonMul: Double = b.siphoned ? 0.5 : 1.0
         // Same left-to-right order as the web engine.
-        return data.tower(.beacon).range[bi] * splitMul * br * allMul * highMul
+        return data.tower(.beacon).range[bi] * splitMul * br * allMul * highMul * siphonMul
     }
 
     /// Final numbers for a tower right now, after levels, splits, mastery, trees, beacons, night and Wren.
@@ -635,6 +637,8 @@ public final class Battle {
         }
         if h.sunriseT > 0 { rateMul *= 2; buffs.append("Sunrise 2x") }
         if stage.weather == "rain" && def.element == .fire && t.kind != .beacon { dmg *= 0.8; buffs.append("Rain -20%") }
+        if t.kind == .beacon && t.siphoned { range *= 0.5; buffs.append("Siphoned -50% rng") }
+        if t.bogT > 0 && t.kind != .beacon { rate *= 1.5; buffs.append("Bogged -33% spd") }
         return TowerStats(dmg: dmg, range: range, rate: rate / rateMul, crit: crit, jumps: jumps, splash: splash, shells: shells, hitsFlying: def.hitsFlying, buffs: buffs)
     }
 
@@ -858,10 +862,27 @@ public final class Battle {
         }
         let id = nextId()
         let p = road.path.point(at: d)
+        var hp = def.hp * scale
+        var affix: EliteAffix? = nil
+        if at == nil && (variant == .alt || !oaths.isEmpty) && !def.isBoss && def.traits?.fugitive != true
+            && eliteSpawnedWave != wave && (wave == 4 || wave == 7 || wave == totalWaves - 1) {
+            eliteSpawnedWave = wave
+            let pool: [EliteAffix] = [.swift, .volatile, .wardborn]
+            affix = pool[Int((rng.next() * Double(pool.count)).rounded(.down))]
+            hp *= 1.45
+        }
         let off = def.isBoss ? 0 : (rng.next() - 0.5) * road.def.w * 0.5
-        let hp = def.hp * scale
         let speed = def.speed * (0.94 + rng.next() * 0.12)
-        let f = Foe(id: id, kind: kind, def: def, road: road, d: d, at: p, off: off, hp: hp, speed: speed)
+        let f = Foe(id: id, kind: kind, def: def, road: road, d: d, at: p, off: off, hp: hp, speed: speed, affix: affix)
+        if def.traits?.link == true {
+            for cand in foes.reversed() {
+                if !cand.dead && cand.def.traits?.link == true && cand.linkPartnerId == nil && cand.road === road {
+                    cand.linkPartnerId = f.id
+                    f.linkPartnerId = cand.id
+                    break
+                }
+            }
+        }
         foes.append(f)
         if def.isBoss { events.append(.boss(kind)) }
         return f
@@ -1014,10 +1035,25 @@ public final class Battle {
         while i < foes.count { body(foes[i]); i += 1 }
     }
 
+    private func isFlying(_ f: Foe) -> Bool {
+        f.def.isFlying || f.flightT > 0
+    }
+
     private func updateFoes(_ dt: Double) {
         let wardens = foes.filter { ($0.def.traits?.shield ?? 0) != 0 && !$0.dead }
         let heralds = foes.filter { $0.def.traits?.aura != nil && !$0.dead && !$0.under }
         let beacons = towers.filter { $0.kind == .beacon && !$0.down }
+        for t in towers { t.siphoned = false }
+        for f in foes where !f.dead && !f.under && f.def.traits?.siphonBeacon == true {
+            var best: Tower? = nil
+            var bestD = 120.0
+            for b in beacons {
+                let d = ell(b.x - f.x, b.y - f.y)
+                if d < bestD { bestD = d; best = b }
+            }
+            if let b = best { f.siphonTowerId = b.id; b.siphoned = true }
+            else { f.siphonTowerId = nil }
+        }
         var blocking = 0
         let sight = heroSight()
         let hd = data.hero
@@ -1038,9 +1074,13 @@ public final class Battle {
             f.paneCd = max(0, f.paneCd - dt)
             f.sporePaneCd = max(0, f.sporePaneCd - dt)
             f.healInterruptT = max(0, f.healInterruptT - dt)
-            if let pn = tr?.panes, f.panes < pn.n {
+            f.drenchedT = max(0, f.drenchedT - dt)
+            f.eclipseT = max(0, f.eclipseT - dt)
+            f.flightT = max(0, f.flightT - dt)
+            let maxPanes = max(tr?.panes?.n ?? 0, f.affix == .wardborn ? 1 : 0)
+            if maxPanes > 0 && f.panes < maxPanes {
                 f.paneT -= dt
-                if f.paneT <= 0 { f.panes += 1; f.paneT = pn.regrow }
+                if f.paneT <= 0 { f.panes += 1; f.paneT = tr?.panes?.regrow ?? 4 }
             }
             if f.burnT > 0 {
                 f.burnT -= dt
@@ -1062,8 +1102,16 @@ public final class Battle {
             if let dv = tr?.dive {
                 f.underT -= dt
                 if f.underT <= 0 {
+                    let wasUnder = f.under
                     f.under.toggle(); f.underT = f.under ? dv.dur : dv.every
                     events.append(.dive(x: f.x, y: f.y, under: f.under))
+                    if wasUnder && !f.under && tr?.bossSkill == "tide" {
+                        f.drenchedT = 4
+                        if f.phase >= 1 {
+                            for t in towers where ell(t.x - f.x, t.y - f.y) < 110 { t.stunT = max(t.stunT, 1) }
+                            events.append(.stamp(x: f.x, y: f.y, r: 110))
+                        }
+                    }
                 }
                 if f.under { f.hp = min(f.max, f.hp + f.max * 0.01 * dt) }
             }
@@ -1118,6 +1166,51 @@ public final class Battle {
                     f.healTarget = nil
                 }
             }
+            // Active multi-phase boss signature skills.
+            if tr?.bossSkill == "mire" {
+                f.bossSkillT -= dt
+                if f.bossSkillT <= 0 {
+                    f.bossSkillT = 8
+                    var best: Tower? = nil
+                    var bestD = 220.0
+                    for t in towers where !t.down && t.kind != .beacon {
+                        let d = ell(t.x - f.x, t.y - f.y)
+                        if d < bestD { bestD = d; best = t }
+                    }
+                    if let b = best { b.bogT = max(b.bogT, 4); events.append(.bog(tower: b.id, x: b.x, y: b.y)) }
+                }
+                if f.phase >= 1 && f.burnT <= 0 && f.lanternBurnT <= 0 {
+                    f.hp = min(f.max, f.hp + f.max * 0.008 * dt)
+                }
+            } else if tr?.bossSkill == "colossus" {
+                if f.ventWarnT > 0 {
+                    f.ventWarnT -= dt
+                    if f.ventWarnT <= 0 {
+                        f.ventWarnT = 0
+                        events.append(.vent(x: f.x, y: f.y))
+                        if !hero.dead && ell(hero.x - f.x, hero.y - f.y) < 120 {
+                            hero.hp -= 20
+                            let dx = hero.x - f.x, dy = hero.y - f.y, dl = hypot2(dx, dy) == 0 ? 1 : hypot2(dx, dy)
+                            let kx = max(40.0, min(1240.0, hero.x + (dx / dl) * 55))
+                            let ky = max(60.0, min(680.0, hero.y + (dy / dl) * 55))
+                            hero.x = kx; hero.tx = kx; hero.anchorX = kx
+                            hero.y = ky; hero.ty = ky; hero.anchorY = ky
+                        }
+                    }
+                } else {
+                    f.bossSkillT -= dt
+                    if f.bossSkillT <= 0 { f.bossSkillT = 10; f.ventWarnT = 1.5 }
+                }
+            } else if tr?.bossSkill == "queen" {
+                f.bossSkillT -= dt
+                if f.bossSkillT <= 0 {
+                    f.bossSkillT = 12
+                    for o in foes where !o.dead && !o.under && !o.def.isBoss && ell(o.x - f.x, o.y - f.y) < 160 {
+                        o.eclipseT = max(o.eclipseT, 3.5)
+                    }
+                }
+            }
+
             if let ph = tr?.phases, f.phase < ph.count, f.hp / f.max < ph[f.phase] {
                 f.phase += 1
                 f.burstT = 4
@@ -1132,12 +1225,19 @@ public final class Battle {
                 if let brood = tr?.summon?.kind {
                     for k in 0..<6 { spawn(brood, at: (f.road, max(0, f.d - 30 - Double(k) * 16))) }
                 }
+                if tr?.bossSkill == "queen" && f.phase == 1 {
+                    spawn(.herald, at: (f.road, max(0, f.d - 24)))
+                    spawn(.herald, at: (f.road, max(0, f.d - 42)))
+                }
+                if tr?.bossSkill == "queen" && f.phase == 2 {
+                    f.flightT = 6
+                }
                 events.append(.phase(n: f.phase, x: f.x, y: f.y))
             }
 
             f.shielded = (tr?.shield ?? 0) == 0 && wardens.contains { ell($0.x - f.x, $0.y - f.y) < ($0.def.traits?.shield ?? 0) }
             f.warded = tr?.aura == nil && heralds.contains { ell($0.x - f.x, $0.y - f.y) < ($0.def.traits?.aura?.r ?? 0) }
-            if tr?.stealth == true {
+            if tr?.stealth == true || f.eclipseT > 0 {
                 let seen = (!hero.dead && hypot2(hero.x - f.x, hero.y - f.y) < sight)
                     || hero.sunriseT > 0
                     || inLighthouse(f.x, f.y)
@@ -1149,21 +1249,53 @@ public final class Battle {
             }
 
             // Pin + Leash Hold: stepping inside <= leash (90 px) of pinned anchor keeps Wren's block guard active.
+            let flyNow = isFlying(f)
             f.blocked = false
             let inLeash = hero.focus == nil && hypot2(hero.x - hero.anchorX, hero.y - hero.anchorY) <= hd.leash
-            if !hero.dead && (!hero.moving || inLeash) && !f.def.isFlying && !f.under && blocking < hd.blocks && hypot2(hero.x - f.x, hero.y - f.y) < 30 + f.def.size * 10 {
+            if !hero.dead && (!hero.moving || inLeash) && !flyNow && !f.under && blocking < hd.blocks && hypot2(hero.x - f.x, hero.y - f.y) < 30 + f.def.size * 10 {
                 f.blocked = true; blocking += 1
                 let armor = min(0.6, sumItems(\.armor))
                 hero.hp -= f.def.dps * scale * 0.6 * (1 - armor) * dt
             }
 
+            // Rune Stalker off-road detour toward active Rune (steals & hastes nearby Hollow allies!).
+            if tr?.runeHunter == true, let rn = rune, !f.under, !held, !f.blocked {
+                f.detouring = true
+                let rdx = rn.x - f.x, rdy = rn.y - f.y, rdist = hypot2(rdx, rdy)
+                let step = effectiveSpeed(f) * dt
+                if rdist <= max(24.0, step) {
+                    f.x = rn.x; f.y = rn.y
+                    rune = nil
+                    f.detouring = false
+                    events.append(.runeStolen(x: f.x, y: f.y))
+                    for o in foes where !o.dead && hypot2(o.x - f.x, o.y - f.y) < 140 { o.burstT = max(o.burstT, 4) }
+                } else if rdist > 0.01 {
+                    let mx = (rdx / rdist) * step, my = (rdy / rdist) * step
+                    if abs(mx) > 0.01 { f.dir = jsSign(mx) }
+                    f.x += mx; f.y += my
+                }
+                continue
+            } else if f.detouring {
+                let rp = f.road.path.point(at: f.d)
+                let rdx = rp.x - f.x, rdy = rp.y - f.y, rdist = hypot2(rdx, rdy)
+                let step = effectiveSpeed(f) * dt
+                if rdist <= max(14.0, step) {
+                    f.x = rp.x; f.y = rp.y; f.detouring = false
+                } else if rdist > 0.01 {
+                    let mx = (rdx / rdist) * step, my = (rdy / rdist) * step
+                    if abs(mx) > 0.01 { f.dir = jsSign(mx) }
+                    f.x += mx; f.y += my
+                    continue
+                }
+            }
+
             var nd = f.d + effectiveSpeed(f) * dt
-            if f.road.closed && !f.def.isFlying {
+            if f.road.closed && !flyNow {
                 for ca in f.road.closeAts {
                     if f.d <= ca - 30 { nd = min(nd, max(f.d, ca - 30)); break }
                 }
             }
-            if var bar = f.road.barrier, bar.hp > 0, !f.def.isFlying, f.d < bar.d {
+            if var bar = f.road.barrier, bar.hp > 0, !flyNow, f.d < bar.d {
                 nd = min(nd, bar.d - 26)
                 if tr?.sapper == true && nd >= bar.d - 30 {
                     bar.hp -= 40 * dt
@@ -1221,6 +1353,9 @@ public final class Battle {
             for b in f.road.belts where f.d >= b.from && f.d <= b.to { mul *= b.mult }
         }
         if f.under && tr?.burrow != nil { mul *= 1.4 }
+        if f.affix == .swift { mul *= 1.2 }
+        if tr?.bossSkill == "colossus" && f.phase >= 1 { mul *= 1.35 }
+        if f.siphonTowerId != nil { mul *= 0.55 }
         if f.kind == .grub {
             var pack = 0
             for o in foes where !o.dead && !o.under && o.kind == .grub && hypot2(o.x - f.x, o.y - f.y) < 70 { pack += 1 }
@@ -1231,6 +1366,10 @@ public final class Battle {
 
     private func leak(_ f: Foe) {
         f.dead = true
+        if f.def.traits?.fugitive == true || f.def.leak <= 0 {
+            events.append(.escape(x: f.x, y: f.y, kind: f.kind))
+            return
+        }
         if (mods.ironGate || mods.gateShock) && !leakedThisWave && ironGateCd <= 0 && !f.def.isBoss {
             leakedThisWave = true
             ironGateCd = 15
@@ -1261,8 +1400,15 @@ public final class Battle {
     }
 
     @discardableResult
-    func damage(_ f: Foe, _ amount: Double, _ src: DamageSource, byHero: Bool, quiet: Bool = false, crit: Bool = false, sourceTower: Tower? = nil, bucket: AttributionBucket? = nil, armorPierceExtra: Double = 0, shatterSkill: Bool = false) -> Double {
+    func damage(_ f: Foe, _ amount: Double, _ src: DamageSource, byHero: Bool, quiet: Bool = false, crit: Bool = false, sourceTower: Tower? = nil, bucket: AttributionBucket? = nil, armorPierceExtra: Double = 0, shatterSkill: Bool = false, fromLink: Bool = false) -> Double {
         if !reachable(f, byHero: true) || amount <= 0 { return 0 }
+        var amount = amount
+        if !fromLink, let pid = f.linkPartnerId,
+           let partner = foes.first(where: { $0.id == pid && !$0.dead && !$0.under }),
+           hypot2(partner.x - f.x, partner.y - f.y) <= 160 {
+            amount *= 0.5
+            damage(partner, amount, src, byHero: byHero, quiet: quiet, crit: crit, sourceTower: sourceTower, bucket: bucket, armorPierceExtra: armorPierceExtra, shatterSkill: shatterSkill, fromLink: true)
+        }
         if f.panes > 0 {
             let tick = bucket == .status
             if tick && src != .element(.nature) { return 0 }
@@ -1274,11 +1420,10 @@ public final class Battle {
                 f.paneCd = 0.02
             }
             f.panes -= 1
-            f.paneT = f.def.traits?.panes?.regrow ?? 2.5
+            f.paneT = f.def.traits?.panes?.regrow ?? (f.affix == .wardborn ? 4 : 2.5)
             events.append(.pane(x: f.x, y: f.y - f.def.bar * 0.6, left: f.panes))
             return 0
         }
-        var amount = amount
         if f.warded, case .element(let el) = src, el != .hero, el == heraldEl() { amount *= 1 - heraldCut }
         // Warden Directional Front Aegis: absorbs 40% from towers firing ahead of its march; flanks, behind, Wren & Storm bypass.
         if f.kind == .warden, !byHero, let st = sourceTower, case .element(let el) = src, el != .storm, el != .hero, bucket != .status {
@@ -1297,10 +1442,11 @@ public final class Battle {
         }
         if f.shielded { m *= 0.6 }
         if f.vulnT > 0 { m *= 1.25 }
+        if f.drenchedT > 0 && dmgEl == .storm { m *= 1.4 }
         let chilled = f.slowT > 0 || f.freezeT > 0
         if chilled && dmgEl == .fire && mods.shatter { m *= 1.5 }
         if chilled && shatterSkill && mods.burnShatter { m *= 1.5 }
-        if let plated = f.def.traits?.plated, plated != 0, !chilled { m *= plated }
+        if let plated = f.def.traits?.plated, plated != 0, !chilled, !(f.def.traits?.bossSkill == "colossus" && f.phase >= 1) { m *= plated }
         var dmg = amount * m
         if let armor = f.def.traits?.armor, armor != 0, !quiet {
             let pierce = min(1.0, mods.armorPierce + armorPierceExtra)
@@ -1363,6 +1509,14 @@ public final class Battle {
                 resist[el] = max(0, topVal - 0.2)
                 events.append(.heraldCleanse(el: el, x: f.x, y: f.y))
             }
+        }
+        if f.def.traits?.runeHunter == true && byHero {
+            gold += 35
+            if var rn = rune { rn.ttl = data.runeLifetime; rune = rn }
+        }
+        if f.affix == .volatile {
+            events.append(.boom(x: f.x, y: f.y, r: 70))
+            for t in towers where ell(t.x - f.x, t.y - f.y) < 70 { t.stunT = max(t.stunT, 1.2) }
         }
         if hero.focus == f.id { hero.focus = nil }
     }
@@ -1499,7 +1653,7 @@ public final class Battle {
     // MARK: towers
 
     private func targetable(_ f: Foe, from t: Tower, range: Double, flying: Bool) -> Bool {
-        if !reachable(f) || (f.def.isFlying && !flying) { return false }
+        if !reachable(f) || (isFlying(f) && !flying) { return false }
         return ell(f.x - t.x, f.y - t.y) < range
     }
 
@@ -1521,6 +1675,7 @@ public final class Battle {
     private func updateTowers(_ dt: Double) {
         for t in towers {
             t.fired += dt
+            t.bogT = max(0, t.bogT - dt)
             if t.stunT > 0 { t.stunT = max(0, t.stunT - dt); continue }
             if t.kind == .beacon || t.down { continue }
             let s = stats(t)

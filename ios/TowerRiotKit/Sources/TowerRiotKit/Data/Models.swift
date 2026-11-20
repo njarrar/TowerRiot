@@ -26,6 +26,7 @@ public struct RubbleDef: Codable, Equatable, Sendable {
 public enum EnemyKind: String, Codable, CaseIterable, Sendable {
     case grub, skitter, shell, moth, warden, mender, shade, splitter, sapper, burrower, ashmoth, elite
     case husk, hound, glasshide, veilmoth, ram, herald
+    case runethief, scarab, wickleech, tether
     case mireking, tidewyrm, colossus, queen
 }
 
@@ -93,6 +94,11 @@ public struct Traits: Codable, Sendable {
     public let aura: Aura?
     public let phases: [Double]?
     public let boss: Bool?
+    public let runeHunter: Bool?
+    public let fugitive: Bool?
+    public let siphonBeacon: Bool?
+    public let link: Bool?
+    public let bossSkill: String?
 }
 
 public struct EnemyDef: Codable, Sendable {

@@ -603,6 +603,13 @@ final class BattleScene: SKScene {
             case let .heraldCleanse(_, hx, hy):
                 addFx(.ring, hx, hy, r: 0, max: 150, life: 0.85, color: UIColor(120, 245, 200))
                 float(hx, hy - 54, "Cleanse -20%", UIColor(hex: 0x7cf0c4), big: true)
+            case let .runeStolen(rx, ry):
+                addFx(.ring, rx, ry, r: 0, max: 140, life: 0.9, color: UIColor(255, 195, 70))
+                float(rx, ry - 50, "Rune stolen!", UIColor(hex: 0xffb040), big: true)
+            case let .escape(ex, ey, _):
+                float(ex, ey - 44, "Escaped!", UIColor(hex: 0xe8c468), big: false)
+            case let .bog(_, bx, by):
+                addFx(.ring, bx, by, r: 0, max: 52, life: 0.7, color: UIColor(115, 175, 75))
             default: break
             }
         }
@@ -836,8 +843,8 @@ final class BattleScene: SKScene {
         if f.def.isFlying { return .fly }
         if f.def.isBoss { return .stomp }
         switch f.kind {
-        case .skitter, .hound: return .scuttle
-        case .shell, .sapper, .elite, .warden, .glasshide, .herald: return .plod
+        case .skitter, .hound, .runethief, .scarab: return .scuttle
+        case .shell, .sapper, .elite, .warden, .glasshide, .herald, .tether: return .plod
         case .ram: return .stomp
         default: return .crawl
         }

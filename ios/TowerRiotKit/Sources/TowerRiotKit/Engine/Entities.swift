@@ -25,6 +25,8 @@ public final class RoadRt {
     }
 }
 
+public enum EliteAffix: String, Sendable { case swift, volatile, wardborn }
+
 public final class Foe {
     public let id: Int
     public let kind: EnemyKind
@@ -76,14 +78,39 @@ public final class Foe {
     var healInterruptT = 0.0
     /// True while a Sapper still carries an unspent powder keg (detonates on death).
     public internal(set) var kegArmed = false
+    /// Crowned Elite affix on Variant B / active Oath runs.
+    public internal(set) var affix: EliteAffix? = nil
+    /// Partner foe id for Tether Twins (50/50 damage split within 160 px).
+    public internal(set) var linkPartnerId: Int? = nil
+    /// Beacon tower id currently siphoned by this Wick Leech.
+    public internal(set) var siphonTowerId: Int? = nil
+    /// Tidewyrm post-dive vulnerability window (+40% Storm damage).
+    public internal(set) var drenchedT = 0.0
+    /// Hollow Queen Veil Eclipse temporary stealth shroud.
+    public internal(set) var eclipseT = 0.0
+    /// Hollow Queen Phase 3 temporary Spectral Flight timer.
+    public internal(set) var flightT = 0.0
+    /// Cooldown for active multi-phase boss signature skills.
+    var bossSkillT = 0.0
+    /// 1.5 s telegraph countdown before Brass Colossus Steam Vent.
+    public internal(set) var ventWarnT = 0.0
+    /// True while a Rune Stalker is detouring off-road toward/back from a Rune.
+    var detouring = false
 
-    init(id: Int, kind: EnemyKind, def: EnemyDef, road: RoadRt, d: Double, at p: Path.Point, off: Double, hp: Double, speed: Double) {
+    init(id: Int, kind: EnemyKind, def: EnemyDef, road: RoadRt, d: Double, at p: Path.Point, off: Double, hp: Double, speed: Double, affix: EliteAffix? = nil) {
         self.id = id; self.kind = kind; self.def = def; self.road = road; self.d = d
         x = p.x; y = p.y; dir = p.dir; self.off = off; self.hp = hp; max = hp; self.speed = speed
+        self.affix = affix
         underT = def.traits?.burrow?[1] ?? def.traits?.dive?.every ?? 0
         abilityT = def.traits?.summon?.every ?? def.traits?.lunge?.every ?? def.traits?.stamp?.every ?? 2
-        panes = def.traits?.panes?.n ?? 0
+        panes = Swift.max(def.traits?.panes?.n ?? 0, affix == .wardborn ? 1 : 0)
         kegArmed = def.traits?.sapper ?? false
+        switch def.traits?.bossSkill {
+        case "mire": bossSkillT = 8
+        case "colossus": bossSkillT = 10
+        case "queen": bossSkillT = 12
+        default: bossSkillT = 0
+        }
     }
 }
 
@@ -106,8 +133,12 @@ public final class Tower {
     /// Seconds since its last attack, for the renderer.
     public internal(set) var fired = 9.0
     var shotCount = 0
-    /// Seconds left stunned by a Hollow Ram's stamp.
+    /// Seconds left stunned by a Hollow Ram's stamp or Tide-Spout.
     public internal(set) var stunT = 0.0
+    /// Seconds left bogged down by Mire King's Bog Glob (-33% fire rate).
+    public internal(set) var bogT = 0.0
+    /// True while a Wick Leech is siphoning this Beacon (halves radius).
+    public internal(set) var siphoned = false
     public internal(set) var dmgDealt = 0.0
     public internal(set) var kills = 0
 
@@ -257,6 +288,9 @@ public enum BattleEvent {
     case gateShock(x: Double, y: Double)
     case ironGate(x: Double, y: Double)
     case heraldCleanse(el: Element, x: Double, y: Double)
+    case runeStolen(x: Double, y: Double)
+    case escape(x: Double, y: Double, kind: EnemyKind)
+    case bog(tower: Int, x: Double, y: Double)
     case stamp(x: Double, y: Double, r: Double)
     case pane(x: Double, y: Double, left: Int)
     case lunge(x: Double, y: Double)

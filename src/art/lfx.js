@@ -903,7 +903,77 @@ function dreadnought(ctx,x,y,s,pass,seed,face,frost,ph){seed=seed||61;face=face|
  }
  ctx.restore();}
 
-const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField,acolyte,wraith,stiltpod,obelisk,serpent,dreadnought};
+// Stalker (Rune Stalker): lean jackal-like Hollow sprinter with hooked rune-thief talons & golden rune aura.
+function stalker(ctx,x,y,s,pass,seed,face,ph){seed=seed||81;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,26,6,.6);
+  ctx.strokeStyle='#191522';ctx.lineWidth=2.4;ctx.lineCap='round';
+  [-14,-4,8,16].forEach((lx,i)=>{const sw=walk?Math.sin(ph*2+i*1.6)*6:0;ctx.beginPath();ctx.moveTo(lx,-14);ctx.lineTo(lx+sw,0);ctx.stroke();});
+  const bg=ctx.createLinearGradient(-22,-26,22,-8);bg.addColorStop(0,'#2c243a');bg.addColorStop(.6,'#44365c');bg.addColorStop(1,'#181322');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.moveTo(-22,-14);ctx.quadraticCurveTo(-8,-26,12,-24);ctx.lineTo(24,-18);ctx.lineTo(18,-10);ctx.quadraticCurveTo(-4,-8,-22,-14);ctx.closePath();ctx.fill();
+  // swept ears & bright amber thief crest
+  ctx.fillStyle='#e8b84a';ctx.beginPath();ctx.moveTo(10,-24);ctx.lineTo(2,-35);ctx.lineTo(14,-26);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#ffd466';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-14,-19);ctx.quadraticCurveTo(2,-23,18,-16);ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,16,-18,16,'#ffd466',.45);ctx.restore();
+ }
+ ctx.restore();}
+
+// Scarab (Gilded Scarab): gleaming faceted gold-and-jade treasure beetle with fluttering wingcases.
+function scarab(ctx,x,y,s,pass,seed,face,ph){seed=seed||82;face=face||1;const walk=ph!=null;ph=ph||0;const jit=walk?Math.sin(ph*3)*1.5:0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,24,6,.55);
+  ctx.strokeStyle='#4a3410';ctx.lineWidth=1.8;
+  [-12,-2,8].forEach((lx,i)=>{const sw=walk?Math.sin(ph*2.5+i*1.8)*4:0;ctx.beginPath();ctx.moveTo(lx,-8);ctx.lineTo(lx+sw,0);ctx.stroke();});
+  // burnished golden carapace
+  const gg=ctx.createRadialGradient(4,-20+jit,3,0,-14+jit,24);gg.addColorStop(0,'#fff0a6');gg.addColorStop(.45,'#e2a832');gg.addColorStop(1,'#6a460c');
+  ctx.fillStyle=gg;ctx.beginPath();ctx.ellipse(0,-14+jit,21,13,0,0,TAU);ctx.fill();
+  ctx.strokeStyle='#3a2406';ctx.lineWidth=1.5;ctx.stroke();
+  // emerald gemstone inlay + pincer crown
+  ctx.fillStyle='#5cf0be';ctx.beginPath();ctx.moveTo(-6,-17+jit);ctx.lineTo(2,-22+jit);ctx.lineTo(10,-17+jit);ctx.lineTo(2,-12+jit);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#f5c856';ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(19,-15+jit);ctx.quadraticCurveTo(28,-20+jit,30,-13+jit);ctx.moveTo(19,-11+jit);ctx.quadraticCurveTo(27,-6+jit,29,-11+jit);ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,2,-16+jit,24,'#ffd860',.55);ctx.restore();
+ }
+ ctx.restore();}
+
+// Leech (Wick Leech): floating translucent lamprey-moth with hanging violet siphon tendrils.
+function leech(ctx,x,y,s,pass,seed,alt){seed=seed||83;alt=alt==null?58:alt;ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+ if(pass==='base'){
+  shadow(ctx,0,alt,32,6,.45);
+  // translucent dark-violet umbrella fins
+  for(const sd of[-1,1]){
+   const fg=ctx.createLinearGradient(0,-18,sd*46,10);fg.addColorStop(0,'#3b224a');fg.addColorStop(.6,'#241432');fg.addColorStop(1,'rgba(24,14,34,.2)');
+   ctx.fillStyle=fg;ctx.beginPath();ctx.moveTo(0,-10);ctx.bezierCurveTo(sd*18,-26,sd*42,-20,sd*48,-4);ctx.bezierCurveTo(sd*36,10,sd*16,8,0,4);ctx.closePath();ctx.fill();
+   ctx.strokeStyle='rgba(205,140,255,.45)';ctx.lineWidth=1;ctx.stroke();
+  }
+  // lamprey body + hanging siphon proboscis
+  ctx.fillStyle='#190f24';ctx.beginPath();ctx.ellipse(0,-4,8,12,0,0,TAU);ctx.fill();
+  ctx.strokeStyle='#b878ff';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(0,8);ctx.quadraticCurveTo(-4,18,0,28);ctx.stroke();
+  ctx.fillStyle='#ff9a42';ctx.beginPath();ctx.arc(0,-4,3.5,0,TAU);ctx.fill();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,0,-4,18,'#c878ff',.5);glow(ctx,0,22,12,'#ff9a42',.4);ctx.restore();
+ }
+ ctx.restore();}
+
+// Twin (Tether Twin): angular obsidian crystal-backed walker with glowing violet link pylon on its spine.
+function twin(ctx,x,y,s,pass,seed,face,ph){seed=seed||84;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,28,7,.7);
+  ctx.strokeStyle='#161522';ctx.lineWidth=2.6;ctx.lineCap='round';
+  [-12,0,12].forEach((lx,i)=>{const sw=walk?Math.sin(ph*2+i*2)*5:0;ctx.beginPath();ctx.moveTo(lx,-14);ctx.lineTo(lx+sw,0);ctx.stroke();});
+  const bg=ctx.createLinearGradient(-18,-30,18,-8);bg.addColorStop(0,'#3e3a54');bg.addColorStop(.5,'#232032');bg.addColorStop(1,'#111018');
+  ctx.fillStyle=bg;poly(ctx,[[-20,-12],[-14,-28],[12,-28],[22,-14],[12,-8],[-14,-8]]);ctx.fill();
+  ctx.strokeStyle='rgba(190,165,255,.4)';ctx.lineWidth=1.2;ctx.stroke();
+  // twin crystalline link spire rising from back
+  ctx.fillStyle='#c494ff';poly(ctx,[[-4,-28],[0,-46],[5,-28]]);ctx.fill();
+  ctx.strokeStyle='#f2e6ff';ctx.lineWidth=1;ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';glow(ctx,0,-40,18,'#c494ff',.58);ctx.restore();
+ }
+ ctx.restore();}
+
+const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField,acolyte,wraith,stiltpod,obelisk,serpent,dreadnought,stalker,scarab,leech,twin};
 
 return{watchTower,frostBell,stormPylon,grub,moth,shellback,wren,gate,block,ruinWall,deadTree,leafyTree,standingStone,plot,masonry,planks,shadow,glow,darkness,vignette,fog,makeNoise,rng,mix,ss,clamp,catmull,strokePts,offset,poly,bolt,shade,hex,rgb,groundTile,TAU,EXTRA:typeof EXTRA!=="undefined"?EXTRA:null};
 })();

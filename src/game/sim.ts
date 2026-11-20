@@ -138,6 +138,24 @@ export interface Foe {
   healInterruptT: number;
   /** True while a Sapper still carries an unspent powder keg (detonates on death). */
   kegArmed: boolean;
+  /** Crowned Elite affix on Variant B / active Oath runs. */
+  affix: 'swift' | 'volatile' | 'wardborn' | null;
+  /** Partner foe id for Tether Twins (50/50 damage split within 160 px). */
+  linkPartnerId: number | null;
+  /** Beacon tower id currently siphoned by this Wick Leech. */
+  siphonTowerId: number | null;
+  /** Tidewyrm post-dive vulnerability window (+40% Storm damage). */
+  drenchedT: number;
+  /** Hollow Queen Veil Eclipse temporary stealth shroud. */
+  eclipseT: number;
+  /** Hollow Queen Phase 3 temporary Spectral Flight timer. */
+  flightT: number;
+  /** Cooldown for active multi-phase boss signature skills. */
+  bossSkillT: number;
+  /** 1.5 s telegraph countdown before Brass Colossus Steam Vent. */
+  ventWarnT: number;
+  /** True while a Rune Stalker is detouring off-road toward/back from a Rune. */
+  detouring: boolean;
 }
 
 export interface Tower {
@@ -160,8 +178,12 @@ export interface Tower {
   fired: number;
   /** Shot counter for Repeater Lv 5 every-4th twin bolt mastery. */
   shotCount: number;
-  /** Seconds left stunned by a Hollow Ram's stamp. */
+  /** Seconds left stunned by a Hollow Ram's stamp or Tide-Spout. */
   stunT: number;
+  /** Seconds left bogged down by Mire King's Bog Glob (-33% fire rate). */
+  bogT: number;
+  /** True while a Wick Leech is siphoning this Beacon (halves radius). */
+  siphoned: boolean;
   /** Telemetry exposed in Tower Inspector & Result breakdown. */
   dmgDealt: number;
   kills: number;
@@ -249,6 +271,9 @@ export type BattleEvent =
   | { t: 'gateShock'; x: number; y: number }
   | { t: 'ironGate'; x: number; y: number }
   | { t: 'heraldCleanse'; el: Element; x: number; y: number }
+  | { t: 'runeStolen'; x: number; y: number }
+  | { t: 'escape'; x: number; y: number; kind: EnemyKind }
+  | { t: 'bog'; tower: number; x: number; y: number }
   | { t: 'stamp'; x: number; y: number; r: number }
   | { t: 'pane'; x: number; y: number; left: number }
   | { t: 'lunge'; x: number; y: number }
@@ -319,6 +344,7 @@ export class Battle {
   private leakedThisWave = false;
   private ironGateCd = 0;
   private gateShockUsedWave = -1;
+  private eliteSpawnedWave = -1;
   private threatDirty = true;
   private threat = new Map<RoadRt, number>();
   private airThreat = new Map<RoadRt, number>();
@@ -551,7 +577,7 @@ export class Battle {
     this.gold -= cost;
     const t: Tower = {
       id: this.ids++, kind, plot, x: p.x, y: p.y, lv: 1, split: null, spent: cost, cd: 0.4,
-      mode: 'first', round: null, aim: 0, high: p.high, down: false, fired: 9, shotCount: 0, stunT: 0, dmgDealt: 0, kills: 0,
+      mode: 'first', round: null, aim: 0, high: p.high, down: false, fired: 9, shotCount: 0, stunT: 0, bogT: 0, siphoned: false, dmgDealt: 0, kills: 0,
     };
     t.down = !!p.gear && !this.gearUp(p.gear);
     this.towers.push(t);
@@ -806,12 +832,14 @@ export class Battle {
         x: t.x,
         y: t.y,
         down: t.down,
+        siphoned: t.siphoned,
+        bogT: t.bogT,
       },
       {
         mods: this.mods,
         beacons: this.towers.filter(b => b.kind === 'beacon').map(b => ({
           kind: b.kind, lv: b.lv, split: b.split, high: b.high,
-          nearWater: this.plots[b.plot]?.nearWater ?? false, x: b.x, y: b.y, down: b.down,
+          nearWater: this.plots[b.plot]?.nearWater ?? false, x: b.x, y: b.y, down: b.down, siphoned: b.siphoned,
         })),
         hero: {
           dead: this.hero.dead, x: this.hero.x, y: this.hero.y,
@@ -1054,17 +1082,39 @@ export class Battle {
       road = this.pickRoad(options, def);
     }
     const isBoss = !!def.traits?.boss;
-    const hp = def.hp * this.scale;
+    const bs = def.traits?.bossSkill;
+    let hp = def.hp * this.scale;
     const p = pointAt(road.path, d);
+    let affix: Foe['affix'] = null;
+    if (!at && (this.variant === 'alt' || this.oaths.length > 0) && !isBoss && !def.traits?.fugitive
+        && this.eliteSpawnedWave !== this.wave && (this.wave === 4 || this.wave === 7 || this.wave === this.totalWaves - 1)) {
+      this.eliteSpawnedWave = this.wave;
+      const pool: ('swift' | 'volatile' | 'wardborn')[] = ['swift', 'volatile', 'wardborn'];
+      affix = pool[Math.floor(this.rng() * pool.length)];
+      hp *= 1.45;
+    }
     const f: Foe = {
       id: this.ids++, kind, def, road, d, x: p.x, y: p.y, dir: p.dir, off: isBoss ? 0 : (this.rng() - 0.5) * road.def.w * 0.5,
       hp, max: hp, speed: def.speed * (0.94 + this.rng() * 0.12), slow: 0, slowT: 0, rootT: 0, staggerT: 0, freezeT: 0, freezeImmune: 0,
       burnT: 0, burnDps: 0, lanternBurnT: 0, lanternBurnDps: 0, vulnT: 0, blocked: false, hidden: false, shielded: false, under: false,
       underT: def.traits?.burrow ? def.traits.burrow[1] : def.traits?.dive?.every ?? 0,
       abilityT: def.traits?.summon?.every ?? def.traits?.lunge?.every ?? def.traits?.stamp?.every ?? 2, phase: 0, burstT: 0, hitT: 0, dead: false, warpedMask: 0,
-      lungeT: 0, panes: def.traits?.panes?.n ?? 0, paneT: 0, paneCd: 0, sporePaneCd: 0, warded: false,
+      lungeT: 0, panes: Math.max(def.traits?.panes?.n ?? 0, affix === 'wardborn' ? 1 : 0), paneT: 0, paneCd: 0, sporePaneCd: 0, warded: false,
       healTarget: null, healInterruptT: 0, kegArmed: !!def.traits?.sapper,
+      affix, linkPartnerId: null, siphonTowerId: null, drenchedT: 0, eclipseT: 0, flightT: 0,
+      bossSkillT: bs === 'mire' ? 8 : bs === 'colossus' ? 10 : bs === 'queen' ? 12 : 0,
+      ventWarnT: 0, detouring: false,
     };
+    if (def.traits?.link) {
+      for (let i = this.foes.length - 1; i >= 0; i--) {
+        const cand = this.foes[i];
+        if (!cand.dead && cand.def.traits?.link && cand.linkPartnerId === null && cand.road === road) {
+          cand.linkPartnerId = f.id;
+          f.linkPartnerId = cand.id;
+          break;
+        }
+      }
+    }
     this.foes.push(f);
     if (isBoss) this.events.push({ t: 'boss', kind });
     return f;
@@ -1200,11 +1250,26 @@ export class Battle {
     return !!L && ell(L[0] - x, L[1] - y) < LIGHTHOUSE_RANGE;
   }
 
+  private isFlying(f: Foe): boolean {
+    return !!f.def.flying || f.flightT > 0;
+  }
+
   private updateFoes(dt: number) {
     const h = this.hero;
     const wardens = this.foes.filter(f => f.def.traits?.shield && !f.dead);
     const heralds = this.foes.filter(f => f.def.traits?.aura && !f.dead && !f.under);
     const beacons = this.towers.filter(t => t.kind === 'beacon' && !t.down);
+    for (const t of this.towers) t.siphoned = false;
+    for (const f of this.foes) {
+      if (f.dead || f.under || !f.def.traits?.siphonBeacon) continue;
+      let best: Tower | undefined, bestD = 120;
+      for (const b of beacons) {
+        const d = ell(b.x - f.x, b.y - f.y);
+        if (d < bestD) { bestD = d; best = b; }
+      }
+      if (best) { f.siphonTowerId = best.id; best.siphoned = true; }
+      else f.siphonTowerId = null;
+    }
     let blocking = 0;
     const sight = this.heroSight();
 
@@ -1222,9 +1287,13 @@ export class Battle {
       f.paneCd = Math.max(0, f.paneCd - dt);
       f.sporePaneCd = Math.max(0, f.sporePaneCd - dt);
       f.healInterruptT = Math.max(0, f.healInterruptT - dt);
-      if (tr?.panes && f.panes < tr.panes.n) {
+      f.drenchedT = Math.max(0, f.drenchedT - dt);
+      f.eclipseT = Math.max(0, f.eclipseT - dt);
+      f.flightT = Math.max(0, f.flightT - dt);
+      const maxPanes = Math.max(tr?.panes?.n ?? 0, f.affix === 'wardborn' ? 1 : 0);
+      if (maxPanes > 0 && f.panes < maxPanes) {
         f.paneT -= dt;
-        if (f.paneT <= 0) { f.panes++; f.paneT = tr.panes.regrow; }
+        if (f.paneT <= 0) { f.panes++; f.paneT = tr?.panes?.regrow ?? 4; }
       }
       if (f.burnT > 0) {
         f.burnT -= dt;
@@ -1246,8 +1315,16 @@ export class Battle {
       if (tr?.dive) {
         f.underT -= dt;
         if (f.underT <= 0) {
+          const wasUnder = f.under;
           f.under = !f.under; f.underT = f.under ? tr.dive.dur : tr.dive.every;
           this.events.push({ t: 'dive', x: f.x, y: f.y, under: f.under });
+          if (wasUnder && !f.under && tr.bossSkill === 'tide') {
+            f.drenchedT = 4;
+            if (f.phase >= 1) {
+              for (const t of this.towers) if (ell(t.x - f.x, t.y - f.y) < 110) t.stunT = Math.max(t.stunT, 1);
+              this.events.push({ t: 'stamp', x: f.x, y: f.y, r: 110 });
+            }
+          }
         }
         if (f.under) f.hp = Math.min(f.max, f.hp + f.max * 0.01 * dt);
       }
@@ -1302,6 +1379,52 @@ export class Battle {
         }
       }
 
+      // Active multi-phase boss signature skills.
+      if (tr?.bossSkill === 'mire') {
+        f.bossSkillT -= dt;
+        if (f.bossSkillT <= 0) {
+          f.bossSkillT = 8;
+          let best: Tower | undefined, bestD = 220;
+          for (const t of this.towers) {
+            if (t.down || t.kind === 'beacon') continue;
+            const d = ell(t.x - f.x, t.y - f.y);
+            if (d < bestD) { bestD = d; best = t; }
+          }
+          if (best) { best.bogT = Math.max(best.bogT, 4); this.events.push({ t: 'bog', tower: best.id, x: best.x, y: best.y }); }
+        }
+        if (f.phase >= 1 && f.burnT <= 0 && f.lanternBurnT <= 0) {
+          f.hp = Math.min(f.max, f.hp + f.max * 0.008 * dt);
+        }
+      } else if (tr?.bossSkill === 'colossus') {
+        if (f.ventWarnT > 0) {
+          f.ventWarnT -= dt;
+          if (f.ventWarnT <= 0) {
+            f.ventWarnT = 0;
+            this.events.push({ t: 'vent', x: f.x, y: f.y });
+            if (!h.dead && ell(h.x - f.x, h.y - f.y) < 120) {
+              h.hp -= 20;
+              const dx = h.x - f.x, dy = h.y - f.y, dl = Math.hypot(dx, dy) || 1;
+              const kx = Math.max(40, Math.min(1240, h.x + (dx / dl) * 55));
+              const ky = Math.max(60, Math.min(680, h.y + (dy / dl) * 55));
+              h.x = h.tx = h.anchorX = kx; h.y = h.ty = h.anchorY = ky;
+            }
+          }
+        } else {
+          f.bossSkillT -= dt;
+          if (f.bossSkillT <= 0) { f.bossSkillT = 10; f.ventWarnT = 1.5; }
+        }
+      } else if (tr?.bossSkill === 'queen') {
+        f.bossSkillT -= dt;
+        if (f.bossSkillT <= 0) {
+          f.bossSkillT = 12;
+          for (const o of this.foes) {
+            if (!o.dead && !o.under && !o.def.traits?.boss && ell(o.x - f.x, o.y - f.y) < 160) {
+              o.eclipseT = Math.max(o.eclipseT, 3.5);
+            }
+          }
+        }
+      }
+
       // Boss phase breaks (now actually awaken openOnPhase roads + atPhase terraforms!).
       if (tr?.phases && f.phase < tr.phases.length && f.hp / f.max < tr.phases[f.phase]) {
         f.phase++;
@@ -1318,40 +1441,79 @@ export class Battle {
         });
         const brood = tr.summon?.kind;
         if (brood) for (let i = 0; i < 6; i++) this.spawn(brood, undefined, { road: f.road, d: Math.max(0, f.d - 30 - i * 16) });
+        if (tr.bossSkill === 'queen' && f.phase === 1) {
+          this.spawn('herald', undefined, { road: f.road, d: Math.max(0, f.d - 24) });
+          this.spawn('herald', undefined, { road: f.road, d: Math.max(0, f.d - 42) });
+        }
+        if (tr.bossSkill === 'queen' && f.phase === 2) {
+          f.flightT = 6;
+        }
         this.events.push({ t: 'phase', n: f.phase, x: f.x, y: f.y });
       }
 
       f.shielded = !tr?.shield && wardens.some(w => ell(w.x - f.x, w.y - f.y) < (w.def.traits!.shield ?? 0));
       f.warded = !tr?.aura && heralds.some(w => ell(w.x - f.x, w.y - f.y) < w.def.traits!.aura!.r);
-      f.hidden = !!tr?.stealth && !(
+      f.hidden = (!!tr?.stealth || f.eclipseT > 0) && !(
         (!h.dead && Math.hypot(h.x - f.x, h.y - f.y) < sight) ||
         h.sunriseT > 0 ||
         this.inLighthouse(f.x, f.y) ||
         (!tr?.veil && this.towers.some(t => !t.down && t.stunT <= 0 && ell(t.x - f.x, t.y - f.y) < TOWER_SIGHT)) ||
         beacons.some(b => b.stunT <= 0 && ell(b.x - f.x, b.y - f.y) < previewBeaconRange({
           kind: 'beacon', lv: b.lv, split: b.split, high: b.high,
-          nearWater: this.plots[b.plot]?.nearWater ?? false, x: b.x, y: b.y, down: b.down,
+          nearWater: this.plots[b.plot]?.nearWater ?? false, x: b.x, y: b.y, down: b.down, siphoned: b.siphoned,
         }, this.mods))
       );
 
       // Pin + Leash Hold: stepping inside <= HERO.leash (90 px) of pinned anchor keeps Wren's block guard active.
+      const flyNow = this.isFlying(f);
       f.blocked = false;
       const inLeash = h.focus === null && Math.hypot(h.x - h.anchorX, h.y - h.anchorY) <= HERO.leash;
-      if (!h.dead && (!h.moving || inLeash) && !f.def.flying && !f.under && blocking < HERO.blocks && Math.hypot(h.x - f.x, h.y - f.y) < 30 + f.def.size * 10) {
+      if (!h.dead && (!h.moving || inLeash) && !flyNow && !f.under && blocking < HERO.blocks && Math.hypot(h.x - f.x, h.y - f.y) < 30 + f.def.size * 10) {
         f.blocked = true; blocking++;
         const armor = Math.min(0.6, sumItems(h.items, 'armor'));
         h.hp -= f.def.dps * this.scale * 0.6 * (1 - armor) * dt;
       }
 
+      // Rune Stalker off-road detour toward active Rune (steals & hastes nearby Hollow allies!).
+      if (tr?.runeHunter && this.rune && !f.under && !held && !f.blocked) {
+        f.detouring = true;
+        const rdx = this.rune.x - f.x, rdy = this.rune.y - f.y, rdist = Math.hypot(rdx, rdy);
+        const step = this.effectiveSpeed(f) * dt;
+        if (rdist <= Math.max(24, step)) {
+          f.x = this.rune.x; f.y = this.rune.y;
+          this.rune = null;
+          f.detouring = false;
+          this.events.push({ t: 'runeStolen', x: f.x, y: f.y });
+          for (const o of this.foes) if (!o.dead && Math.hypot(o.x - f.x, o.y - f.y) < 140) o.burstT = Math.max(o.burstT, 4);
+        } else if (rdist > 0.01) {
+          const mx = (rdx / rdist) * step, my = (rdy / rdist) * step;
+          if (Math.abs(mx) > 0.01) f.dir = Math.sign(mx);
+          f.x += mx; f.y += my;
+        }
+        continue;
+      } else if (f.detouring) {
+        const rp = pointAt(f.road.path, f.d);
+        const rdx = rp.x - f.x, rdy = rp.y - f.y, rdist = Math.hypot(rdx, rdy);
+        const step = this.effectiveSpeed(f) * dt;
+        if (rdist <= Math.max(14, step)) {
+          f.x = rp.x; f.y = rp.y; f.detouring = false;
+        } else if (rdist > 0.01) {
+          const mx = (rdx / rdist) * step, my = (rdy / rdist) * step;
+          if (Math.abs(mx) > 0.01) f.dir = Math.sign(mx);
+          f.x += mx; f.y += my;
+          continue;
+        }
+      }
+
       // Movement & portal jumps.
       let nd = f.d + this.effectiveSpeed(f) * dt;
-      if (f.road.closed && !f.def.flying) {
+      if (f.road.closed && !flyNow) {
         for (const ca of f.road.closeAts) {
           if (f.d <= ca - 30) { nd = Math.min(nd, Math.max(f.d, ca - 30)); break; }
         }
       }
       const bar = f.road.barrier;
-      if (bar && bar.hp > 0 && !f.def.flying && f.d < bar.d) {
+      if (bar && bar.hp > 0 && !flyNow && f.d < bar.d) {
         nd = Math.min(nd, bar.d - 26);
         if (tr?.sapper && nd >= bar.d - 30) {
           bar.hp -= 40 * dt;
@@ -1402,6 +1564,9 @@ export class Battle {
     if (activeBrake) mul *= activeBrake.def.beltMult ?? 0.55;
     else for (const b of f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult;
     if (f.under && tr?.burrow) mul *= 1.4;
+    if (f.affix === 'swift') mul *= 1.2;
+    if (tr?.bossSkill === 'colossus' && f.phase >= 1) mul *= 1.35;
+    if (f.siphonTowerId !== null) mul *= 0.55;
     if (f.kind === 'grub') {
       let pack = 0;
       for (const o of this.foes) {
@@ -1414,6 +1579,11 @@ export class Battle {
 
   private leak(f: Foe) {
     f.dead = true;
+    // Fugitive treasure mobs (Gilded Scarab) escape without costing lives or triggering Iron Gate.
+    if (f.def.traits?.fugitive || f.def.leak <= 0) {
+      this.events.push({ t: 'escape', x: f.x, y: f.y, kind: f.kind });
+      return;
+    }
     if ((this.mods.ironGate || this.mods.gateShock) && !this.leakedThisWave && this.ironGateCd <= 0 && !f.def.traits?.boss) {
       this.leakedThisWave = true;
       this.ironGateCd = 15;
@@ -1457,8 +1627,17 @@ export class Battle {
     bucket?: AttributionBucket,
     armorPierceExtra = 0,
     shatterSkill = false,
+    fromLink = false,
   ): number {
     if (!this.reachable(f, true) || amount <= 0) return 0;
+    // Tether Twins split incoming damage 50/50 while their partner is alive within 160 px.
+    if (!fromLink && f.linkPartnerId !== null) {
+      const partner = this.foes.find(o => o.id === f.linkPartnerId && !o.dead && !o.under);
+      if (partner && Math.hypot(partner.x - f.x, partner.y - f.y) <= 160) {
+        amount *= 0.5;
+        this.damage(partner, amount, el, byHero, quiet, crit, sourceTower, bucket, armorPierceExtra, shatterSkill, true);
+      }
+    }
     if (f.panes > 0) {
       // Each direct hit breaks one pane (short 20ms dedup so twin bolts & scatter shells each strip a pane);
       // spore clouds use a separate 0.6s cooldown so they never shield Glasshide from direct hits.
@@ -1472,7 +1651,7 @@ export class Battle {
         f.paneCd = 0.02;
       }
       f.panes--;
-      f.paneT = f.def.traits?.panes?.regrow ?? 2.5;
+      f.paneT = f.def.traits?.panes?.regrow ?? (f.affix === 'wardborn' ? 4 : 2.5);
       this.events.push({ t: 'pane', x: f.x, y: f.y - f.def.bar * 0.6, left: f.panes });
       return 0;
     }
@@ -1531,6 +1710,16 @@ export class Battle {
         this.resist[topEl] = Math.max(0, this.resist[topEl] - 0.2);
         this.events.push({ t: 'heraldCleanse', el: topEl, x: f.x, y: f.y });
       }
+    }
+    // Rune Stalker Wren-Kill Bonus: +35 bonus gold and refreshes active Rune timer.
+    if (f.def.traits?.runeHunter && byHero) {
+      this.gold += 35;
+      if (this.rune) this.rune.ttl = RUNE_LIFETIME;
+    }
+    // Volatile Crowned Elite death shock stuns adjacent towers briefly.
+    if (f.affix === 'volatile') {
+      this.events.push({ t: 'boom', x: f.x, y: f.y, r: 70 });
+      for (const t of this.towers) if (ell(t.x - f.x, t.y - f.y) < 70) t.stunT = Math.max(t.stunT, 1.2);
     }
     if (h.focus === f.id) h.focus = null;
   }
@@ -1668,7 +1857,7 @@ export class Battle {
   /* towers */
 
   private targetable(t: Tower, f: Foe, range: number, flying: boolean) {
-    if (!this.reachable(f) || (f.def.flying && !flying)) return false;
+    if (!this.reachable(f) || (this.isFlying(f) && !flying)) return false;
     return ell(f.x - t.x, f.y - t.y) < range;
   }
 
@@ -1688,6 +1877,7 @@ export class Battle {
   private updateTowers(dt: number) {
     for (const t of this.towers) {
       t.fired += dt;
+      t.bogT = Math.max(0, t.bogT - dt);
       if (t.stunT > 0) { t.stunT = Math.max(0, t.stunT - dt); continue; }
       if (t.kind === 'beacon' || t.down) continue;
       const s = this.stats(t);
