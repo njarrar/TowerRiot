@@ -49,6 +49,8 @@ function showCrashCard(detail: string) {
         copyBtn))));
 }
 window.addEventListener('error', e => {
+  // Errors with no error object come from other origins (browser add-ons) or layout notices, not from the game.
+  if (!e.error) return;
   showCrashCard(e.error?.stack || e.message || 'Unknown error');
 });
 window.addEventListener('unhandledrejection', e => {

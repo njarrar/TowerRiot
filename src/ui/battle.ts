@@ -211,7 +211,8 @@ export class BattleScreen {
   /* ------------------------------------------------------------------ loop */
 
   private frame(now: number) {
-    const rawDt = Math.min(0.05, (now - this.last) / 1000);
+    // A frame stamp can be older than `last` after a long task (painting the map), so never step time backwards.
+    const rawDt = Math.max(0, Math.min(0.05, (now - this.last) / 1000));
     this.last = now;
     const b = this.battle;
     // Wren fell (or lost the skill) while aiming: stop aiming, so time does not stay slow.

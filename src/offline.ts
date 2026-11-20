@@ -7,9 +7,11 @@ export function registerOffline(onUpdateReady?: (apply: () => void) => void) {
   const native = !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
   if (native || !('serviceWorker' in navigator) || location.protocol === 'file:' || import.meta.env.DEV) return;
   window.addEventListener('load', () => {
+    // A first visit has no worker yet. When the first one takes over there is nothing new to load, so do not reload then.
+    const hadWorker = !!navigator.serviceWorker.controller;
     let reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloading) return;
+      if (reloading || !hadWorker) return;
       reloading = true;
       location.reload();
     });

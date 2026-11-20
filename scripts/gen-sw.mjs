@@ -38,7 +38,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(hit => {
+    caches.match(e.request, { ignoreSearch: true, ignoreVary: true }).then(hit => {
       if (hit) return hit;
       return fetch(e.request).catch(() => e.request.mode === 'navigate' ? caches.match('./index.html') : Response.error());
     }),

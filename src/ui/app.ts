@@ -486,7 +486,7 @@ export class App {
       h('input', { type: 'checkbox', checked: !!st[key], onchange: (e: Event) => { st[key] = (e.target as HTMLInputElement).checked; this.applySettings(); } }),
       h('span', {}, h('b', { text: label }), h('small', { text: note })));
     const autoSkillRow = h('div', { class: 'toggle seg-row' },
-      h('span', {}, h('b', { text: 'Auto skill points' }), h('small', { text: 'Spend Wren\'s points on level-up. Default helps in Mosslight Vale (Stages 1–5), then hands control to you.' })),
+      h('span', {}, h('b', { text: 'Auto skill points' }), h('small', { text: 'Spend Wren\'s points on level-up. Default helps in Mosslight Vale (Stages 1 to 5), then hands control to you.' })),
       (() => {
         const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Auto skill points' });
         const opts: [string, boolean | null][] = [['Region 1 only', null], ['Always on', true], ['Off', false]];

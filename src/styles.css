@@ -669,8 +669,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 12px;
   box-shadow: 0 10px 28px var(--shadow);
   font-size: 0.9rem;
@@ -686,8 +686,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .crash-card {
   width: min(500px, 100%);
   padding: 22px 24px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 14px;
   box-shadow: 0 12px 32px var(--shadow);
 }
