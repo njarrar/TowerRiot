@@ -572,6 +572,7 @@ export class BattleScreen {
 
   private bindInput() {
     this.canvas.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       this.host.audio.unlock();
       // Keep the pointer, so a release over the HUD still ends the gesture here.
       try { this.canvas.setPointerCapture(e.pointerId); } catch { /* the pointer is already gone */ }
@@ -619,8 +620,12 @@ export class BattleScreen {
       }
     });
     this.canvas.addEventListener('pointercancel', e => {
-      this.input.onCancel(e.pointerId);
-      this.view.showLeash = false;
+      try { this.canvas.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+      if (this.aimingW) this.cancelAim();
+      else {
+        this.input.onCancel(e.pointerId);
+        this.view.showLeash = false;
+      }
     });
     this.canvas.addEventListener('contextmenu', e => {
       e.preventDefault();
@@ -704,6 +709,12 @@ export class BattleScreen {
       btn.setAttribute('aria-pressed', String(!on));
       btn.classList.toggle('off', !on);
     }
+  }
+
+  /** Pause automatically when the tab or native app moves to the background. */
+  pauseIfRunning() {
+    if (this.aimingW) this.cancelAim();
+    if (!this.battle.over && !this.battle.paused && !this.ended) this.togglePause();
   }
 
   /** Top Pause Strip keeps the field unblurred and inspectable while paused. */
