@@ -8,11 +8,11 @@ import TowerRiotKit
 /// the map is wider than the screen there, and a drag slides it left and right.
 struct BattleView: View {
     @EnvironmentObject var app: AppModel
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var ctl: BattleController
 
-    init(stageId: Int, variant: StageVariant = .standard, oaths: [OathId] = []) {
-        // The controller needs the app; it is handed over in onAppear-free form via a holder.
-        _ctl = StateObject(wrappedValue: BattleController(stageId: stageId, variant: variant, oaths: oaths, app: AppHolder.shared!))
+    init(stageId: Int, variant: StageVariant = .standard, oaths: [OathId] = [], app: AppModel) {
+        _ctl = StateObject(wrappedValue: BattleController(stageId: stageId, variant: variant, oaths: oaths, app: app))
     }
 
     var body: some View {
@@ -26,6 +26,14 @@ struct BattleView: View {
             .ignoresSafeArea()
         }
         .statusBarHidden(true)
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                ctl.pauseIfRunning()
+                app.sound.setBackgrounded(true)
+            } else {
+                app.sound.setBackgrounded(false)
+            }
+        }
     }
 
     @ViewBuilder private func screen(safe: EdgeInsets, w: CGFloat, h: CGFloat) -> some View {
@@ -47,7 +55,7 @@ struct BattleView: View {
         }()
         // The whole map, which runs past the screen's sides when upright.
         let scale = map.height / World.height
-        let _ = ctl.setView(scale: scale, halfWidth: min(World.width / 2, Double(map.width / scale / 2)))
+        let halfW = min(World.width / 2, Double(map.width / max(0.01, scale) / 2))
         let full: CGRect = upright
             ? CGRect(x: map.midX - CGFloat(ctl.centre()) * scale, y: map.minY, width: World.width * scale, height: map.height)
             : map
@@ -62,11 +70,10 @@ struct BattleView: View {
             HudLayer(ctl: ctl, map: map, full: full, side: side, upright: upright, safe: safe, size: CGSize(width: w, height: h), band: band)
         }
         .frame(width: w, height: h)
+        .onAppear { ctl.setView(scale: scale, halfWidth: halfW) }
+        .onChange(of: CGSize(width: w, height: h)) { _, _ in ctl.setView(scale: scale, halfWidth: halfW) }
     }
 }
-
-/// The app model, for views built before the environment is in place (the battle's StateObject).
-enum AppHolder { static weak var shared: AppModel? }
 
 private struct HudLayer: View {
     @ObservedObject var ctl: BattleController
@@ -896,6 +903,7 @@ private struct PauseStrip: View {
             }
             .font(Face.body(13, .heavy)).foregroundStyle(Ink.ink).lineLimit(1)
             Button("Resume") { ctl.togglePause() }.buttonStyle(PaperButton(kind: .primary, tall: true))
+            Button("Restart") { ctl.retry() }.buttonStyle(PaperButton(tall: true))
             Button { ctl.requestExit() } label: { HStack(spacing: 5) { ArtIcon(name: "leave", size: 15); Text("Leave") } }
                 .buttonStyle(PaperButton(tall: true))
             // Upright, sound lives here: the strip on top has no room for it.
@@ -958,7 +966,7 @@ private struct ResultCard: View {
                         }
                     }
                     .frame(height: 6).clipShape(Capsule())
-                    Text("Towers \(r.bdTowersPct)% · Wren \(r.bdHeroPct)%\(r.mvpText.map { " · \($0)" } ?? "")")
+                    Text("Towers \(r.bdTowersPct)% · Wren \(r.bdHeroPct)% · Status \(r.bdStatusPct)%\(r.mvpText.map { " · \($0)" } ?? "")")
                         .font(Face.body(11, .bold)).foregroundStyle(Ink.inkDim)
                 }
                 if r.won && r.embers > 0 { Text("+\(r.embers) Embers for the skill trees").font(Face.body(14, .heavy)).foregroundStyle(Ink.accent) }

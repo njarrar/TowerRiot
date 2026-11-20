@@ -2,36 +2,81 @@ import AVFoundation
 import os
 
 /// The game's sounds, made on the fly like the web game's WebAudio synth (src/audio/sfx.ts): no files, fully offline.
-/// Each sound is a few tones with pitch sweeps and short bursts of filtered noise.
+/// Uses a fixed-capacity voice table, non-blocking audio render lock, precomputed per-sample exponential multipliers,
+/// and automatic engine pause on silence/backgrounding to avoid real-time CoreAudio glitches and battery drain.
 final class Sound {
     enum Sfx: CaseIterable { case bolt, boom, zap, bell, root, coin, level, leak, wave, build, click, sweep, snare, sunrise, rune, boss, win, lose, hero, switchFlip, clear, warp }
 
-    private let engine = AVAudioEngine()
+    private static let maxVoices = 48
+    private var engine = AVAudioEngine()
     private var node: AVAudioSourceNode?
-    private let rate: Double
+    private var rate: Double = 44100
     private var lock = os_unfair_lock()
-    private var voices: [Voice] = []
+    private var voices: [Voice] = Array(repeating: .inactive, count: maxVoices)
+    private var nextSlot = 0
     private var clock = 0.0
     private var last: [Sfx: Double] = [:]
     private var gain = 0.5
     private var targetGain = 0.5
+    private var silentFrames = 0
+    private var idlePausePending = false
+    private var backgrounded = false
+    private var observers: [NSObjectProtocol] = []
 
     /// Muting also silences any sound already playing, not just the next one.
     var enabled = true {
-        didSet { os_unfair_lock_lock(&lock); targetGain = enabled ? 0.5 : 0; os_unfair_lock_unlock(&lock) }
+        didSet {
+            os_unfair_lock_lock(&lock)
+            targetGain = enabled ? 0.5 : 0
+            os_unfair_lock_unlock(&lock)
+            if !enabled && engine.isRunning { engine.pause() }
+        }
     }
 
     init() {
+        configureSession()
+        rebuildEngine()
+        registerObservers()
+    }
+
+    deinit {
+        for o in observers { NotificationCenter.default.removeObserver(o) }
+        engine.stop()
+    }
+
+    func setBackgrounded(_ bg: Bool) {
+        backgrounded = bg
+        if bg {
+            if engine.isRunning { engine.pause() }
+        } else if enabled {
+            try? AVAudioSession.sharedInstance().setActive(true)
+        }
+    }
+
+    private func configureSession() {
         let session = AVAudioSession.sharedInstance()
         // Ambient: plays along with the player's music and follows the silent switch.
         try? session.setCategory(.ambient, options: [.mixWithOthers])
         try? session.setActive(true)
-        rate = engine.outputNode.outputFormat(forBus: 0).sampleRate > 0 ? engine.outputNode.outputFormat(forBus: 0).sampleRate : 44100
-        let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 1)!
-        let src = AVAudioSourceNode(format: format) { [unowned self] _, _, frames, buffers -> OSStatus in
+    }
+
+    private func rebuildEngine() {
+        engine.stop()
+        engine = AVAudioEngine()
+        let hwRate = engine.outputNode.outputFormat(forBus: 0).sampleRate
+        rate = hwRate > 0 ? hwRate : 44100
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 1) else {
+            node = nil
+            return
+        }
+        let src = AVAudioSourceNode(format: format) { [weak self] _, _, frames, buffers -> OSStatus in
             let abl = UnsafeMutableAudioBufferListPointer(buffers)
             guard let out = abl.first?.mData?.assumingMemoryBound(to: Float.self) else { return noErr }
-            self.render(into: out, frames: Int(frames))
+            if let self {
+                self.render(into: out, frames: Int(frames))
+            } else {
+                for i in 0..<Int(frames) { out[i] = 0 }
+            }
             if abl.count > 1 { for b in abl.dropFirst() { b.mData?.copyMemory(from: out, byteCount: Int(frames) * 4) } }
             return noErr
         }
@@ -39,30 +84,79 @@ final class Sound {
         engine.attach(src)
         engine.connect(src, to: engine.mainMixerNode, format: format)
         engine.prepare()
-        try? engine.start()
-        NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] _ in
-            try? self?.engine.start()
+    }
+
+    private func registerObservers() {
+        let nc = NotificationCenter.default
+        observers.append(nc.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
+            guard let self,
+                  let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+            if type == .began {
+                self.engine.pause()
+            } else if type == .ended, self.enabled, !self.backgrounded {
+                try? AVAudioSession.sharedInstance().setActive(true)
+                try? self.engine.start()
+            }
+        })
+        observers.append(nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            let newRate = self.engine.outputNode.outputFormat(forBus: 0).sampleRate
+            if newRate > 0 && abs(newRate - self.rate) > 1 {
+                self.rebuildEngine()
+            }
+        })
+        observers.append(nc.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main) { [weak self] _ in
+            guard let self, self.enabled, !self.backgrounded else { return }
+            self.rebuildEngine()
+        })
+        observers.append(nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.configureSession()
+            self.rebuildEngine()
+        })
+    }
+
+    private func scheduleIdlePause() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            os_unfair_lock_lock(&self.lock)
+            let stillIdle = self.idlePausePending && self.silentFrames >= Int(self.rate * 0.5)
+            self.idlePausePending = false
+            os_unfair_lock_unlock(&self.lock)
+            if stillIdle && self.engine.isRunning { self.engine.pause() }
         }
     }
 
     func play(_ s: Sfx) {
-        guard enabled else { return }
+        guard enabled && !backgrounded else { return }
+        if node == nil { rebuildEngine() }
+        guard node != nil else { return }
         if !engine.isRunning { try? engine.start() }
         os_unfair_lock_lock(&lock)
         defer { os_unfair_lock_unlock(&lock) }
+        silentFrames = 0
+        idlePausePending = false
         let now = clock
         // Many towers fire at once: keep each sound from stacking into noise.
         let gap = s == .bolt || s == .coin || s == .hero ? 0.05 : 0.08
         if let t = last[s], t > now - gap { return }
         last[s] = now
-        if voices.count > 48 { voices.removeFirst(voices.count - 48) }
         // Subtle ±4% pitch jitter on rapid combat hits prevents machine-gun ear fatigue while keeping musical chimes exact.
         let j = [.bolt, .boom, .zap, .hero, .root].contains(s) ? 0.96 + (noise() + 1) * 0.04 : 1.0
+        let push: (Voice) -> Void = { v in
+            if let free = self.voices.firstIndex(where: { !$0.active }) {
+                self.voices[free] = v
+            } else {
+                self.voices[self.nextSlot] = v
+                self.nextSlot = (self.nextSlot + 1) % Self.maxVoices
+            }
+        }
         let tone = { (w: Wave, f0: Double, f1: Double, dur: Double, vol: Double, delay: Double) in
-            self.voices.append(Voice(start: now + delay, dur: dur, vol: vol, kind: .tone(w, max(20, f0 * j), max(20, f1 * j))))
+            push(Voice.makeTone(wave: w, f0: max(20, f0 * j), f1: max(20, f1 * j), start: now + delay, dur: dur, vol: vol, rate: self.rate))
         }
         let hiss = { (freq: Double, q: Double, dur: Double, vol: Double, type: Filter.Kind) in
-            self.voices.append(Voice(start: now, dur: dur, vol: vol, kind: .noise(Filter(kind: type, freq: freq, q: q, rate: self.rate)), env: .decay))
+            push(Voice.makeNoise(filter: Filter(kind: type, freq: freq, q: q, rate: self.rate), start: now, dur: dur, vol: vol, rate: self.rate))
         }
         switch s {
         case .bolt: tone(.triangle, 900, 300, 0.08, 0.08, 0); hiss(3000, 1, 0.05, 0.05, .high)
@@ -118,14 +212,53 @@ final class Sound {
     }
 
     struct Voice {
-        enum Kind { case tone(Wave, Double, Double), noise(Filter) }
-        enum Env { case pluck, decay }
-        let start: Double
-        let dur: Double
-        let vol: Double
+        enum Kind { case tone(Wave), noise(Filter) }
+        var active: Bool
+        var start: Double
+        var dur: Double
+        var attackSec: Double
+        var envVal: Double
+        var attackMul: Double
+        var decayMul: Double
+        var freq: Double
+        var freqMul: Double
         var kind: Kind
-        var env: Env = .pluck
-        var phase = 0.0
+        var phase: Double
+        var sampleIdx: Int
+        var attackSamples: Int
+        var totalSamples: Int
+
+        static let inactive = Voice(
+            active: false, start: 0, dur: 0, attackSec: 0, envVal: 0, attackMul: 1, decayMul: 1,
+            freq: 0, freqMul: 1, kind: .tone(.sine), phase: 0, sampleIdx: 0, attackSamples: 0, totalSamples: 0
+        )
+
+        static func makeTone(wave: Wave, f0: Double, f1: Double, start: Double, dur: Double, vol: Double, rate: Double) -> Voice {
+            let tot = max(1, Int((dur * rate).rounded()))
+            let att = max(1, min(tot, Int((0.01 * rate).rounded())))
+            let dec = max(1, tot - att)
+            let attMul = pow(max(0.0001, vol) / 0.0001, 1.0 / Double(att))
+            let decMul = pow(0.0001 / max(0.0001, vol), 1.0 / Double(dec))
+            let fMul = pow(max(20, f1) / max(20, f0), 1.0 / Double(tot))
+            return Voice(
+                active: true, start: start, dur: dur, attackSec: 0.01, envVal: 0.0001,
+                attackMul: attMul, decayMul: decMul, freq: f0, freqMul: fMul,
+                kind: .tone(wave), phase: 0, sampleIdx: 0, attackSamples: att, totalSamples: tot
+            )
+        }
+
+        static func makeNoise(filter: Filter, start: Double, dur: Double, vol: Double, rate: Double) -> Voice {
+            let tot = max(1, Int((dur * rate).rounded()))
+            let att = max(1, min(tot, Int((0.004 * rate).rounded())))
+            let dec = max(1, tot - att)
+            let attMul = pow(max(0.0001, vol) / 0.0001, 1.0 / Double(att))
+            let decMul = pow(0.0001 / max(0.0001, vol), 1.0 / Double(dec))
+            return Voice(
+                active: true, start: start, dur: dur, attackSec: 0.004, envVal: 0.0001,
+                attackMul: attMul, decayMul: decMul, freq: 0, freqMul: 1,
+                kind: .noise(filter), phase: 0, sampleIdx: 0, attackSamples: att, totalSamples: tot
+            )
+        }
     }
 
     private var seed: UInt32 = 22222
@@ -134,29 +267,40 @@ final class Sound {
         return Double(seed) / Double(UInt32.max) * 2 - 1
     }
 
+    /// Real-time audio callback: zero heap allocations, zero pow() per sample, non-blocking trylock.
     private func render(into out: UnsafeMutablePointer<Float>, frames: Int) {
-        os_unfair_lock_lock(&lock)
+        if !os_unfair_lock_trylock(&lock) {
+            for i in 0..<frames { out[i] = 0 }
+            return
+        }
         defer { os_unfair_lock_unlock(&lock) }
-        let dt = 1 / rate
+        let dt = 1.0 / rate
+        var anyActive = false
         for i in 0..<frames {
             gain += (targetGain - gain) * 0.002
             var mix = 0.0
             let t = clock + Double(i) * dt
-            for v in voices.indices {
-                let local = t - voices[v].start
-                if local < 0 || local > voices[v].dur { continue }
-                let u = local / voices[v].dur
-                // Exponential fades, as WebAudio's exponentialRampToValueAtTime gives.
-                let env: Double
-                switch voices[v].env {
-                case .pluck: env = local < 0.01 ? 0.0001 * pow(voices[v].vol / 0.0001, local / 0.01) : voices[v].vol * pow(0.0001 / voices[v].vol, (local - 0.01) / max(0.001, voices[v].dur - 0.01))
-                case .decay: env = voices[v].vol * pow(0.0001 / voices[v].vol, u)
+            for idx in 0..<Self.maxVoices {
+                if !voices[idx].active { continue }
+                if t < voices[idx].start { anyActive = true; continue }
+                if voices[idx].sampleIdx >= voices[idx].totalSamples {
+                    voices[idx].active = false
+                    continue
                 }
-                switch voices[v].kind {
-                case let .tone(w, f0, f1):
-                    let f = f0 * pow(f1 / f0, u)
-                    voices[v].phase += f * dt
-                    let p = voices[v].phase - floor(voices[v].phase)
+                anyActive = true
+                let env = voices[idx].envVal
+                if voices[idx].sampleIdx < voices[idx].attackSamples {
+                    voices[idx].envVal *= voices[idx].attackMul
+                } else {
+                    voices[idx].envVal *= voices[idx].decayMul
+                }
+                voices[idx].sampleIdx += 1
+                switch voices[idx].kind {
+                case let .tone(w):
+                    let f = voices[idx].freq
+                    voices[idx].freq *= voices[idx].freqMul
+                    voices[idx].phase += f * dt
+                    let p = voices[idx].phase - floor(voices[idx].phase)
                     let s: Double
                     switch w {
                     case .sine: s = sin(p * 2 * .pi)
@@ -167,12 +311,20 @@ final class Sound {
                     mix += s * env
                 case var .noise(filter):
                     mix += filter.run(noise()) * env
-                    voices[v].kind = .noise(filter)
+                    voices[idx].kind = .noise(filter)
                 }
             }
             out[i] = Float(max(-1, min(1, mix * gain)))
         }
         clock += Double(frames) * dt
-        voices.removeAll { clock - $0.start > $0.dur + 0.05 }
+        if anyActive && targetGain > 0.001 {
+            silentFrames = 0
+        } else {
+            silentFrames += frames
+            if !idlePausePending && silentFrames >= Int(rate * 0.5) {
+                idlePausePending = true
+                scheduleIdlePause()
+            }
+        }
     }
 }

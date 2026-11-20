@@ -202,22 +202,28 @@ const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
 async function grounds() {
   const meta: Record<number, unknown> = {};
-  for (const st of STAGES) {
-    const b = new Battle(st, { mods: modsFor(freshSave()), seed: 7 });
+  const bakeOne = async (st: (typeof STAGES)[number], variant: 'standard' | 'alt', filename: string) => {
+    const b = new Battle(st, { mods: modsFor(freshSave()), seed: 7, variant });
     const cv = document.createElement('canvas');
-    const scene = new Scene(cv) as unknown as { load(b: Battle): void; bg: HTMLCanvasElement; g: G; posts: [number, number][]; waterPts: { pts: [number, number][]; w: number }[]; drawRifts(T: number): void };
+    const scene = new Scene(cv) as unknown as { load(b: Battle): void; bg: HTMLCanvasElement; posts: [number, number][]; waterPts: { pts: [number, number][]; w: number }[]; drainWaters: { idx: number; pts: [number, number][]; w: number }[] };
     scene.load(b);
-    // The ground the web game bakes once per stage, with the rifts set into it.
+    // Rifts are rendered live in BattleScene from battle.spawns so Variant B reversed roads never show phantom rifts.
     const ground = document.createElement('canvas');
     ground.width = 1280; ground.height = 720;
     const g = ground.getContext('2d')!;
     g.drawImage(scene.bg, 0, 0);
-    scene.g = g;
-    scene.drawRifts(0);
-    await window.save(`ground-${String(st.id).padStart(2, '0')}.jpg`, ground.toDataURL('image/jpeg', 0.9));
+    await window.save(filename, ground.toDataURL('image/jpeg', 0.9));
+    return { b, scene };
+  };
+  for (const st of STAGES) {
+    const { b, scene } = await bakeOne(st, 'standard', `ground-${String(st.id).padStart(2, '0')}.jpg`);
+    if (st.alt && (st.alt.reverseRoads || st.alt.openAtWave)) {
+      await bakeOne(st, 'alt', `ground-${String(st.id).padStart(2, '0')}-alt.jpg`);
+    }
+    // Export ALL stage waters (including drainable channels) in exact st.waters index order for maps.json.
     meta[st.id] = {
       posts: scene.posts.map(([x, y]) => [round3(x), round3(y)]),
-      waters: scene.waterPts.map(w => ({ w: w.w, pts: w.pts.map(([x, y]) => [round3(x), round3(y)]) })),
+      waters: b.waters.map(w => ({ w: w.w, pts: w.path.pts.map(([x, y]) => [round3(x), round3(y)]) })),
     };
   }
   await window.save('maps.json', 'data:application/json,' + encodeURIComponent(JSON.stringify(meta)));
