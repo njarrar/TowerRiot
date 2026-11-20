@@ -239,16 +239,19 @@ Run both before you build for a device. The art step paints with the same painte
 
 #### Play it on your iPhone
 
-You need a Mac with Xcode 16 or newer and a free Apple ID. The art in the repo is a bake of the web painters. If towers or maps have changed since that bake (tower level 5 is new), run `npm run native:art` first.
+You need a Mac with Xcode 16 or newer and an Apple ID. A paid Apple Developer account is best, since its installs last a year. The art in the repo is a bake of the web painters. If towers or maps have changed since that bake (tower level 5 is new), run `npm run native:art` first.
 
 1. Clone the repo and open `ios/TowerRiot/TowerRiot.xcodeproj` in Xcode.
 2. In Xcode, open Settings, then Accounts, and add your Apple ID.
-3. Click the TowerRiot project, then the TowerRiot target, then Signing & Capabilities. Pick your name under Team. If Xcode says the bundle id is taken, change `com.njarrar.towerriot` to anything of your own.
+3. Click the TowerRiot project, then the TowerRiot target, then Signing & Capabilities. Under Team, pick your paid developer team if you have one, not the one marked Personal Team. If Xcode says the bundle id is taken, change `com.njarrar.towerriot` to anything of your own.
 4. Plug the iPhone in with a cable, unlock it and tap Trust. On the phone, turn on Settings, Privacy & Security, Developer Mode, and let it restart.
 5. Pick the iPhone in the device menu at the top of Xcode and press Run (Cmd R).
 6. The first time, the phone blocks the app. Open Settings, General, VPN & Device Management, tap your Apple ID and tap Trust. Then open TowerRiot.
 
-With a free Apple ID the app stops opening after 7 days. Press Run again to renew it.
+How long the install lasts depends on the team you signed with:
+
+- **Paid developer team:** a year. Press Run again before then to renew it.
+- **Personal Team (free Apple ID):** 7 days. After that the app shows its launch screen and closes at once. It has not crashed: press Run again to renew it.
 
 ### Android app (native)
 
@@ -331,7 +334,15 @@ The November 2026 overhaul:
 - **Web:** the game pauses when the tab or app goes to the background, a lost touch no longer leaves time slow, sound comes back after a call on iPhone, and a new version waits for you to tap Reload. If the game hits an error it shows a card to reload or go back to the title. Your save is kept.
 - **Settings:** auto skill points has three choices (region 1 only, always, off), and erase asks twice.
 - **iOS:** a fixed 30 steps a second clock like the web, pause when the app leaves the screen, Variant B ground art, and lighter sound code.
-- **Android:** the game draws edge to edge and keeps clear of the camera cutout, with a paper-coloured launch screen and a smaller release build.
+- **Android:** the game draws edge to edge and keeps clear of the camera cutout, on a paper-coloured background while it loads.
+
+Since then:
+
+- **A native Android app.** The Android game is now a Kotlin app with no web view, in place of the old web wrapper. Its engine lands on the same 54 bot runs as the web and iOS games, and every push builds a ready-to-install APK, kept on the run as `TowerRiot-android`. See [Android app (native)](#android-app-native).
+- **Offline loads hold up:** a first visit no longer reloads when the offline cache takes over, and the cache finds its files on any host.
+- **A long frame can't send time backwards,** which used to crash Variant B.
+- **The update toast and the recovery card** now match the morning palette.
+- **iPhone installs:** sign with a paid developer team and the app lasts a year. See [Play it on your iPhone](#play-it-on-your-iphone).
 
 ## Design notes
 
