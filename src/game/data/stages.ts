@@ -126,6 +126,10 @@ export interface StageAlt {
   portalOpenAtWave?: number;
   /** Tides, lava and steam cycle this much faster or slower (0.8 = every 40 s instead of 50 s). */
   shiftEveryMul?: number;
+  /** Optional explicit switch overrides when reversed roads relocate forks/gates. */
+  switches?: SwitchDef[];
+  /** Optional explicit portal overrides when reversed roads invert chute/rift directions. */
+  portals?: PortalDef[];
   /** Foe health for this layout, on top of the stage's own `hpMul`. */
   hpMul?: number;
 }
@@ -296,6 +300,8 @@ export function resolveStageVariant(st: StageDef, variant: StageVariant = 'stand
     if (a.weather !== undefined) out.weather = a.weather;
     if (a.adaptEvery !== undefined) out.adaptEvery = a.adaptEvery;
     if (a.portalOpenAtWave !== undefined) out.portals = out.portals?.map(pt => ({ ...pt, openAtWave: a.portalOpenAtWave }));
+    if (a.switches !== undefined) out.switches = a.switches.map(sw => ({ ...sw, at: [...sw.at] as Vec }));
+    if (a.portals !== undefined) out.portals = a.portals.map(pt => ({ ...pt }));
     if (a.shiftEveryMul !== undefined && out.shifts?.length) out.shifts = scaleShifts(out.shifts, a.shiftEveryMul);
     if (a.hpMul !== undefined) out.hpMul = (st.hpMul ?? 1) * a.hpMul;
   }
@@ -479,7 +485,7 @@ const s5: StageDef = {
   ],
   waters: [{ id: 'moat', w: 58, drainAtWave: 5, ctrl: [[560, 240], [405, 275], [375, 395], [485, 500], [735, 495], [820, 380], [800, 255]] }],
   plots: [
-    { at: [540, 385] }, { at: [665, 415], sinkAt: 8 }, { at: [375, 195] },
+    { at: [540, 385] }, { at: [665, 415], sinkAt: 7 }, { at: [375, 195] },
     { at: [585, 168] }, { at: [795, 180] }, { at: [1015, 360], sinkAt: 6 },
     { at: [1015, 595] }, { at: [640, 645] }, { at: [435, 640] },
     { at: [245, 370], sinkAt: 4 }, { at: [85, 290] }, { at: [1200, 390] },
@@ -859,6 +865,11 @@ const s14: StageDef = {
     twist: 'The foundry reverses: foes pour from NW out toward N, E and S docks.',
     hpMul: 1.06,
     reverseRoads: ['top', 'mid', 'mid_loop', 'bot'], heroStart: [760, 260],
+    switches: [
+      { id: 'rail_m', label: 'Mid Rail Switch', at: [540, 260], mode: 'fork', closesA: ['mid_loop'], closesB: ['mid'], cd: 16 },
+      { id: 'brake',  label: 'Crucible Brake',  at: [740, 175], mode: 'gate', closesB: ['top'], dur: 10, cd: 18 },
+    ],
+    portals: [{ id: 'drop', kind: 'chute', fromRoad: 'bot', fromAt: 0.35, toRoad: 'mid', toAt: 0.42, openAtWave: 5, everyNth: 3, groundOnly: true }],
   },
   waves: waves([
     ['Three bays start', '6 husk @t, 6 husk @m +1, 6 husk @b +2'],
@@ -963,7 +974,7 @@ const s17: StageDef = {
   id: 17, name: 'Avalanche Ridge', region: 3, lava: true,
   twist: 'NE→W→SE horseshoe around a collapsing high ridge. Wave 4 cracks a steep scree slide while avalanches bury plots.',
   newFoe: 'Glasshide', unlocks: 'Shop item: Dawn mantle',
-  startGold: 720, lives: 20, towers: ALL, hpMul: 1.0,
+  startGold: 720, lives: 20, towers: ALL, hpMul: 1.06,
   high: [[345, 210], [1280, 210], [1280, 505], [345, 505], [260, 360], [345, 210]],
   roads: [
     { id: 'main',  spawn: 'w', w: 50, ctrl: [[1320, 125], [960, 125], [560, 120], [270, 140], [160, 265], [155, 450], [280, 565], [580, 580], [920, 580], [1165, 585]] },
@@ -986,6 +997,7 @@ const s17: StageDef = {
     twist: 'Foes surge upward from the southern basin onto the crumbling eastern peak, on the ridge road and the scree alike.',
     hpMul: 0.65,
     reverseRoads: ['main', 'scree'], heroStart: [640, 220],
+    portals: [{ id: 'lavatube', kind: 'tunnel', fromRoad: 'main', fromAt: 0.25, toRoad: 'scree', toAt: 0.45, openAtWave: 7, everyNth: 3, groundOnly: true }],
   },
   waves: waves([
     ['Onto the ridge', '16 husk /0.6'],
@@ -1030,6 +1042,8 @@ const s18: StageDef = {
     twist: 'The outer corners become the rifts and every spiral feeds inward to one centre Keep.',
     hpMul: 0.72,
     reverseRoads: ['north', 'south', 'cross'],
+    switches: [{ id: 'mirror_sw', label: 'Bridge Boom', at: [640, 285], mode: 'gate', closesB: ['cross'], dur: 10, cd: 18 }],
+    portals: [{ id: 'refl', kind: 'rift', fromRoad: 'south', fromAt: 0.35, toRoad: 'cross', toAt: 0.45, openAtWave: 7, everyNth: 4, groundOnly: true }],
   },
   waves: waves([
     ['Center rift opens', '16 husk /0.55'],

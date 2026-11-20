@@ -45,7 +45,7 @@ export function deliverDamage(
   f: DamageTarget,
   amount: number,
   el: DmgEl,
-  options: { byHero: boolean; quiet?: boolean; armorPierceExtra?: number; bucket?: AttributionBucket },
+  options: { byHero: boolean; quiet?: boolean; armorPierceExtra?: number; bucket?: AttributionBucket; shatterSkill?: boolean },
 ): { applied: number; clamped: number; chilledShatter: boolean } {
   if (f.dead || f.under || amount <= 0) return { applied: 0, clamped: 0, chilledShatter: false };
 
@@ -56,7 +56,11 @@ export function deliverDamage(
 
   const chilled = f.slowT > 0 || f.freezeT > 0;
   let chilledShatter = false;
-  if (chilled && ((el === 'fire' && ctx.mods.shatter) || ((el === 'hero' || el === 'fire') && ctx.mods.burnShatter && (options.byHero || options.quiet)))) {
+  if (chilled && el === 'fire' && ctx.mods.shatter) {
+    m *= 1.5;
+    chilledShatter = true;
+  }
+  if (chilled && options.shatterSkill && ctx.mods.burnShatter) {
     m *= 1.5;
     chilledShatter = true;
   }

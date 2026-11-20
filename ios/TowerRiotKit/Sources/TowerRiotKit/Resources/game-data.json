@@ -1165,7 +1165,7 @@
     {
      "id": "ar-overload",
      "name": "Overload",
-     "desc": "Lightning on rooted or frozen foes jumps +2 times (Rail +35%).",
+     "desc": "Lightning on rooted or frozen foes jumps +2 times (Rail +35% extra).",
      "cost": 4,
      "req": "ar-storm",
      "effect": {
@@ -3100,7 +3100,7 @@
       665,
       415
      ],
-     "sinkAt": 8
+     "sinkAt": 7
     },
     {
      "at": [
@@ -7525,6 +7525,51 @@
     "heroStart": [
      760,
      260
+    ],
+    "switches": [
+     {
+      "id": "rail_m",
+      "label": "Mid Rail Switch",
+      "at": [
+       540,
+       260
+      ],
+      "mode": "fork",
+      "closesA": [
+       "mid_loop"
+      ],
+      "closesB": [
+       "mid"
+      ],
+      "cd": 16
+     },
+     {
+      "id": "brake",
+      "label": "Crucible Brake",
+      "at": [
+       740,
+       175
+      ],
+      "mode": "gate",
+      "closesB": [
+       "top"
+      ],
+      "dur": 10,
+      "cd": 18
+     }
+    ],
+    "portals": [
+     {
+      "id": "drop",
+      "kind": "chute",
+      "fromRoad": "bot",
+      "fromAt": 0.35,
+      "toRoad": "mid",
+      "toAt": 0.42,
+      "openAtWave": 5,
+      "everyNth": 3,
+      "groundOnly": true
+     }
     ]
    },
    "waves": [
@@ -8650,7 +8695,7 @@
     "roots",
     "beacon"
    ],
-   "hpMul": 1,
+   "hpMul": 1.06,
    "high": [
     [
      345,
@@ -8923,6 +8968,19 @@
     "heroStart": [
      640,
      220
+    ],
+    "portals": [
+     {
+      "id": "lavatube",
+      "kind": "tunnel",
+      "fromRoad": "main",
+      "fromAt": 0.25,
+      "toRoad": "scree",
+      "toAt": 0.45,
+      "openAtWave": 7,
+      "everyNth": 3,
+      "groundOnly": true
+     }
     ]
    },
    "waves": [
@@ -9397,6 +9455,35 @@
      "north",
      "south",
      "cross"
+    ],
+    "switches": [
+     {
+      "id": "mirror_sw",
+      "label": "Bridge Boom",
+      "at": [
+       640,
+       285
+      ],
+      "mode": "gate",
+      "closesB": [
+       "cross"
+      ],
+      "dur": 10,
+      "cd": 18
+     }
+    ],
+    "portals": [
+     {
+      "id": "refl",
+      "kind": "rift",
+      "fromRoad": "south",
+      "fromAt": 0.35,
+      "toRoad": "cross",
+      "toAt": 0.45,
+      "openAtWave": 7,
+      "everyNth": 4,
+      "groundOnly": true
+     }
     ]
    },
    "waves": [

@@ -76,7 +76,7 @@ export const TREES: TreeDef[] = [
       { id: 'ar-frost', name: 'Frost rounds', desc: 'Load a tower with frost rounds: hits chill the foe.', cost: 3, effect: { k: 'round', round: 'frost' } },
       { id: 'ar-storm', name: 'Storm rounds', desc: 'Load a tower with storm rounds: hits can chain to a nearby foe.', cost: 3, effect: { k: 'round', round: 'storm' } },
       { id: 'ar-shatter', name: 'Shatter', desc: 'Chilled foes take 50% more fire damage.', cost: 4, req: 'ar-frost', effect: { k: 'shatter' } },
-      { id: 'ar-overload', name: 'Overload', desc: 'Lightning on rooted or frozen foes jumps +2 times (Rail +35%).', cost: 4, req: 'ar-storm', effect: { k: 'overload' } },
+      { id: 'ar-overload', name: 'Overload', desc: 'Lightning on rooted or frozen foes jumps +2 times (Rail +35% extra).', cost: 4, req: 'ar-storm', effect: { k: 'overload' } },
       { id: 'ar-inherit', name: 'Borrowed edge', desc: 'Cross-tree: Wren inherits the loaded round of the nearest loaded tower.', cost: 6, req: 'ar-ember', effect: { k: 'roundInherit' } },
       { id: 'ar-pierce', name: 'Breach cores', desc: 'Capstone: every tower ignores 50% of foe armor.', cost: 10, req: 'ar-inherit', after: 14, excl: 'ar-tempest', effect: { k: 'armorPierce', v: 0.5 } },
       { id: 'ar-tempest', name: 'Chain conductor', desc: 'Capstone: Storm lightning jumps to +2 more foes and all towers attack 8% faster.', cost: 10, req: 'ar-overload', after: 14, excl: 'ar-pierce', effect: { k: 'jumps', v: 2 } },

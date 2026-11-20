@@ -41,7 +41,7 @@ export interface TowerStats {
 export interface EvalContext {
   mods: Mods;
   beacons: EvalBeacon[];
-  hero: { dead: boolean; x: number; y: number; rankE: number; items: ItemId[]; double: number; sunriseT: number };
+  hero: { dead: boolean; x: number; y: number; rankE: number; items: ItemId[]; double: number; sunriseT: number; attuneSurgeT?: number };
   night: boolean;
   weather?: 'rain';
   inLighthouse: (x: number, y: number) => boolean;
@@ -126,19 +126,23 @@ export function evalTowerStats(t: TowerEvalInput, ctx: EvalContext, lvOverride?:
   }
 
   const h = ctx.hero;
-  if (!h.dead && ctx.ell(h.x - t.x, h.y - t.y) < ATTUNE.radius) {
-    if (h.rankE > 0) {
-      const aRate = ATTUNE.rate[h.rankE - 1] + ctx.mods.attune;
+  const nearHero = !h.dead && ctx.ell(h.x - t.x, h.y - t.y) < ATTUNE.radius;
+  const surge = (h.attuneSurgeT ?? 0) > 0;
+  if (nearHero || surge) {
+    if (h.rankE > 0 || surge) {
+      const aRate = ATTUNE.rate[Math.max(0, h.rankE - 1)] + ctx.mods.attune;
       rateMul += aRate;
-      buffs.push(`Attune +${Math.round(aRate * 100)}% spd`);
+      buffs.push(`${surge && !nearHero ? 'Runic Attune' : 'Attune'} +${Math.round(aRate * 100)}% spd`);
     }
-    let aura = 0;
-    for (const id of h.items) aura += ITEMS[id].auraDmg ?? 0;
-    if (aura > 0) { dmg *= 1 + aura; buffs.push('Mantle +12%'); }
-    if (h.double > 0) { dmg *= 2; buffs.push('2x Rune'); }
+    if (nearHero) {
+      let aura = 0;
+      for (const id of h.items) aura += ITEMS[id].auraDmg ?? 0;
+      if (aura > 0) { dmg *= 1 + aura; buffs.push('Mantle +12%'); }
+      if (h.double > 0) { dmg *= 2; buffs.push('2x Rune'); }
+    }
   }
   if (h.sunriseT > 0) { rateMul *= 2; buffs.push('Sunrise 2x'); }
-  if (ctx.weather === 'rain' && def.element === 'fire') { dmg *= 0.8; buffs.push('Rain -20%'); }
+  if (ctx.weather === 'rain' && def.element === 'fire' && t.kind !== 'beacon') { dmg *= 0.8; buffs.push('Rain -20%'); }
 
   return { dmg, range, rate: rate / rateMul, crit, jumps, splash, shells, hitsFlying: def.hitsFlying, buffs };
 }

@@ -15,7 +15,7 @@ import { HERO, heroRespawn, xpToNext, SKILLS, SWEEP, SNARE, ATTUNE, SUNRISE, typ
 import { COURIER_SURCHARGE, ITEMS, ITEM_SLOTS, SELL_ITEM, RUNE_EVERY, RUNE_FIRST, RUNE_LIFETIME, RUNE_ORDER, RUNES, type ItemId, type RuneKind } from './data/shop';
 import { baseMods, type Mods } from './mods';
 import { deliverDamage, type AttributionBucket, type DamageBreakdown, type DmgEl } from './combat';
-import { evalTowerStats, type TowerStats } from './tower-stats';
+import { evalTowerStats, previewBeaconRange, type TowerStats } from './tower-stats';
 
 /** The game is drawn in a 3/4 view: ranges are ellipses, squashed by this factor on y. */
 export const Y_SQUASH = 1.25;
@@ -40,6 +40,8 @@ export interface RoadRt {
   closed: boolean;
   /** Distance along the road where a tide, lava, or gate closure sits, if any. */
   closeAt: number | null;
+  /** All closure stops along self-intersecting roads (e.g. figure-8 viaduct). */
+  closeAts: number[];
   barrier: { hp: number; max: number; d: number; x: number; y: number } | null;
   belts: { from: number; to: number; mult: number }[];
 }
@@ -105,6 +107,9 @@ export interface Foe {
   freezeImmune: number;
   burnT: number;
   burnDps: number;
+  /** Separate Lantern Snare (W) burn so it credits Wren last-hits and scopes wr-shatter cleanly. */
+  lanternBurnT: number;
+  lanternBurnDps: number;
   vulnT: number;
   blocked: boolean;
   hidden: boolean;
@@ -125,6 +130,7 @@ export interface Foe {
   panes: number;
   paneT: number;
   paneCd: number;
+  sporePaneCd: number;
   /** Inside a Herald's aura this tick. */
   warded: boolean;
 }
@@ -194,6 +200,8 @@ export interface HeroState {
   double: number;
   regenT: number;
   sunriseT: number;
+  /** Global Attune surge seconds from Runic Echo (bw-rune). */
+  attuneSurgeT: number;
   face: number;
   swing: number;
   moving: boolean;
@@ -234,6 +242,7 @@ export type BattleEvent =
   | { t: 'terraform'; label: string }
   | { t: 'warp'; fromX: number; fromY: number; toX: number; toY: number; kind: PortalDef['kind'] }
   | { t: 'gateShock'; x: number; y: number }
+  | { t: 'ironGate'; x: number; y: number }
   | { t: 'stamp'; x: number; y: number; r: number }
   | { t: 'pane'; x: number; y: number; left: number }
   | { t: 'lunge'; x: number; y: number }
@@ -302,6 +311,7 @@ export class Battle {
   private ids = 1;
   private shiftShift = 0;
   private leakedThisWave = false;
+  private ironGateCd = 0;
   private gateShockUsedWave = -1;
   private threatDirty = true;
   private threat = new Map<RoadRt, number>();
@@ -330,14 +340,21 @@ export class Battle {
         spawnOpen: active && (def.closeAtWave === undefined || def.closeAtWave > 1),
         closed: false,
         closeAt: null,
+        closeAts: [],
         barrier: null,
         belts: [],
       };
-      for (const s of stage.shifts ?? []) if (s.closes.includes(def.id)) rt.closeAt = nearestD(path, s.at);
+      for (const s of stage.shifts ?? []) if (s.closes.includes(def.id)) {
+        for (const d of allNearestDs(path, s.at)) if (!rt.closeAts.some(x => Math.abs(x - d) < 60)) rt.closeAts.push(d);
+      }
       // A gate switch holds walkers at its boom, exactly like a tide holds them at a ford.
       for (const sw of stage.switches ?? []) {
-        if (sw.mode === 'gate' && rt.closeAt === null && (sw.closesB ?? []).includes(def.id)) rt.closeAt = nearestD(path, sw.at);
+        if (sw.mode === 'gate' && (sw.closesB ?? []).includes(def.id)) {
+          for (const d of allNearestDs(path, sw.at)) if (!rt.closeAts.some(x => Math.abs(x - d) < 60)) rt.closeAts.push(d);
+        }
       }
+      rt.closeAts.sort((a, b) => a - b);
+      rt.closeAt = rt.closeAts[0] ?? null;
       for (const b of stage.barriers ?? []) if (b.road === def.id) {
         const p = pointAt(path, path.tot * b.at);
         rt.barrier = { hp: b.hp * this.scale, max: b.hp * this.scale, d: path.tot * b.at, x: p.x, y: p.y };
@@ -399,7 +416,7 @@ export class Battle {
     this.hero = {
       x: sx, y: sy, tx: sx, ty: sy, anchorX: sx, anchorY: sy,
       hp: 0, level: lvl, xp: 0, points: lvl + this.mods.heroSkillPoints, ranks: { q: 0, w: 0, e: 0, r: 0 }, cd: { q: 0, w: 0, e: 0, r: 0 },
-      atkCd: 0, dead: false, respawnT: 0, focus: null, items: [], revived: false, haste: 0, double: 0, regenT: 0, sunriseT: 0, face: 1, swing: 0, moving: false,
+      atkCd: 0, dead: false, respawnT: 0, focus: null, items: [], revived: false, haste: 0, double: 0, regenT: 0, sunriseT: 0, attuneSurgeT: 0, face: 1, swing: 0, moving: false,
     };
     this.hero.hp = this.heroMaxHp();
     this.applyGears(1);
@@ -675,7 +692,7 @@ export class Battle {
     const h = this.hero, r = h.ranks.q;
     const dmg = SWEEP.dmg[r - 1] * (1 + this.mods.sweep) * this.heroDmgMul();
     for (const f of this.foes) if (this.reachable(f, true) && ell(f.x - h.x, f.y - h.y) < SWEEP.radius) {
-      this.damage(f, dmg, 'hero', true, false, false, undefined, 'skills');
+      this.damage(f, dmg, 'hero', true, false, false, undefined, 'skills', 0, true);
     }
     h.cd.q = SKILLS.q.cd[r - 1];
     h.swing = 0.35;
@@ -694,9 +711,9 @@ export class Battle {
     const burnDps = burst * SNARE.burnDpsMul;
     for (const f of this.foes) if (this.reachable(f, true) && !f.def.flying && ell(f.x - x, f.y - y) < SNARE.radius) {
       if (!f.def.traits?.boss) f.rootT = Math.max(f.rootT, hold);
-      f.burnT = Math.max(f.burnT, SNARE.burnSec);
-      f.burnDps = Math.max(f.burnDps, burnDps);
-      this.damage(f, burst, 'hero', true, false, false, undefined, 'skills');
+      f.lanternBurnT = Math.max(f.lanternBurnT, SNARE.burnSec);
+      f.lanternBurnDps = Math.max(f.lanternBurnDps, burnDps);
+      this.damage(f, burst, 'hero', true, false, false, undefined, 'skills', 0, true);
     }
     h.cd.w = SKILLS.w.cd[r - 1];
     this.events.push({ t: 'skill', key: 'w', x, y });
@@ -731,6 +748,7 @@ export class Battle {
 
   canBuy(id: ItemId): boolean {
     const it = ITEMS[id];
+    if (id === 'seconddawn' && this.hero.revived) return false;
     return this.canShop() && this.hero.items.length < ITEM_SLOTS && this.gold >= this.itemCost(id) && this.mods.shopAfter >= it.after && !this.hero.items.includes(id);
   }
 
@@ -791,7 +809,7 @@ export class Battle {
         })),
         hero: {
           dead: this.hero.dead, x: this.hero.x, y: this.hero.y,
-          rankE: this.hero.ranks.e, items: this.hero.items, double: this.hero.double, sunriseT: this.hero.sunriseT,
+          rankE: this.hero.ranks.e, items: this.hero.items, double: this.hero.double, sunriseT: this.hero.sunriseT, attuneSurgeT: this.hero.attuneSurgeT,
         },
         night: this.night,
         weather: this.stage.weather,
@@ -829,12 +847,14 @@ export class Battle {
   private tick(dt: number) {
     const running = this.status === 'running';
     if (running) this.clock += dt;
+    this.ironGateCd = Math.max(0, this.ironGateCd - dt);
     this.updateSwitches(dt);
     this.updateShifts();
     if (running) this.updateWave(dt);
     if (running) this.updateRunes(dt);
-    this.updateVents(dt);
+    if (running) this.updateVents(dt);
     this.updateFoes(dt);
+    if (this.lives <= 0) { this.foes = this.foes.filter(f => !f.dead); this.finish(false); return; }
     this.updateHero(dt);
     this.updateTowers(dt);
     this.updateShots(dt);
@@ -1033,10 +1053,10 @@ export class Battle {
     const f: Foe = {
       id: this.ids++, kind, def, road, d, x: p.x, y: p.y, dir: p.dir, off: isBoss ? 0 : (this.rng() - 0.5) * road.def.w * 0.5,
       hp, max: hp, speed: def.speed * (0.94 + this.rng() * 0.12), slow: 0, slowT: 0, rootT: 0, staggerT: 0, freezeT: 0, freezeImmune: 0,
-      burnT: 0, burnDps: 0, vulnT: 0, blocked: false, hidden: false, shielded: false, under: false,
+      burnT: 0, burnDps: 0, lanternBurnT: 0, lanternBurnDps: 0, vulnT: 0, blocked: false, hidden: false, shielded: false, under: false,
       underT: def.traits?.burrow ? def.traits.burrow[1] : def.traits?.dive?.every ?? 0,
       abilityT: def.traits?.summon?.every ?? def.traits?.lunge?.every ?? def.traits?.stamp?.every ?? 2, phase: 0, burstT: 0, hitT: 0, dead: false, warpedMask: 0,
-      lungeT: 0, panes: def.traits?.panes?.n ?? 0, paneT: 0, paneCd: 0, warded: false,
+      lungeT: 0, panes: def.traits?.panes?.n ?? 0, paneT: 0, paneCd: 0, sporePaneCd: 0, warded: false,
     };
     this.foes.push(f);
     if (isBoss) this.events.push({ t: 'boss', kind });
@@ -1146,7 +1166,7 @@ export class Battle {
         if (r.kind === 'double') h.double = RUNES.double.dur;
         if (r.kind === 'regen') h.regenT = RUNES.regen.dur;
         if (r.kind === 'bounty') { const g = 30 + this.wave * 6; this.gold += g; this.giveXp(40 + this.wave * 20); }
-        if (this.mods.runeAttune) { h.sunriseT = Math.max(h.sunriseT, 3); }
+        if (this.mods.runeAttune) { h.attuneSurgeT += 3; }
         this.events.push({ t: 'rune', kind: r.kind, picked: true });
       } else if (r.ttl <= 0) {
         this.rune = null;
@@ -1193,6 +1213,7 @@ export class Battle {
       f.burstT = Math.max(0, f.burstT - dt);
       f.hitT = Math.max(0, f.hitT - dt);
       f.paneCd = Math.max(0, f.paneCd - dt);
+      f.sporePaneCd = Math.max(0, f.sporePaneCd - dt);
       if (tr?.panes && f.panes < tr.panes.n) {
         f.paneT -= dt;
         if (f.paneT <= 0) { f.panes++; f.paneT = tr.panes.regrow; }
@@ -1202,6 +1223,12 @@ export class Battle {
         this.damage(f, f.burnDps * dt, 'fire', false, true, false, undefined, 'status');
         if (f.dead) continue;
         if (f.burnT <= 0) { f.burnT = 0; f.burnDps = 0; }
+      }
+      if (f.lanternBurnT > 0) {
+        f.lanternBurnT -= dt;
+        this.damage(f, f.lanternBurnDps * dt, 'hero', true, true, false, undefined, 'skills', 0, true);
+        if (f.dead) continue;
+        if (f.lanternBurnT <= 0) { f.lanternBurnT = 0; f.lanternBurnDps = 0; }
       }
 
       if (tr?.burrow) {
@@ -1276,13 +1303,16 @@ export class Battle {
         (!h.dead && Math.hypot(h.x - f.x, h.y - f.y) < sight) ||
         h.sunriseT > 0 ||
         this.inLighthouse(f.x, f.y) ||
-        (!tr?.veil && this.towers.some(t => ell(t.x - f.x, t.y - f.y) < TOWER_SIGHT)) ||
-        beacons.some(b => ell(b.x - f.x, b.y - f.y) < TOWERS.beacon.range[Math.min(b.lv, 3) - 1])
+        (!tr?.veil && this.towers.some(t => !t.down && t.stunT <= 0 && ell(t.x - f.x, t.y - f.y) < TOWER_SIGHT)) ||
+        beacons.some(b => b.stunT <= 0 && ell(b.x - f.x, b.y - f.y) < previewBeaconRange({
+          kind: 'beacon', lv: b.lv, split: b.split, high: b.high,
+          nearWater: this.plots[b.plot]?.nearWater ?? false, x: b.x, y: b.y, down: b.down,
+        }, this.mods))
       );
 
-      // Pin + Leash Hold: stepping inside <= 36 px of pinned anchor NEVER breaks Wren's `blocks: 2` guard!
+      // Pin + Leash Hold: stepping inside <= HERO.leash (90 px) of pinned anchor keeps Wren's block guard active.
       f.blocked = false;
-      const inLeash = Math.hypot(h.x - h.anchorX, h.y - h.anchorY) <= 36;
+      const inLeash = h.focus === null && Math.hypot(h.x - h.anchorX, h.y - h.anchorY) <= HERO.leash;
       if (!h.dead && (!h.moving || inLeash) && !f.def.flying && !f.under && blocking < HERO.blocks && Math.hypot(h.x - f.x, h.y - f.y) < 30 + f.def.size * 10) {
         f.blocked = true; blocking++;
         const armor = Math.min(0.6, sumItems(h.items, 'armor'));
@@ -1290,16 +1320,12 @@ export class Battle {
       }
 
       // Movement & portal jumps.
-      let mul = f.slow > 0 ? 1 - f.slow : 1;
-      if (f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked) mul = 0;
-      if (f.burstT > 0) mul *= 1.6;
-      if (f.lungeT > 0 && tr?.lunge) mul *= tr.lunge.mult;
-      const activeBrake = this.switches.find(sw => sw.def.mode === 'belt' && sw.activeT > 0 && sw.def.targetRoad === f.road.def.id);
-      if (activeBrake) mul *= activeBrake.def.beltMult ?? 0.55;
-      else for (const b of f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult;
-      if (f.under && tr?.burrow) mul *= 1.4;
-      let nd = f.d + f.speed * mul * dt;
-      if (f.road.closed && f.road.closeAt !== null && f.d < f.road.closeAt - 30 && !f.def.flying) nd = Math.min(nd, f.road.closeAt - 40);
+      let nd = f.d + this.effectiveSpeed(f) * dt;
+      if (f.road.closed && !f.def.flying) {
+        for (const ca of f.road.closeAts) {
+          if (f.d <= ca - 30) { nd = Math.min(nd, Math.max(f.d, ca - 30)); break; }
+        }
+      }
       const bar = f.road.barrier;
       if (bar && bar.hp > 0 && !f.def.flying && f.d < bar.d) {
         nd = Math.min(nd, bar.d - 26);
@@ -1342,16 +1368,36 @@ export class Battle {
     }
   }
 
+  private effectiveSpeed(f: Foe): number {
+    if (f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked) return 0;
+    const tr = f.def.traits;
+    let mul = f.slow > 0 ? 1 - f.slow : 1;
+    if (f.burstT > 0) mul *= 1.6;
+    if (f.lungeT > 0 && tr?.lunge) mul *= tr.lunge.mult;
+    const activeBrake = this.switches.find(sw => sw.def.mode === 'belt' && sw.activeT > 0 && sw.def.targetRoad === f.road.def.id);
+    if (activeBrake) mul *= activeBrake.def.beltMult ?? 0.55;
+    else for (const b of f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult;
+    if (f.under && tr?.burrow) mul *= 1.4;
+    return f.speed * mul;
+  }
+
   private leak(f: Foe) {
     f.dead = true;
-    if ((this.mods.ironGate || this.mods.gateShock) && !this.leakedThisWave && !f.def.traits?.boss) {
+    if ((this.mods.ironGate || this.mods.gateShock) && !this.leakedThisWave && this.ironGateCd <= 0 && !f.def.traits?.boss) {
       this.leakedThisWave = true;
+      this.ironGateCd = 15;
       if (this.mods.gateShock && this.gateShockUsedWave !== this.wave) {
         this.gateShockUsedWave = this.wave;
         this.events.push({ t: 'gateShock', x: f.x, y: f.y });
         for (const o of this.foes) {
-          if (!o.dead && !o.def.traits?.boss && Math.hypot(o.x - f.x, o.y - f.y) < 160) o.rootT = Math.max(o.rootT, 2.5);
+          if (!o.dead && !o.def.traits?.boss && !o.def.flying && !o.under && Math.hypot(o.x - f.x, o.y - f.y) < 160) {
+            o.d = Math.max(0, o.d - 80);
+            o.staggerT = Math.max(o.staggerT, 1.5);
+            o.rootT = Math.max(o.rootT, 2.5);
+          }
         }
+      } else {
+        this.events.push({ t: 'ironGate', x: f.x, y: f.y });
       }
       return;
     }
@@ -1379,16 +1425,22 @@ export class Battle {
     sourceTower?: Tower,
     bucket?: AttributionBucket,
     armorPierceExtra = 0,
+    shatterSkill = false,
   ): number {
     if (!this.reachable(f, true) || amount <= 0) return 0;
     if (f.panes > 0) {
-      // Each hit breaks one pane and does no harm. Burns and vents only scratch the glass;
-      // a spore cloud breaks a pane now and then.
+      // Each direct hit breaks one pane (short 20ms dedup so twin bolts & scatter shells each strip a pane);
+      // spore clouds use a separate 0.6s cooldown so they never shield Glasshide from direct hits.
       const tick = bucket === 'status';
       if (tick && el !== 'nature') return 0;
-      if (f.paneCd > 0) return 0;
+      if (tick) {
+        if (f.sporePaneCd > 0) return 0;
+        f.sporePaneCd = 0.6;
+      } else {
+        if (f.paneCd > 0) return 0;
+        f.paneCd = 0.02;
+      }
       f.panes--;
-      f.paneCd = tick ? 0.6 : 0.12;
       f.paneT = f.def.traits?.panes?.regrow ?? 2.5;
       this.events.push({ t: 'pane', x: f.x, y: f.y - f.def.bar * 0.6, left: f.panes });
       return 0;
@@ -1396,7 +1448,7 @@ export class Battle {
     if (f.warded && el !== 'hero' && el !== 'env' && el === this.heraldEl()) amount *= 1 - this.heraldCut;
     const { applied, clamped } = deliverDamage(
       { stageId: this.stage.id, mods: this.mods, resist: this.resist, dmgWindow: this.dmgWindow, breakdown: this.breakdown },
-      f, amount, el, { byHero, quiet, armorPierceExtra, bucket },
+      f, amount, el, { byHero, quiet, armorPierceExtra, bucket, shatterSkill },
     );
     if (applied <= 0) return 0;
     if (sourceTower) sourceTower.dmgDealt += clamped;
@@ -1454,7 +1506,7 @@ export class Battle {
     const h = this.hero;
     for (const k of ['q', 'w', 'r'] as SkillKey[]) h.cd[k] = Math.max(0, h.cd[k] - dt);
     h.haste = Math.max(0, h.haste - dt); h.double = Math.max(0, h.double - dt); h.regenT = Math.max(0, h.regenT - dt);
-    h.sunriseT = Math.max(0, h.sunriseT - dt); h.swing = Math.max(0, h.swing - dt);
+    h.sunriseT = Math.max(0, h.sunriseT - dt); h.attuneSurgeT = Math.max(0, h.attuneSurgeT - dt); h.swing = Math.max(0, h.swing - dt);
 
     if (h.dead) {
       h.respawnT -= dt;
@@ -1617,12 +1669,18 @@ export class Battle {
       }
       case 'cannon': {
         const dur = t.split === 'a' ? 0.65 : 0.68;
-        let belt = 1;
-        for (const b of target.road.belts) if (target.d >= b.from && target.d <= b.to) belt *= b.mult;
-        const lead = target.rootT > 0 || target.freezeT > 0 || target.blocked ? 0 : target.speed * (1 - target.slow) * belt * dur;
+        let predD = target.d + this.effectiveSpeed(target) * dur;
+        if (target.road.closed && !target.def.flying) {
+          for (const ca of target.road.closeAts) {
+            if (target.d <= ca - 30) { predD = Math.min(predD, Math.max(target.d, ca - 30)); break; }
+          }
+        }
+        if (target.road.barrier && target.road.barrier.hp > 0 && !target.def.flying && target.d < target.road.barrier.d) {
+          predD = Math.min(predD, target.road.barrier.d - 26);
+        }
         for (let i = 0; i < s.shells; i++) {
           const off = s.shells > 1 ? (i - 1) * 54 : 0;
-          const p = pointAt(target.road.path, target.d + lead + off);
+          const p = pointAt(target.road.path, predD + off);
           this.shots.push({
             id: this.ids++, kind: 'shell', tower: t.id, x0: t.x, y0: t.y - 44, tx: p.x, ty: p.y,
             foe: target.id, t: -i * 0.08, dur, dmg: s.dmg, el, splash: s.splash, round: t.round, crit: false,
@@ -1650,7 +1708,7 @@ export class Battle {
         const hit = new Set<number>();
         const held = target.rootT > 0 || target.freezeT > 0;
         let cur: Foe | undefined = target;
-        let dmg = t.split === 'b' && held ? s.dmg * 1.35 : s.dmg;
+        let dmg = t.split === 'b' && held ? s.dmg * (this.mods.overload ? 1.7 : 1.35) : s.dmg;
         const pierceExtra = t.lv >= MAX_TOWER_LEVEL && t.split === 'b' && !target.def.traits?.boss ? 0.3 : 0;
         let jumps = t.split === 'b' ? 0 : s.jumps + (this.mods.overload && held ? 2 : 0);
         const reach = this.stage.weather === 'rain' ? 220 : 120;
@@ -1777,10 +1835,21 @@ function sumItems(items: ItemId[], key: 'hp' | 'dmg' | 'speed' | 'regen' | 'armo
   return s;
 }
 
-function nearestD(p: Path, at: Vec): number {
+function allNearestDs(p: Path, at: Vec): number[] {
+  const ds: number[] = [];
+  let prev = Infinity, cur = Infinity, prevD = 0;
   let best = Infinity, bd = 0;
-  for (let d = 0; d <= p.tot; d += 6) { const q = pointAt(p, d); const k = Math.hypot(q.x - at[0], q.y - at[1]); if (k < best) { best = k; bd = d; } }
-  return bd;
+  for (let d = 0; d <= p.tot; d += 6) {
+    const q = pointAt(p, d);
+    const k = Math.hypot(q.x - at[0], q.y - at[1]);
+    if (k < best) { best = k; bd = d; }
+    if (cur < prev && cur <= k && cur <= 55) {
+      if (!ds.some(x => Math.abs(x - prevD) < 60)) ds.push(prevD);
+    }
+    prev = cur; cur = k; prevD = d;
+  }
+  if (ds.length === 0) ds.push(bd);
+  return ds;
 }
 
 export function inPoly(pt: Vec, poly: Vec[]): boolean {

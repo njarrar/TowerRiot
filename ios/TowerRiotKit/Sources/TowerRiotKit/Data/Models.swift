@@ -292,6 +292,8 @@ public struct StageAlt: Codable, Sendable {
     /// Tides, lava and steam cycle this much faster or slower (0.8 = every 40 s instead of 50 s).
     public let shiftEveryMul: Double?
     /// Foe health for this layout, on top of the stage's own `hpMul`.
+    public var switches: [SwitchDef]?
+    public let portals: [PortalDef]?
     public let hpMul: Double?
 }
 
@@ -322,7 +324,7 @@ public struct StageDef: Codable, Sendable {
     public let barriers: [Barrier]?
     public let belts: [Belt]?
     public let vents: [Vent]?
-    public let switches: [SwitchDef]?
+    public var switches: [SwitchDef]?
     public let terraforms: [TerraformDef]?
     public var portals: [PortalDef]?
     public let alt: StageAlt?
@@ -469,6 +471,8 @@ public struct StageDef: Codable, Sendable {
             if let pw = a.portalOpenAtWave {
                 out.portals = out.portals?.map { var pt = $0; pt.openAtWave = pw; return pt }
             }
+            if let sws = a.switches { out.switches = sws }
+            if let pts = a.portals { out.portals = pts }
             if let mul = a.shiftEveryMul, let sh = out.shifts, !sh.isEmpty { out.shifts = Self.scaleShifts(sh, mul) }
             if let hm = a.hpMul { out.hpMul = (hpMul ?? 1) * hm }
         }

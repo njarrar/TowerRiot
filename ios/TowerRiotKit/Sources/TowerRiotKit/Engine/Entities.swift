@@ -16,6 +16,7 @@ public final class RoadRt {
     public internal(set) var closed = false
     /// Distance along the road where a tide or lava closure sits, if any.
     public internal(set) var closeAt: Double?
+    public internal(set) var closeAts: [Double] = []
     public internal(set) var barrier: BarrierState?
     public internal(set) var belts: [BeltState] = []
 
@@ -46,6 +47,8 @@ public final class Foe {
     var freezeImmune = 0.0
     public internal(set) var burnT = 0.0
     var burnDps = 0.0
+    public internal(set) var lanternBurnT = 0.0
+    var lanternBurnDps = 0.0
     public internal(set) var vulnT = 0.0
     public internal(set) var blocked = false
     public internal(set) var hidden = false
@@ -65,6 +68,7 @@ public final class Foe {
     public internal(set) var panes = 0
     var paneT = 0.0
     var paneCd = 0.0
+    var sporePaneCd = 0.0
     /// Inside a Herald's aura this tick.
     public internal(set) var warded = false
 
@@ -197,6 +201,7 @@ public struct HeroState {
     public internal(set) var double = 0.0
     public internal(set) var regenT = 0.0
     public internal(set) var sunriseT = 0.0
+    public internal(set) var attuneSurgeT = 0.0
     public internal(set) var face = 1.0
     public internal(set) var swing = 0.0
     public internal(set) var moving = false
@@ -244,6 +249,7 @@ public enum BattleEvent {
     case terraform(label: String)
     case warp(fromX: Double, fromY: Double, toX: Double, toY: Double, kind: PortalDef.Kind)
     case gateShock(x: Double, y: Double)
+    case ironGate(x: Double, y: Double)
     case stamp(x: Double, y: Double, r: Double)
     case pane(x: Double, y: Double, left: Int)
     case lunge(x: Double, y: Double)

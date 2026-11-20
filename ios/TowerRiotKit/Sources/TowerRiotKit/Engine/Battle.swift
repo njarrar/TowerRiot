@@ -72,6 +72,7 @@ public final class Battle {
     private var ids = 1
     private var shiftShift = 0.0
     private var leakedThisWave = false
+    private var ironGateCd = 0.0
     private var gateShockUsedWave = -1
     private var threatDirty = true
     private var threat: [ObjectIdentifier: Double] = [:]
@@ -97,11 +98,17 @@ public final class Battle {
             let active = openWave <= 1 && (def.openOnPhase ?? 0) == 0
             let spawnOpen = active && (def.closeAtWave == nil || def.closeAtWave! > 1)
             let rt = RoadRt(def: def, path: path, active: active, telegraph: openWave == 2, spawnOpen: spawnOpen)
-            for s in stage.shifts ?? [] where s.closes.contains(def.id) { rt.closeAt = path.nearestDistance(to: s.at) }
+            for s in stage.shifts ?? [] where s.closes.contains(def.id) {
+                for d in path.allNearestDistances(to: s.at) where !rt.closeAts.contains(where: { abs($0 - d) < 60 }) { rt.closeAts.append(d) }
+            }
             // A gate switch holds walkers at its boom, exactly like a tide holds them at a ford.
             for sw in stage.switches ?? [] {
-                if sw.mode == .gate && rt.closeAt == nil && (sw.closesB ?? []).contains(def.id) { rt.closeAt = path.nearestDistance(to: sw.at) }
+                if sw.mode == .gate && (sw.closesB ?? []).contains(def.id) {
+                    for d in path.allNearestDistances(to: sw.at) where !rt.closeAts.contains(where: { abs($0 - d) < 60 }) { rt.closeAts.append(d) }
+                }
             }
+            rt.closeAts.sort()
+            rt.closeAt = rt.closeAts.first
             for b in stage.barriers ?? [] where b.road == def.id {
                 let p = path.point(at: path.tot * b.at)
                 rt.barrier = .init(hp: b.hp * scale, max: b.hp * scale, d: path.tot * b.at, x: p.x, y: p.y)
@@ -432,7 +439,7 @@ public final class Battle {
         let dmg = data.sweep.dmg[r - 1] * (1 + mods.sweep) * heroDmgMul()
         eachFoe { f in
             if self.reachable(f, byHero: true) && ell(f.x - self.hero.x, f.y - self.hero.y) < self.data.sweep.radius {
-                self.damage(f, dmg, .element(.hero), byHero: true, bucket: .skills)
+                self.damage(f, dmg, .element(.hero), byHero: true, bucket: .skills, shatterSkill: true)
             }
         }
         hero.cd[.q] = data.skill(.q).cd[r - 1]
@@ -454,9 +461,9 @@ public final class Battle {
         eachFoe { f in
             if self.reachable(f, byHero: true) && !f.def.isFlying && ell(f.x - x, f.y - y) < sn.radius {
                 if !f.def.isBoss { f.rootT = max(f.rootT, hold) }
-                f.burnT = max(f.burnT, sn.burnSec)
-                f.burnDps = max(f.burnDps, burnDps)
-                self.damage(f, burst, .element(.hero), byHero: true, bucket: .skills)
+                f.lanternBurnT = max(f.lanternBurnT, sn.burnSec)
+                f.lanternBurnDps = max(f.lanternBurnDps, burnDps)
+                self.damage(f, burst, .element(.hero), byHero: true, bucket: .skills, shatterSkill: true)
             }
         }
         hero.cd[.w] = data.skill(.w).cd[r - 1]
@@ -491,6 +498,7 @@ public final class Battle {
 
     public func canBuy(_ id: ItemId) -> Bool {
         let it = data.item(id)
+        if id == .seconddawn && hero.revived { return false }
         return canShop() && hero.items.count < data.itemSlots && gold >= itemCost(id) && mods.shopAfter >= it.after && !hero.items.contains(id)
     }
 
@@ -611,18 +619,22 @@ public final class Battle {
             }
         }
         let h = hero
-        if !h.dead && ell(h.x - t.x, h.y - t.y) < data.attune.radius {
-            if h.rank(.e) > 0 {
-                let aRate = data.attune.rate[h.rank(.e) - 1] + mods.attune
+        let nearHero = !h.dead && ell(h.x - t.x, h.y - t.y) < data.attune.radius
+        let surge = h.attuneSurgeT > 0
+        if nearHero || surge {
+            if h.rank(.e) > 0 || surge {
+                let aRate = data.attune.rate[max(0, h.rank(.e) - 1)] + mods.attune
                 rateMul += aRate
-                buffs.append("Attune +\(Int(jsRound(aRate * 100)))% spd")
+                buffs.append("\(surge && !nearHero ? "Runic Attune" : "Attune") +\(Int(jsRound(aRate * 100)))% spd")
             }
-            let aura = sumItems(\.auraDmg)
-            if aura > 0 { dmg *= 1 + aura; buffs.append("Mantle +12%") }
-            if h.double > 0 { dmg *= 2; buffs.append("2x Rune") }
+            if nearHero {
+                let aura = sumItems(\.auraDmg)
+                if aura > 0 { dmg *= 1 + aura; buffs.append("Mantle +12%") }
+                if h.double > 0 { dmg *= 2; buffs.append("2x Rune") }
+            }
         }
         if h.sunriseT > 0 { rateMul *= 2; buffs.append("Sunrise 2x") }
-        if stage.weather == "rain" && def.element == .fire { dmg *= 0.8; buffs.append("Rain -20%") }
+        if stage.weather == "rain" && def.element == .fire && t.kind != .beacon { dmg *= 0.8; buffs.append("Rain -20%") }
         return TowerStats(dmg: dmg, range: range, rate: rate / rateMul, crit: crit, jumps: jumps, splash: splash, shells: shells, hitsFlying: def.hitsFlying, buffs: buffs)
     }
 
@@ -649,12 +661,14 @@ public final class Battle {
     private func tick(_ dt: Double) {
         let running = status == .running
         if running { clock += dt }
+        ironGateCd = max(0, ironGateCd - dt)
         updateSwitches(dt)
         updateShifts()
         if running { updateWave(dt) }
         if running { updateRunes(dt) }
-        updateVents(dt)
+        if running { updateVents(dt) }
         updateFoes(dt)
+        if lives <= 0 { foes.removeAll { $0.dead }; finish(won: false); return }
         updateHero(dt)
         updateTowers(dt)
         updateShots(dt)
@@ -963,7 +977,7 @@ public final class Battle {
                 case .regen: hero.regenT = data.rune(.regen).dur
                 case .bounty: gold += 30 + wave * 6; giveXp(40 + Double(wave) * 20)
                 }
-                if mods.runeAttune { hero.sunriseT = max(hero.sunriseT, 3) }
+                if mods.runeAttune { hero.attuneSurgeT += 3 }
                 events.append(.rune(kind: r.kind, picked: true))
             } else if r.ttl <= 0 {
                 rune = nil
@@ -1004,7 +1018,6 @@ public final class Battle {
         let wardens = foes.filter { ($0.def.traits?.shield ?? 0) != 0 && !$0.dead }
         let heralds = foes.filter { $0.def.traits?.aura != nil && !$0.dead && !$0.under }
         let beacons = towers.filter { $0.kind == .beacon && !$0.down }
-        let beaconRange = data.tower(.beacon).range
         var blocking = 0
         let sight = heroSight()
         let hd = data.hero
@@ -1023,6 +1036,7 @@ public final class Battle {
             f.burstT = max(0, f.burstT - dt)
             f.hitT = max(0, f.hitT - dt)
             f.paneCd = max(0, f.paneCd - dt)
+            f.sporePaneCd = max(0, f.sporePaneCd - dt)
             if let pn = tr?.panes, f.panes < pn.n {
                 f.paneT -= dt
                 if f.paneT <= 0 { f.panes += 1; f.paneT = pn.regrow }
@@ -1032,6 +1046,12 @@ public final class Battle {
                 damage(f, f.burnDps * dt, .element(.fire), byHero: false, quiet: true, bucket: .status)
                 if f.dead { continue }
                 if f.burnT <= 0 { f.burnT = 0; f.burnDps = 0 }
+            }
+            if f.lanternBurnT > 0 {
+                f.lanternBurnT -= dt
+                damage(f, f.lanternBurnDps * dt, .element(.hero), byHero: true, quiet: true, bucket: .skills, shatterSkill: true)
+                if f.dead { continue }
+                if f.lanternBurnT <= 0 { f.lanternBurnT = 0; f.lanternBurnDps = 0 }
             }
 
             if let b = tr?.burrow {
@@ -1103,34 +1123,28 @@ public final class Battle {
                 let seen = (!hero.dead && hypot2(hero.x - f.x, hero.y - f.y) < sight)
                     || hero.sunriseT > 0
                     || inLighthouse(f.x, f.y)
-                    || (tr?.veil != true && towers.contains { ell($0.x - f.x, $0.y - f.y) < Battle.towerSight })
-                    || beacons.contains { ell($0.x - f.x, $0.y - f.y) < beaconRange[min($0.lv, 3) - 1] }
+                    || (tr?.veil != true && towers.contains { !$0.down && $0.stunT <= 0 && ell($0.x - f.x, $0.y - f.y) < Battle.towerSight })
+                    || beacons.contains { $0.stunT <= 0 && ell($0.x - f.x, $0.y - f.y) < beaconRange($0) }
                 f.hidden = !seen
             } else {
                 f.hidden = false
             }
 
-            // Pin + Leash Hold: stepping inside <= 36 px of pinned anchor keeps Wren's block guard active.
+            // Pin + Leash Hold: stepping inside <= leash (90 px) of pinned anchor keeps Wren's block guard active.
             f.blocked = false
-            let inLeash = hypot2(hero.x - hero.anchorX, hero.y - hero.anchorY) <= 36
+            let inLeash = hero.focus == nil && hypot2(hero.x - hero.anchorX, hero.y - hero.anchorY) <= hd.leash
             if !hero.dead && (!hero.moving || inLeash) && !f.def.isFlying && !f.under && blocking < hd.blocks && hypot2(hero.x - f.x, hero.y - f.y) < 30 + f.def.size * 10 {
                 f.blocked = true; blocking += 1
                 let armor = min(0.6, sumItems(\.armor))
                 hero.hp -= f.def.dps * scale * 0.6 * (1 - armor) * dt
             }
 
-            var mul = f.slow > 0 ? 1 - f.slow : 1
-            if f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked { mul = 0 }
-            if f.burstT > 0 { mul *= 1.6 }
-            if f.lungeT > 0, let lg = tr?.lunge { mul *= lg.mult }
-            if let activeBrake = switches.first(where: { $0.def.mode == .belt && $0.activeT > 0 && $0.def.targetRoad == f.road.def.id }) {
-                mul *= activeBrake.def.beltMult ?? 0.55
-            } else {
-                for b in f.road.belts where f.d >= b.from && f.d <= b.to { mul *= b.mult }
+            var nd = f.d + effectiveSpeed(f) * dt
+            if f.road.closed && !f.def.isFlying {
+                for ca in f.road.closeAts {
+                    if f.d <= ca - 30 { nd = min(nd, max(f.d, ca - 30)); break }
+                }
             }
-            if f.under && tr?.burrow != nil { mul *= 1.4 }
-            var nd = f.d + f.speed * mul * dt
-            if f.road.closed, let c = f.road.closeAt, f.d < c - 30, !f.def.isFlying { nd = min(nd, c - 40) }
             if var bar = f.road.barrier, bar.hp > 0, !f.def.isFlying, f.d < bar.d {
                 nd = min(nd, bar.d - 26)
                 if tr?.sapper == true && nd >= bar.d - 30 {
@@ -1176,16 +1190,36 @@ public final class Battle {
         }
     }
 
+    private func effectiveSpeed(_ f: Foe) -> Double {
+        if f.rootT > 0 || f.freezeT > 0 || f.staggerT > 0 || f.blocked { return 0 }
+        let tr = f.def.traits
+        var mul = f.slow > 0 ? 1 - f.slow : 1
+        if f.burstT > 0 { mul *= 1.6 }
+        if f.lungeT > 0, let lg = tr?.lunge { mul *= lg.mult }
+        if let activeBrake = switches.first(where: { $0.def.mode == .belt && $0.activeT > 0 && $0.def.targetRoad == f.road.def.id }) {
+            mul *= activeBrake.def.beltMult ?? 0.55
+        } else {
+            for b in f.road.belts where f.d >= b.from && f.d <= b.to { mul *= b.mult }
+        }
+        if f.under && tr?.burrow != nil { mul *= 1.4 }
+        return f.speed * mul
+    }
+
     private func leak(_ f: Foe) {
         f.dead = true
-        if (mods.ironGate || mods.gateShock) && !leakedThisWave && !f.def.isBoss {
+        if (mods.ironGate || mods.gateShock) && !leakedThisWave && ironGateCd <= 0 && !f.def.isBoss {
             leakedThisWave = true
+            ironGateCd = 15
             if mods.gateShock && gateShockUsedWave != wave {
                 gateShockUsedWave = wave
                 events.append(.gateShock(x: f.x, y: f.y))
-                for o in foes where !o.dead && !o.def.isBoss && hypot2(o.x - f.x, o.y - f.y) < 160 {
+                for o in foes where !o.dead && !o.def.isBoss && !o.def.isFlying && !o.under && hypot2(o.x - f.x, o.y - f.y) < 160 {
+                    o.d = max(0, o.d - 80)
+                    o.staggerT = max(o.staggerT, 1.5)
                     o.rootT = max(o.rootT, 2.5)
                 }
+            } else {
+                events.append(.ironGate(x: f.x, y: f.y))
             }
             return
         }
@@ -1203,16 +1237,19 @@ public final class Battle {
     }
 
     @discardableResult
-    func damage(_ f: Foe, _ amount: Double, _ src: DamageSource, byHero: Bool, quiet: Bool = false, crit: Bool = false, sourceTower: Tower? = nil, bucket: AttributionBucket? = nil, armorPierceExtra: Double = 0) -> Double {
+    func damage(_ f: Foe, _ amount: Double, _ src: DamageSource, byHero: Bool, quiet: Bool = false, crit: Bool = false, sourceTower: Tower? = nil, bucket: AttributionBucket? = nil, armorPierceExtra: Double = 0, shatterSkill: Bool = false) -> Double {
         if !reachable(f, byHero: true) || amount <= 0 { return 0 }
         if f.panes > 0 {
-            // Each hit breaks one pane and does no harm. Burns and vents only scratch the glass;
-            // a spore cloud breaks a pane now and then.
             let tick = bucket == .status
             if tick && src != .element(.nature) { return 0 }
-            if f.paneCd > 0 { return 0 }
+            if tick {
+                if f.sporePaneCd > 0 { return 0 }
+                f.sporePaneCd = 0.6
+            } else {
+                if f.paneCd > 0 { return 0 }
+                f.paneCd = 0.02
+            }
             f.panes -= 1
-            f.paneCd = tick ? 0.6 : 0.12
             f.paneT = f.def.traits?.panes?.regrow ?? 2.5
             events.append(.pane(x: f.x, y: f.y - f.def.bar * 0.6, left: f.panes))
             return 0
@@ -1229,9 +1266,8 @@ public final class Battle {
         if f.shielded { m *= 0.6 }
         if f.vulnT > 0 { m *= 1.25 }
         let chilled = f.slowT > 0 || f.freezeT > 0
-        if chilled && ((dmgEl == .fire && mods.shatter) || ((dmgEl == .hero || dmgEl == .fire) && mods.burnShatter && (byHero || quiet))) {
-            m *= 1.5
-        }
+        if chilled && dmgEl == .fire && mods.shatter { m *= 1.5 }
+        if chilled && shatterSkill && mods.burnShatter { m *= 1.5 }
         if let plated = f.def.traits?.plated, plated != 0, !chilled { m *= plated }
         var dmg = amount * m
         if let armor = f.def.traits?.armor, armor != 0, !quiet {
@@ -1305,7 +1341,7 @@ public final class Battle {
         let hd = data.hero
         for k in [SkillKey.q, .w, .r] { hero.cd[k] = max(0, hero.cooldown(k) - dt) }
         hero.haste = max(0, hero.haste - dt); hero.double = max(0, hero.double - dt); hero.regenT = max(0, hero.regenT - dt)
-        hero.sunriseT = max(0, hero.sunriseT - dt); hero.swing = max(0, hero.swing - dt)
+        hero.sunriseT = max(0, hero.sunriseT - dt); hero.attuneSurgeT = max(0, hero.attuneSurgeT - dt); hero.swing = max(0, hero.swing - dt)
         if hero.dead {
             hero.respawnT -= dt
             if hero.respawnT <= 0 {
@@ -1468,12 +1504,18 @@ public final class Battle {
             events.append(.shot(tower: t.id, kind: .bolt))
         case .cannon:
             let dur = t.split == .a ? 0.65 : 0.68
-            var belt = 1.0
-            for b in target.road.belts where target.d >= b.from && target.d <= b.to { belt *= b.mult }
-            let lead = target.rootT > 0 || target.freezeT > 0 || target.blocked ? 0 : target.speed * (1 - target.slow) * belt * dur
+            var predD = target.d + effectiveSpeed(target) * dur
+            if target.road.closed && !target.def.isFlying {
+                for ca in target.road.closeAts {
+                    if target.d <= ca - 30 { predD = min(predD, max(target.d, ca - 30)); break }
+                }
+            }
+            if let bar = target.road.barrier, bar.hp > 0, !target.def.isFlying, target.d < bar.d {
+                predD = min(predD, bar.d - 26)
+            }
             for i in 0..<s.shells {
                 let off = s.shells > 1 ? Double(i - 1) * 54 : 0
-                let p = target.road.path.point(at: target.d + lead + off)
+                let p = target.road.path.point(at: predD + off)
                 shots.append(Shot(id: nextId(), kind: .shell, tower: t.id, x0: t.x, y0: t.y - 44, tx: p.x, ty: p.y,
                                   foe: target.id, t: -Double(i) * 0.08, dur: dur, dmg: s.dmg, el: el, splash: s.splash, round: t.round, crit: false))
             }
@@ -1495,7 +1537,7 @@ public final class Battle {
             var hit = Set<Int>()
             let held = target.rootT > 0 || target.freezeT > 0
             var cur: Foe? = target
-            var dmg = t.split == .b && held ? s.dmg * 1.35 : s.dmg
+            var dmg = t.split == .b && held ? s.dmg * (mods.overload ? 1.7 : 1.35) : s.dmg
             let pierceExtra = t.lv >= data.maxTowerLevel && t.split == .b && !target.def.isBoss ? 0.3 : 0.0
             var jumps = t.split == .b ? 0 : s.jumps + (mods.overload && held ? 2 : 0)
             let reach = stage.weather == "rain" ? 220.0 : 120.0

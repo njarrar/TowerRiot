@@ -152,7 +152,7 @@ final class EngineTests: XCTestCase {
         XCTAssertFalse(free.roads.first(where: { $0.def.id == roadId })!.closed)
         for b in [held, free] { for _ in 0..<4 { b.step(0.5) } }
         XCTAssertFalse(walkers[0].dead)
-        XCTAssertEqual(walkers[0].d, hold - 40, accuracy: 1e-9, "the walker waits 40 px short of the boom")
+        XCTAssertEqual(walkers[0].d, hold - 30, accuracy: 1e-9, "the walker waits 30 px short of the boom without teleporting backwards")
         XCTAssertGreaterThan(walkers[1].d, hold, "with the gate open the same walker is past the boom by now")
         XCTAssertEqual(held.switches[si].cdLeft, cd, accuracy: 1e-9, "the cooldown waits for the gate to open")
         // Let the gate time out: the road opens, the walker moves on and the cooldown starts.
@@ -162,7 +162,7 @@ final class EngineTests: XCTestCase {
         XCTAssertEqual(held.switches[si].state, 0)
         held.step(1)
         XCTAssertFalse(held.roads.first(where: { $0.def.id == roadId })!.closed)
-        XCTAssertTrue(walkers[0].dead || walkers[0].d > hold - 40, "the walker is let through once the gate opens")
+        XCTAssertTrue(walkers[0].dead || walkers[0].d > hold - 30, "the walker is let through once the gate opens")
         XCTAssertLessThan(held.switches[si].cdLeft, cd)
     }
 
