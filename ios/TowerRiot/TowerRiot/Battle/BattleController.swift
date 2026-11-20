@@ -227,6 +227,7 @@ final class BattleController: ObservableObject {
             case .pane: sound.play(.bell)
             case .gateShock: sound.play(.sunrise); showBanner("Bastion bell!", "The Keep shockwave stuns intruders at the gate.", 2.2)
             case .ironGate: sound.play(.build); showBanner("Iron Gate holds!", "The portcullis repels the breach and knocks intruders back.", 2.2)
+            case let .heraldCleanse(el, _, _): sound.play(.sunrise); showBanner("Herald broken!", "Wren's kill strips 20% \(Words.element[el] ?? el.rawValue) resistance from the Hollow.", 2.4)
             case .level: sound.play(.level); lvlT = 0.9; levelFlash = true; if autoSkills { b.autoLearn() }
             case let .wave(n, hint):
                 sound.play(.wave); showBanner("Wave \(n) of \(b.totalWaves)", hint, 2)

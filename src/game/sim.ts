@@ -133,6 +133,11 @@ export interface Foe {
   sporePaneCd: number;
   /** Inside a Herald's aura this tick. */
   warded: boolean;
+  /** Current ally id receiving a Mender's channeled heal beam, and interrupt lock timer. */
+  healTarget: number | null;
+  healInterruptT: number;
+  /** True while a Sapper still carries an unspent powder keg (detonates on death). */
+  kegArmed: boolean;
 }
 
 export interface Tower {
@@ -243,6 +248,7 @@ export type BattleEvent =
   | { t: 'warp'; fromX: number; fromY: number; toX: number; toY: number; kind: PortalDef['kind'] }
   | { t: 'gateShock'; x: number; y: number }
   | { t: 'ironGate'; x: number; y: number }
+  | { t: 'heraldCleanse'; el: Element; x: number; y: number }
   | { t: 'stamp'; x: number; y: number; r: number }
   | { t: 'pane'; x: number; y: number; left: number }
   | { t: 'lunge'; x: number; y: number }
@@ -1057,6 +1063,7 @@ export class Battle {
       underT: def.traits?.burrow ? def.traits.burrow[1] : def.traits?.dive?.every ?? 0,
       abilityT: def.traits?.summon?.every ?? def.traits?.lunge?.every ?? def.traits?.stamp?.every ?? 2, phase: 0, burstT: 0, hitT: 0, dead: false, warpedMask: 0,
       lungeT: 0, panes: def.traits?.panes?.n ?? 0, paneT: 0, paneCd: 0, sporePaneCd: 0, warded: false,
+      healTarget: null, healInterruptT: 0, kegArmed: !!def.traits?.sapper,
     };
     this.foes.push(f);
     if (isBoss) this.events.push({ t: 'boss', kind });
@@ -1214,6 +1221,7 @@ export class Battle {
       f.hitT = Math.max(0, f.hitT - dt);
       f.paneCd = Math.max(0, f.paneCd - dt);
       f.sporePaneCd = Math.max(0, f.sporePaneCd - dt);
+      f.healInterruptT = Math.max(0, f.healInterruptT - dt);
       if (tr?.panes && f.panes < tr.panes.n) {
         f.paneT -= dt;
         if (f.paneT <= 0) { f.panes++; f.paneT = tr.panes.regrow; }
@@ -1271,10 +1279,26 @@ export class Battle {
         }
       }
       if (tr?.heal) {
-        f.abilityT -= dt;
-        if (f.abilityT <= 0) {
-          f.abilityT = 2;
-          for (const o of this.foes) if (!o.dead && ell(o.x - f.x, o.y - f.y) < 100) o.hp = Math.min(o.max, o.hp + o.max * tr.heal);
+        if (held || f.blocked) {
+          f.healTarget = null;
+          f.healInterruptT = Math.max(f.healInterruptT, 3);
+        } else if (f.healInterruptT <= 0) {
+          let best: Foe | undefined, bestD = 120;
+          for (const o of this.foes) {
+            if (o.dead || o.def.flying || o.under || o.hp >= o.max || o.id === f.id) continue;
+            const d = ell(o.x - f.x, o.y - f.y);
+            if (d < bestD) { bestD = d; best = o; }
+          }
+          if (!best && f.hp < f.max) best = f;
+          if (best) {
+            f.healTarget = best.id;
+            const rate = best.def.traits?.boss ? tr.heal * 0.125 : tr.heal * 0.5;
+            best.hp = Math.min(best.max, best.hp + best.max * rate * dt);
+          } else {
+            f.healTarget = null;
+          }
+        } else {
+          f.healTarget = null;
         }
       }
 
@@ -1331,7 +1355,7 @@ export class Battle {
         nd = Math.min(nd, bar.d - 26);
         if (tr?.sapper && nd >= bar.d - 30) {
           bar.hp -= 40 * dt;
-          if (bar.hp <= 0) { bar.hp = 0; this.threatDirty = true; this.events.push({ t: 'barrier', road: f.road.def.id, broken: true }); }
+          if (bar.hp <= 0) { bar.hp = 0; f.kegArmed = false; this.threatDirty = true; this.events.push({ t: 'barrier', road: f.road.def.id, broken: true }); }
         }
       }
       f.d = nd;
@@ -1378,6 +1402,13 @@ export class Battle {
     if (activeBrake) mul *= activeBrake.def.beltMult ?? 0.55;
     else for (const b of f.road.belts) if (f.d >= b.from && f.d <= b.to) mul *= b.mult;
     if (f.under && tr?.burrow) mul *= 1.4;
+    if (f.kind === 'grub') {
+      let pack = 0;
+      for (const o of this.foes) {
+        if (!o.dead && !o.under && o.kind === 'grub' && Math.hypot(o.x - f.x, o.y - f.y) < 70) pack++;
+      }
+      if (pack >= 4) mul *= 1.15;
+    }
     return f.speed * mul;
   }
 
@@ -1446,6 +1477,14 @@ export class Battle {
       return 0;
     }
     if (f.warded && el !== 'hero' && el !== 'env' && el === this.heraldEl()) amount *= 1 - this.heraldCut;
+    // Warden Directional Front Aegis: absorbs 40% from towers firing ahead of its march; flanks, behind, Wren & Storm bypass.
+    if (f.kind === 'warden' && !byHero && sourceTower && el !== 'storm' && el !== 'hero' && el !== 'env' && bucket !== 'status') {
+      const p0 = pointAt(f.road.path, f.d);
+      const p1 = pointAt(f.road.path, Math.min(f.road.path.tot, f.d + 8));
+      const hx = p1.x - p0.x, hy = p1.y - p0.y, hl = Math.hypot(hx, hy);
+      const tx = sourceTower.x - f.x, ty = sourceTower.y - f.y, tl = Math.hypot(tx, ty);
+      if (hl > 0.01 && tl > 0.01 && (hx * tx + hy * ty) / (hl * tl) > 0.35) amount *= 0.6;
+    }
     const { applied, clamped } = deliverDamage(
       { stageId: this.stage.id, mods: this.mods, resist: this.resist, dmgWindow: this.dmgWindow, breakdown: this.breakdown },
       f, amount, el, { byHero, quiet, armorPierceExtra, bucket, shatterSkill },
@@ -1471,6 +1510,27 @@ export class Battle {
     if (sp) for (let i = 0; i < sp.n; i++) {
       const c = this.spawn(sp.kind, undefined, { road: f.road, d: Math.max(0, f.d - i * 14) });
       c.off = (i - 1) * 12;
+    }
+    // Sapper Volatile Powder Keg: killing an armed Sapper detonates its barrel into nearby Hollow allies.
+    if (f.kegArmed) {
+      f.kegArmed = false;
+      this.events.push({ t: 'boom', x: f.x, y: f.y, r: 85 });
+      for (const o of this.foes) {
+        if (!o.dead && !o.under && o.id !== f.id && ell(o.x - f.x, o.y - f.y) < 85) {
+          this.damage(o, 120 * this.scale, 'fire', byHero, false, false, sourceTower, 'status');
+        }
+      }
+    }
+    // Herald Wren-Kill Cleanse: Wren landing the killing blow strips -20% from the Hollow's top adaptation.
+    if (f.kind === 'herald' && byHero) {
+      let topEl: Element | null = null, topVal = 0;
+      for (const el of ['pierce', 'fire', 'frost', 'storm', 'nature'] as const) {
+        if (this.resist[el] > topVal) { topVal = this.resist[el]; topEl = el; }
+      }
+      if (topEl && topVal > 0) {
+        this.resist[topEl] = Math.max(0, this.resist[topEl] - 0.2);
+        this.events.push({ t: 'heraldCleanse', el: topEl, x: f.x, y: f.y });
+      }
     }
     if (h.focus === f.id) h.focus = null;
   }

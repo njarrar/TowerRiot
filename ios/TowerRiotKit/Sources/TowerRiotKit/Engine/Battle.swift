@@ -1037,6 +1037,7 @@ public final class Battle {
             f.hitT = max(0, f.hitT - dt)
             f.paneCd = max(0, f.paneCd - dt)
             f.sporePaneCd = max(0, f.sporePaneCd - dt)
+            f.healInterruptT = max(0, f.healInterruptT - dt)
             if let pn = tr?.panes, f.panes < pn.n {
                 f.paneT -= dt
                 if f.paneT <= 0 { f.panes += 1; f.paneT = pn.regrow }
@@ -1094,10 +1095,27 @@ public final class Battle {
                 }
             }
             if let heal = tr?.heal, heal != 0 {
-                f.abilityT -= dt
-                if f.abilityT <= 0 {
-                    f.abilityT = 2
-                    for o in foes where !o.dead && ell(o.x - f.x, o.y - f.y) < 100 { o.hp = min(o.max, o.hp + o.max * heal) }
+                if held || f.blocked {
+                    f.healTarget = nil
+                    f.healInterruptT = max(f.healInterruptT, 3)
+                } else if f.healInterruptT <= 0 {
+                    var best: Foe? = nil
+                    var bestD = 120.0
+                    for o in foes {
+                        if o.dead || o.def.isFlying || o.under || o.hp >= o.max || o.id == f.id { continue }
+                        let d = ell(o.x - f.x, o.y - f.y)
+                        if d < bestD { bestD = d; best = o }
+                    }
+                    if best == nil && f.hp < f.max { best = f }
+                    if let target = best {
+                        f.healTarget = target.id
+                        let rate = target.def.isBoss ? heal * 0.125 : heal * 0.5
+                        target.hp = min(target.max, target.hp + target.max * rate * dt)
+                    } else {
+                        f.healTarget = nil
+                    }
+                } else {
+                    f.healTarget = nil
                 }
             }
             if let ph = tr?.phases, f.phase < ph.count, f.hp / f.max < ph[f.phase] {
@@ -1151,6 +1169,7 @@ public final class Battle {
                     bar.hp -= 40 * dt
                     if bar.hp <= 0 {
                         bar.hp = 0
+                        f.kegArmed = false
                         threatDirty = true
                         events.append(.barrier(road: f.road.def.id, broken: true))
                     }
@@ -1202,6 +1221,11 @@ public final class Battle {
             for b in f.road.belts where f.d >= b.from && f.d <= b.to { mul *= b.mult }
         }
         if f.under && tr?.burrow != nil { mul *= 1.4 }
+        if f.kind == .grub {
+            var pack = 0
+            for o in foes where !o.dead && !o.under && o.kind == .grub && hypot2(o.x - f.x, o.y - f.y) < 70 { pack += 1 }
+            if pack >= 4 { mul *= 1.15 }
+        }
         return f.speed * mul
     }
 
@@ -1256,6 +1280,14 @@ public final class Battle {
         }
         var amount = amount
         if f.warded, case .element(let el) = src, el != .hero, el == heraldEl() { amount *= 1 - heraldCut }
+        // Warden Directional Front Aegis: absorbs 40% from towers firing ahead of its march; flanks, behind, Wren & Storm bypass.
+        if f.kind == .warden, !byHero, let st = sourceTower, case .element(let el) = src, el != .storm, el != .hero, bucket != .status {
+            let p0 = f.road.path.point(at: f.d)
+            let p1 = f.road.path.point(at: min(f.road.path.tot, f.d + 8))
+            let hx = p1.x - p0.x, hy = p1.y - p0.y, hl = hypot2(hx, hy)
+            let tx = st.x - f.x, ty = st.y - f.y, tl = hypot2(tx, ty)
+            if hl > 0.01 && tl > 0.01 && (hx * tx + hy * ty) / (hl * tl) > 0.35 { amount *= 0.6 }
+        }
         var m = 1.0
         var dmgEl: Element?
         if case .element(let el) = src {
@@ -1307,6 +1339,29 @@ public final class Battle {
             for k in 0..<sp.n {
                 let c = spawn(sp.kind, at: (f.road, max(0, f.d - Double(k) * 14)))
                 c.off = Double(k - 1) * 12
+            }
+        }
+        // Sapper Volatile Powder Keg: killing an armed Sapper detonates its barrel into nearby Hollow allies.
+        if f.kegArmed {
+            f.kegArmed = false
+            events.append(.boom(x: f.x, y: f.y, r: 85))
+            eachFoe { o in
+                if !o.dead && !o.under && o.id != f.id && ell(o.x - f.x, o.y - f.y) < 85 {
+                    self.damage(o, 120 * self.scale, .element(.fire), byHero: byHero, sourceTower: sourceTower, bucket: .status)
+                }
+            }
+        }
+        // Herald Wren-Kill Cleanse: Wren landing the killing blow strips -20% from the Hollow's top adaptation.
+        if f.kind == .herald && byHero {
+            var topEl: Element? = nil
+            var topVal = 0.0
+            for el in [Element.pierce, .fire, .frost, .storm, .nature] {
+                let v = resist[el] ?? 0
+                if v > topVal { topVal = v; topEl = el }
+            }
+            if let el = topEl, topVal > 0 {
+                resist[el] = max(0, topVal - 0.2)
+                events.append(.heraldCleanse(el: el, x: f.x, y: f.y))
             }
         }
         if hero.focus == f.id { hero.focus = nil }

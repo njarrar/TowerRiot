@@ -257,6 +257,7 @@ export class BattleScreen {
         case 'terraform': a.play('boss'); this.showBanner('Ground shifts', e.label, 3.0, true); break;
         case 'gateShock': a.play('sunrise'); this.showBanner('Bastion bell!', 'The Keep shockwave stuns intruders at the gate.', 2.2); break;
         case 'ironGate': a.play('build'); this.showBanner('Iron Gate holds!', 'The portcullis repels the breach and knocks intruders back.', 2.2); break;
+        case 'heraldCleanse': a.play('sunrise'); this.showBanner('Herald broken!', `Wren's kill strips 20% ${ELEMENT_NAME[e.el] ?? e.el} resistance from the Hollow.`, 2.4); break;
         case 'level': a.play('level'); this.lvlT = 0.9; this.hud.hero.classList.add('lvlup'); if (this.host.autoSkills) b.autoLearn(); break;
         case 'wave': {
           a.play('wave'); this.showBanner(`Wave ${e.n} of ${b.totalWaves}`, e.hint, 2);

@@ -56,7 +56,7 @@ public final class Foe {
     /// Underground (burrower) or under the tide (Tidewyrm).
     public internal(set) var under = false
     var underT: Double
-    var abilityT: Double
+    public internal(set) var abilityT: Double
     public internal(set) var phase = 0
     var burstT = 0.0
     public internal(set) var hitT = 0.0
@@ -71,6 +71,11 @@ public final class Foe {
     var sporePaneCd = 0.0
     /// Inside a Herald's aura this tick.
     public internal(set) var warded = false
+    /// Current ally id receiving a Mender's channeled heal beam, and interrupt lock timer.
+    public internal(set) var healTarget: Int? = nil
+    var healInterruptT = 0.0
+    /// True while a Sapper still carries an unspent powder keg (detonates on death).
+    public internal(set) var kegArmed = false
 
     init(id: Int, kind: EnemyKind, def: EnemyDef, road: RoadRt, d: Double, at p: Path.Point, off: Double, hp: Double, speed: Double) {
         self.id = id; self.kind = kind; self.def = def; self.road = road; self.d = d
@@ -78,6 +83,7 @@ public final class Foe {
         underT = def.traits?.burrow?[1] ?? def.traits?.dive?.every ?? 0
         abilityT = def.traits?.summon?.every ?? def.traits?.lunge?.every ?? def.traits?.stamp?.every ?? 2
         panes = def.traits?.panes?.n ?? 0
+        kegArmed = def.traits?.sapper ?? false
     }
 }
 
@@ -250,6 +256,7 @@ public enum BattleEvent {
     case warp(fromX: Double, fromY: Double, toX: Double, toY: Double, kind: PortalDef.Kind)
     case gateShock(x: Double, y: Double)
     case ironGate(x: Double, y: Double)
+    case heraldCleanse(el: Element, x: Double, y: Double)
     case stamp(x: Double, y: Double, r: Double)
     case pane(x: Double, y: Double, left: Int)
     case lunge(x: Double, y: Double)

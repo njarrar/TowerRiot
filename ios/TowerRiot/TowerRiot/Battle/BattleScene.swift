@@ -600,6 +600,9 @@ final class BattleScene: SKScene {
             case let .ironGate(gx, gy):
                 addFx(.ring, gx, gy, r: 0, max: 140, life: 0.75, color: UIColor(235, 195, 125))
                 shake = max(shake, 5)
+            case let .heraldCleanse(_, hx, hy):
+                addFx(.ring, hx, hy, r: 0, max: 150, life: 0.85, color: UIColor(120, 245, 200))
+                float(hx, hy - 54, "Cleanse -20%", UIColor(hex: 0x7cf0c4), big: true)
             default: break
             }
         }
@@ -869,9 +872,13 @@ final class BattleScene: SKScene {
     }
 
     private var foeNodes: [Int: FoeNode] = [:]
+    private var healBeamNodes: [SKShapeNode] = []
+    private var ramWarnNodes: [SKShapeNode] = []
 
     private func syncFoes() {
         var seen = Set<Int>()
+        var healPairs: [(Foe, Foe)] = []
+        var ramWarns: [(Foe, Double, Double)] = []
         for f in battle.foes {
             seen.insert(f.id)
             let n = foeNodes[f.id] ?? {
@@ -880,8 +887,40 @@ final class BattleScene: SKScene {
                 return n
             }()
             drawFoe(f, n)
+            if !f.dead, let tid = f.healTarget, let target = battle.foes.first(where: { $0.id == tid && !$0.dead && !$0.under }) {
+                healPairs.append((f, target))
+            }
+            if !f.dead, !f.under, let st = f.def.traits?.stamp, f.abilityT > 0, f.abilityT < 1.2, f.rootT <= 0, f.freezeT <= 0, f.staggerT <= 0 {
+                ramWarns.append((f, st.r, 1 - f.abilityT / 1.2))
+            }
         }
         for (id, n) in foeNodes where !seen.contains(id) { n.remove(); foeNodes[id] = nil }
+        while healBeamNodes.count < healPairs.count {
+            let s = SKShapeNode(); s.strokeColor = UIColor(150, 250, 185, 0.85); s.lineWidth = 2.4; s.blendMode = .add; s.zPosition = Z.fx
+            world.addChild(s); healBeamNodes.append(s)
+        }
+        for (i, s) in healBeamNodes.enumerated() {
+            guard i < healPairs.count else { s.isHidden = true; continue }
+            s.isHidden = false
+            let (m, tgt) = healPairs[i]
+            let a = P(m.x + (m.dir == 0 ? 1 : m.dir) * 12, m.y - 16)
+            let bPt = P(tgt.x, tgt.y - tgt.def.bar * 0.45)
+            let ctrl = CGPoint(x: (a.x + bPt.x) / 2, y: max(a.y, bPt.y) + 18)
+            let path = CGMutablePath(); path.move(to: a); path.addQuadCurve(to: bPt, control: ctrl)
+            s.path = path
+        }
+        while ramWarnNodes.count < ramWarns.count {
+            let s = SKShapeNode(); s.fillColor = UIColor(235, 95, 48, 0.12); s.lineWidth = 2.2; s.zPosition = Z.rules + 0.05
+            world.addChild(s); ramWarnNodes.append(s)
+        }
+        for (i, s) in ramWarnNodes.enumerated() {
+            guard i < ramWarns.count else { s.isHidden = true; continue }
+            s.isHidden = false
+            let (f, rr, warn) = ramWarns[i]
+            s.position = P(f.x, f.y)
+            s.strokeColor = UIColor(235, 95, 48, 0.35 + 0.55 * warn)
+            s.path = CGPath(ellipseIn: CGRect(x: -rr, y: -rr / World.ySquash, width: rr * 2, height: rr * 2 / World.ySquash), transform: nil)
+        }
     }
 
     private func drawFoe(_ f: Foe, _ n: FoeNode) {

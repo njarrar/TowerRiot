@@ -732,7 +732,178 @@ function paintField(ctx,W,H,M){
  }
  M.plots.forEach(([x,y],i)=>plot(ctx,x,y,600+i*3,1));
 }
-const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField};
+/* ---------- bespoke Hollow silhouettes (Wave 1 Overhaul) ---------- */
+// Acolyte (Mender): hunched fungal-hooded druid with swaying moss censer & emerald spore cap.
+function acolyte(ctx,x,y,s,pass,seed,face,ph){seed=seed||41;face=face||1;const walk=ph!=null;ph=ph||0;const bob=walk?Math.sin(ph)*2.2:0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,2,2,26,7,.65);
+  // tattered fungal cloak trailing into mist
+  const cg=ctx.createLinearGradient(0,-48,0,0);cg.addColorStop(0,'#2a3a2c');cg.addColorStop(.55,'#19231b');cg.addColorStop(1,'#0d120e');
+  ctx.fillStyle=cg;ctx.beginPath();ctx.moveTo(-8,-38+bob);ctx.quadraticCurveTo(-22,-18+bob,-20+Math.sin(ph)*2,-2);ctx.lineTo(-8,-4);ctx.lineTo(0,0);ctx.lineTo(10,-3);ctx.quadraticCurveTo(18,-18+bob,10,-38+bob);ctx.closePath();ctx.fill();
+  // broad layered mushroom cowl
+  const mg=ctx.createRadialGradient(-2,-48+bob,3,0,-44+bob,24);mg.addColorStop(0,'#547a4c');mg.addColorStop(.6,'#284029');mg.addColorStop(1,'#142016');
+  ctx.fillStyle=mg;ctx.beginPath();ctx.moveTo(-22,-38+bob);ctx.quadraticCurveTo(-18,-56+bob,2,-54+bob);ctx.quadraticCurveTo(22,-52+bob,24,-36+bob);ctx.quadraticCurveTo(2,-32+bob,-22,-38+bob);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(155,235,170,.35)';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(-18,-40+bob);ctx.quadraticCurveTo(0,-52+bob,20,-39+bob);ctx.stroke();
+  // gills underneath
+  ctx.fillStyle='#0a0e0b';ctx.beginPath();ctx.ellipse(2,-36+bob,15,4,0,0,TAU);ctx.fill();
+  // crooked staff & swinging censer out front
+  ctx.strokeStyle='#3d2e1e';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(8,-28+bob);ctx.quadraticCurveTo(18,-36+bob,24,-32+bob);ctx.stroke();
+  const sw=walk?Math.sin(ph*1.5)*4:0;
+  ctx.strokeStyle='#6c7a68';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(24,-32+bob);ctx.lineTo(24+sw,-16+bob);ctx.stroke();
+  ctx.fillStyle='#1f2d24';ctx.beginPath();ctx.moveTo(19+sw,-16+bob);ctx.lineTo(29+sw,-16+bob);ctx.lineTo(26+sw,-8+bob);ctx.lineTo(22+sw,-8+bob);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#72f29c';ctx.beginPath();ctx.arc(24+sw,-12+bob,2.6,0,TAU);ctx.fill();
+ } else {
+  const sw=walk?Math.sin(ph*1.5)*4:0;
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,24+sw,-12+bob,18,'#6ef08e',.5);
+  glow(ctx,2,-36+bob,16,'#52d882',.28);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Wraith (Shade): floating twilight torso with torn cloak ribbons & slit cowl, no legs.
+function wraith(ctx,x,y,s,pass,seed,face,ph){seed=seed||51;face=face||1;const walk=ph!=null;ph=ph||0;const hov=Math.sin(ph*1.2)*3;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,3,22,5,.38);
+  // trailing ink-violet ribbons
+  const rg=ctx.createLinearGradient(-34,-28,16,-8);rg.addColorStop(0,'rgba(64,46,118,0)');rg.addColorStop(.5,'rgba(56,42,102,.65)');rg.addColorStop(1,'rgba(22,18,40,.92)');
+  ctx.fillStyle=rg;
+  ctx.beginPath();ctx.moveTo(14,-34+hov);ctx.quadraticCurveTo(-8,-42+hov,-34,-28+hov*1.4);ctx.lineTo(-22,-18+hov);ctx.lineTo(-36,-10+hov*.8);ctx.quadraticCurveTo(-10,-8+hov,14,-14+hov);ctx.closePath();ctx.fill();
+  // narrow angular cowl + hunched shoulders
+  ctx.fillStyle='#1b162c';ctx.beginPath();ctx.moveTo(-10,-16+hov);ctx.quadraticCurveTo(-14,-36+hov,2,-46+hov);ctx.quadraticCurveTo(16,-44+hov,18,-28+hov);ctx.lineTo(10,-12+hov);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(176,148,255,.42)';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(-8,-32+hov);ctx.quadraticCurveTo(2,-45+hov,15,-34+hov);ctx.stroke();
+  // hollow slit face
+  ctx.fillStyle='#07050c';ctx.beginPath();ctx.ellipse(8,-34+hov,4.5,6.5,-.15,0,TAU);ctx.fill();
+  ctx.fillStyle='#bfa4ff';ctx.fillRect(7,-36+hov,3.2,1.6);
+  // elongated spectral claws reaching ahead
+  ctx.strokeStyle='#2c2444';ctx.lineWidth=1.8;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(12,-24+hov);ctx.lineTo(24,-20+hov);ctx.lineTo(28,-16+hov);ctx.moveTo(12,-20+hov);ctx.lineTo(22,-14+hov);ctx.stroke();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,8,-35+hov,16,'#a688ff',.5);
+  glow(ctx,-6,-20+hov,22,'#7c5ee8',.25);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Stiltpod (Splitter): tall pulsing twin-lobed brood pod suspended on 4 spindly articulated stilts.
+function stiltpod(ctx,x,y,s,pass,seed,face,ph){seed=seed||71;face=face||1;const walk=ph!=null;ph=ph||0;const pulse=1+Math.sin(ph*2)*.06;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,0,2,34,7,.65);
+  // 4 tall spindly insect stilts
+  ctx.strokeStyle='#151a18';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';
+  [[-16,-1],[16,1],[-8,1],[8,-1]].forEach(([ox,sd],i)=>{
+   const q=ph+(i%2)*Math.PI,fx=walk?Math.sin(q)*5:0,fy=walk?Math.max(0,Math.cos(q))*4:0;
+   ctx.beginPath();ctx.moveTo(ox*.7,-22);ctx.lineTo(ox*1.35+fx*.5,-32-fy*.4);ctx.lineTo(ox*1.25+fx,-fy);ctx.stroke();
+   ctx.fillStyle='#5be8be';ctx.beginPath();ctx.arc(ox*1.35+fx*.5,-32-fy*.4,1.6,0,TAU);ctx.fill();
+  });
+  // twin-chambered translucent brood sac suspended high
+  ctx.save();ctx.translate(0,-30);ctx.scale(pulse,1/pulse);
+  for(const sd of[-1,1]){
+   const g=ctx.createRadialGradient(sd*7,-6,2,sd*8,0,15);g.addColorStop(0,'#467a6e');g.addColorStop(.55,'#1d3832');g.addColorStop(1,'#0c1816');
+   ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(sd*8,0,11.5,14,sd*.18,0,TAU);ctx.fill();
+   ctx.strokeStyle='rgba(140,250,218,.35)';ctx.lineWidth=1;ctx.stroke();
+  }
+  // glowing cleavage fissure down the centre
+  ctx.strokeStyle='#88ffda';ctx.lineWidth=2.6;ctx.beginPath();ctx.moveTo(0,-14);ctx.lineTo(-1,0);ctx.lineTo(0,13);ctx.stroke();
+  ctx.restore();
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,0,-30,24,'#6ef5cb',.48);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Obelisk (Warden): hovering carved stone-and-iron monolith with frontward concave ward shield & rotating top prism.
+function obelisk(ctx,x,y,s,pass,seed,face,ph){seed=seed||66;face=face||1;const walk=ph!=null;ph=ph||0;const hov=Math.sin(ph*1.4)*2.5;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,2,3,38,9,.75);
+  // monolith tapered body
+  const mg=ctx.createLinearGradient(-16,-62,18,-10);mg.addColorStop(0,'#545c60');mg.addColorStop(.55,'#2a3034');mg.addColorStop(1,'#14181a');
+  ctx.fillStyle=mg;poly(ctx,[[-14,-8+hov],[14,-8+hov],[10,-58+hov],[-10,-58+hov]]);ctx.fill();
+  ctx.strokeStyle='#0d1012';ctx.lineWidth=1.8;ctx.stroke();
+  // carved rune bands
+  ctx.strokeStyle='#5cf0c6';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-9,-42+hov);ctx.lineTo(9,-42+hov);ctx.moveTo(-11,-24+hov);ctx.lineTo(11,-24+hov);ctx.stroke();
+  // floating concave Front Aegis shield facing forward (+x)
+  const sg=ctx.createLinearGradient(16,-54+hov,32,-12+hov);sg.addColorStop(0,'#6ef2cc');sg.addColorStop(.5,'#2a7866');sg.addColorStop(1,'#153d34');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.moveTo(18,-54+hov);ctx.quadraticCurveTo(32,-34+hov,18,-10+hov);ctx.lineTo(13,-14+hov);ctx.quadraticCurveTo(24,-34+hov,13,-50+hov);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#b8ffea';ctx.lineWidth=1.4;ctx.stroke();
+  // suspended spinning crown prism
+  const py=-72+hov+Math.sin(ph*2.2)*2;
+  ctx.fillStyle='#72f7d4';poly(ctx,[[0,py-9],[6,py],[0,py+9],[-6,py]]);ctx.fill();
+  ctx.strokeStyle='#e8fff8';ctx.lineWidth=1;ctx.stroke();
+ } else {
+  const py=-72+hov+Math.sin(ph*2.2)*2;
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,0,py,24,'#5ce6c0',.55);
+  glow(ctx,22,-32+hov,22,'#5ce6c0',.38);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Serpent (Tidewyrm): sinuous multi-looping sea-serpent with sweeping pelagic dorsal fins & abyssal jaw.
+function serpent(ctx,x,y,s,pass,seed,face,ph){seed=seed||47;face=face||1;const walk=ph!=null;ph=ph||0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ const pts=[];const n=11;
+ for(let i=0;i<n;i++){const t=i/(n-1);const px=-64+t*126;const py=-12-Math.sin(t*Math.PI*2.1+(walk?ph:0))*12-Math.sin(t*Math.PI)*8;const r=5+Math.sin(t*Math.PI)*11+(t>.8?4:0);pts.push([px,py,r]);}
+ if(pass==='base'){
+  shadow(ctx,0,4,72,14,.7);
+  // sweeping pelagic sail fins behind crest arches
+  for(const idx of[2,4,6,8]){const [px,py,rr]=pts[idx];const fg=ctx.createLinearGradient(px,py-rr-24,px,py-rr);fg.addColorStop(0,'#72d6f0');fg.addColorStop(1,'#184256');
+   ctx.fillStyle=fg;ctx.beginPath();ctx.moveTo(px-9,py-rr*.6);ctx.quadraticCurveTo(px-4,py-rr-22,px-14,py-rr-24);ctx.quadraticCurveTo(px+8,py-rr-12,px+9,py-rr*.5);ctx.closePath();ctx.fill();}
+  // sinuous scaled body segments
+  for(let i=0;i<n;i++){const [px,py,rr]=pts[i];const g=ctx.createRadialGradient(px-rr*.3,py-rr*.5,1,px,py,rr*1.3);
+   g.addColorStop(0,'#3e7a8e');g.addColorStop(.55,'#193c4a');g.addColorStop(1,'#09171e');
+   ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(px,py,rr*1.15,rr*.92,0,0,TAU);ctx.fill();
+   ctx.strokeStyle='rgba(130,228,248,.32)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(px,py,rr,rr*.82,0,Math.PI*1.1,Math.PI*1.7);ctx.stroke();}
+  // horned sea-wyrm head & abyssal jaw
+  const [hx,hy,hr]=pts[n-1];
+  ctx.fillStyle='#13303d';ctx.beginPath();ctx.moveTo(hx-10,hy-hr);ctx.quadraticCurveTo(hx+14,hy-hr-6,hx+26,hy-2);ctx.lineTo(hx+16,hy+4);ctx.lineTo(hx+22,hy+10);ctx.quadraticCurveTo(hx+4,hy+hr+2,hx-10,hy+hr*.7);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#7ee8ff';ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(hx+10,hy-hr*.8);ctx.quadraticCurveTo(hx-6,hy-hr-14,hx-16,hy-hr-12);ctx.stroke();
+  ctx.fillStyle='#96f4ff';ctx.beginPath();ctx.arc(hx+11,hy-3,2.4,0,TAU);ctx.fill();
+ } else {
+  const [hx,hy]=pts[n-1];
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let i=2;i<n-1;i+=2){const [px,py]=pts[i];glow(ctx,px,py,12,'#5ad8ff',.3);}
+  glow(ctx,hx+14,hy-2,24,'#5ad8ff',.52);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+// Dreadnought (Brass Colossus): heavy riveted Foundry steam walker with twin stacks, flywheel & furnace core.
+function dreadnought(ctx,x,y,s,pass,seed,face,frost,ph){seed=seed||61;face=face||1;const walk=ph!=null;ph=ph||0;const stomp=walk?Math.abs(Math.sin(ph))*3.5:0;ctx.save();ctx.translate(x,y);ctx.scale(s*face,s);
+ if(pass==='base'){
+  shadow(ctx,6,4,72,15,.85);
+  // heavy piston legs
+  [-28,-6,16,34].forEach((lx,i)=>{const q=ph+(i%2)*Math.PI,fx=walk?Math.sin(q)*8:0,up=walk?Math.max(0,Math.cos(q))*5:0;
+   ctx.fillStyle='#242220';poly(ctx,[[lx-7,-24-stomp],[lx+7,-24-stomp],[lx+9+fx,-up],[lx-5+fx,-up]]);ctx.fill();
+   ctx.fillStyle='#b88234';ctx.fillRect(lx-6+fx*.5,-16-up*.5,12,3.2);});
+  // twin iron smokestacks behind hull
+  for(const sx of[-24,10]){ctx.fillStyle='#262422';ctx.fillRect(sx,-82-stomp,12,34);ctx.fillStyle='#c48e3c';ctx.fillRect(sx-2,-84-stomp,16,4.5);}
+  // riveted bronze boiler carapace
+  const bg=ctx.createLinearGradient(-48,-66-stomp,48,-12-stomp);bg.addColorStop(0,'#c68f3d');bg.addColorStop(.45,'#755024');bg.addColorStop(1,'#29221c');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.moveTo(-48,-18-stomp);ctx.lineTo(-42,-54-stomp);ctx.quadraticCurveTo(0,-70-stomp,44,-52-stomp);ctx.lineTo(52,-20-stomp);ctx.quadraticCurveTo(0,-10-stomp,-48,-18-stomp);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#181410';ctx.lineWidth=2.2;ctx.stroke();
+  // rivets along upper rim
+  ctx.fillStyle='#f0ca78';for(let k=-34;k<=36;k+=14){ctx.beginPath();ctx.arc(k,-52-stomp,1.8,0,TAU);ctx.fill();}
+  // glowing furnace grate on chest
+  ctx.fillStyle='#140a06';ctx.fillRect(22,-42-stomp,22,18);
+  ctx.fillStyle='#ff8a2a';ctx.fillRect(24,-40-stomp,18,14);
+  ctx.strokeStyle='#1c1816';ctx.lineWidth=2;for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(27+k*5.5,-42-stomp);ctx.lineTo(27+k*5.5,-24-stomp);ctx.stroke();}
+  // spinning dorsal brass flywheel
+  ctx.save();ctx.translate(-8,-42-stomp);ctx.rotate(walk?ph*.7:.3);
+  ctx.strokeStyle='#dca446';ctx.lineWidth=4.5;ctx.beginPath();ctx.arc(0,0,17,0,TAU);ctx.stroke();
+  for(let k=0;k<8;k++){const a=k/8*TAU;ctx.beginPath();ctx.moveTo(Math.cos(a)*14,Math.sin(a)*14);ctx.lineTo(Math.cos(a)*22,Math.sin(a)*22);ctx.stroke();}
+  ctx.fillStyle='#2a2018';ctx.beginPath();ctx.arc(0,0,7,0,TAU);ctx.fill();ctx.restore();
+  if(frost){frostDust(ctx,-44,-64-stomp,46,-16-stomp,90,seed+3,true);}
+ } else {
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  glow(ctx,33,-33-stomp,26,'#ff8828',.55);
+  glow(ctx,-18,-86-stomp,22,'#ff7a28',.42);
+  glow(ctx,16,-86-stomp,22,'#ff7a28',.42);
+  ctx.restore();
+ }
+ ctx.restore();}
+
+const EXTRA={forgeCannon,cannonBarrel,beaconTower,beaconFire,rootGarden,rootPods,paintField,acolyte,wraith,stiltpod,obelisk,serpent,dreadnought};
 
 return{watchTower,frostBell,stormPylon,grub,moth,shellback,wren,gate,block,ruinWall,deadTree,leafyTree,standingStone,plot,masonry,planks,shadow,glow,darkness,vignette,fog,makeNoise,rng,mix,ss,clamp,catmull,strokePts,offset,poly,bolt,shade,hex,rgb,groundTile,TAU,EXTRA:typeof EXTRA!=="undefined"?EXTRA:null};
 })();
