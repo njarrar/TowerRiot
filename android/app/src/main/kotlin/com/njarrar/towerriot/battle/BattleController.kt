@@ -194,7 +194,7 @@ class BattleController(stageId: Int, val variant: StageVariant, val oaths: List<
             showBanner("Drag Wren to the road", "She holds up to 2 foes inside a 90 px leash and earns +50% gold on kills.", 4.5)
         }
         endAt?.let { if (now() >= it) { endAt = null; end(endWon, endStars) } }
-        scene.frame(events, dt, if (battle.paused) 0.0 else simDt)
+        scene.frame(events, dt, if (battle.paused) 0.0 else if (aimingW) dt * 0.25 else dt)
         frames += 1
         frameNo = frames
         if (frames % 4 == 0 || (events.isNotEmpty() && frames % 2 == 0)) bump()
