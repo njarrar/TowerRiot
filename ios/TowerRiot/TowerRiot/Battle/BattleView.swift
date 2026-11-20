@@ -26,7 +26,7 @@ struct BattleView: View {
             .ignoresSafeArea()
         }
         .statusBarHidden(true)
-        .onChange(of: scenePhase) { _, phase in
+        .onChange(of: scenePhase) { phase in
             if phase != .active {
                 ctl.pauseIfRunning()
                 app.sound.setBackgrounded(true)
@@ -71,7 +71,7 @@ struct BattleView: View {
         }
         .frame(width: w, height: h)
         .onAppear { ctl.setView(scale: scale, halfWidth: halfW) }
-        .onChange(of: CGSize(width: w, height: h)) { _, _ in ctl.setView(scale: scale, halfWidth: halfW) }
+        .onChange(of: CGSize(width: w, height: h)) { _ in ctl.setView(scale: scale, halfWidth: halfW) }
     }
 }
 

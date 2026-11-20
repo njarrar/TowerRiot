@@ -123,7 +123,7 @@ final class BattleScene: SKScene {
 
         // Live pulsing Rift tear markers positioned from active battle.spawns (always accurate on Variant B reversed roads).
         var riftIdx = 0
-        for rs in battle.spawns.values {
+        for rs in battle.spawns.map({ $0.roads }) {
             guard let first = rs.first else { continue }
             let p0 = first.path.point(at: 30)
             let rx = max(64.0, min(World.width - 64.0, p0.x))
@@ -1496,7 +1496,7 @@ final class BattleScene: SKScene {
                 bar.root.isHidden = false
                 bar.root.alpha = 0.6
                 bar.root.position = P(x, y - f.def.bar)
-                bar.set(f.hp / f.max, color: UIColor(hex: 0x5ad8ff), width: 90)
+                bar.set(f.hp / f.max)
             } else {
                 bar.root.isHidden = true
                 under.fillColor = UIColor(40, 32, 24, 0.9)
